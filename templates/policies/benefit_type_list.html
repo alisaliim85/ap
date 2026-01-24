@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-black text-slate-800">أنواع المنافع (Master Data)</h2>
+            <p class="text-slate-500 text-sm mt-1">تعريف التصنيفات الطبية المستخدمة في النظام</p>
+        </div>
+        <div class="p-2 bg-brand-50 text-brand-600 rounded-lg text-xs font-bold border border-brand-100 italic">
+            * يتم إضافة الأنواع الجديدة من لوحة الإدارة فقط
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for t in types %}
+        <div
+            class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5 group hover:border-brand-500 hover:shadow-xl hover:shadow-brand-500/5 transition-all">
+            <div
+                class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
+                <i class="{{ t.icon|default:'ph-duotone ph-list-plus' }} text-3xl"></i>
+            </div>
+            <div>
+                <h4 class="text-lg font-black text-slate-800">{{ t.name_ar }}</h4>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">{{ t.name_en }}</p>
+                <div class="mt-2 text-[9px] text-slate-300 font-mono">{{ t.id }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-12 bg-indigo-50 border border-indigo-100 rounded-2xl p-8 flex items-center gap-6">
+        <div
+            class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100 flex-shrink-0">
+            <i class="ph-duotone ph-info text-3xl"></i>
+        </div>
+        <div>
+            <h5 class="text-indigo-900 font-black mb-1 text-lg">ملاحظة هامة للنظام</h5>
+            <p class="text-indigo-700/70 text-sm leading-relaxed">
+                أنواع المنافع هذه تُستخدم لإصدار تقارير الاستهلاك وحساب الأرصدة المتبقية للموظفين.
+                أي تغيير في مسميات المنافع الأساسية قد يؤثر على دقة التقارير التاريخية.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

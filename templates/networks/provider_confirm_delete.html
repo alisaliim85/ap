@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-lg mx-auto pt-20">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden text-center p-10">
+        <div
+            class="w-20 h-20 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner rotate-3">
+            <i class="ph-duotone ph-warning-diamond text-5xl"></i>
+        </div>
+
+        <h2 class="text-2xl font-black text-slate-800 mb-2">حذف مقدم خدمة</h2>
+        <p class="text-slate-500 mb-8 leading-relaxed">
+            هل أنت متأكد من حذف <br>
+            <span class="font-black text-brand-600 text-xl block my-2">{{ provider.name_ar }}</span>
+            سيتم إزالته من جميع الشبكات المرتبطة به. لا يمكن التراجع عن هذا الإجراء.
+        </p>
+
+        <form method="post" class="flex flex-col sm:flex-row gap-3">
+            {% csrf_token %}
+            <a href="{% url 'networks:service_provider_list' %}"
+                class="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-bold transition">
+                لا، تراجع
+            </a>
+            <button type="submit"
+                class="flex-1 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 font-bold shadow-lg shadow-red-200 transition">
+                تأكيد الحذف
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

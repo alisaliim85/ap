@@ -1,0 +1,59 @@
+<div class="space-y-3">
+    {% for hospital in page_obj %}
+    <div
+        class="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between group hover:border-brand-500 hover:shadow-xl hover:shadow-brand-500/5 transition-all">
+        <div class="flex items-center gap-4">
+            <div
+                class="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
+                <i class="ph-duotone ph-buildings text-2xl"></i>
+            </div>
+            <div>
+                <h4 class="font-black text-slate-800">{{ hospital.name_ar }}</h4>
+                <div class="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    <span>{{ hospital.get_type_display }}</span>
+                    <span class="w-1 h-1 rounded-full bg-slate-200"></span>
+                    <span>{{ hospital.city }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="hospital-btn-{{ hospital.id }}">
+            {% include 'networks/partials/hospital_status_btn.html' with is_in_network=hospital in hospitals_in_network
+            %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="py-20 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+        <i class="ph-duotone ph-magnifying-glass text-5xl text-slate-300 mb-3 block"></i>
+        <p class="text-slate-500 font-bold">لم يتم العثور على نتائج</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Mini Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="mt-8 flex items-center justify-between px-2">
+    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+        Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+    </div>
+    <div class="flex gap-2">
+        {% if page_obj.has_previous %}
+        <button
+            hx-get="{% url 'networks:network_manage_hospitals' network.pk %}?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+            hx-target="#hospital-selection-list"
+            class="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-brand-600 hover:border-brand-200 transition">
+            <i class="ph-bold ph-caret-right"></i>
+        </button>
+        {% endif %}
+
+        {% if page_obj.has_next %}
+        <button
+            hx-get="{% url 'networks:network_manage_hospitals' network.pk %}?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+            hx-target="#hospital-selection-list"
+            class="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-brand-600 hover:border-brand-200 transition">
+            <i class="ph-bold ph-caret-left"></i>
+        </button>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

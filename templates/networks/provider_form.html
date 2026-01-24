@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-black text-slate-800">{{ title }}</h2>
+            <p class="text-slate-500 text-sm mt-1">إدخال البيانات الجغرافية والتفصيلية لمقدم الخدمة</p>
+        </div>
+        <a href="{% url 'networks:service_provider_list' %}"
+            class="text-slate-500 hover:text-slate-700 font-bold text-sm flex items-center gap-2 transition">
+            <i class="ph-bold ph-arrow-right"></i> رجوع للقائمة
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-200 bg-slate-50">
+            <h3 class="font-black text-slate-800 flex items-center gap-2">
+                <i class="ph-duotone ph-hospital text-brand-600 text-xl"></i>
+                بيانات المنشأة الطبية
+            </h3>
+        </div>
+
+        <div class="p-8">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">الاسم
+                            بالعربي</label>
+                        {{ form.name_ar }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Name in
+                            English</label>
+                        {{ form.name_en }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">نوع
+                            المنشأة</label>
+                        {{ form.type }}
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">المدينة</label>
+                        {{ form.city }}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">العنوان
+                            التفصيلي</label>
+                        {{ form.address }}
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 md:col-span-2">
+                        <h4
+                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <i class="ph-bold ph-map-pin text-brand-600"></i> الإحداثيات الجغرافية (اختياري)
+                        </h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1">Latitude</label>
+                                {{ form.latitude }}
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1">Longitude</label>
+                                {{ form.longitude }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-slate-200 flex justify-end gap-3">
+                    <a href="{% url 'networks:service_provider_list' %}"
+                        class="px-6 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-bold transition">إلغاء</a>
+                    <button type="submit"
+                        class="px-10 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 font-bold shadow-lg shadow-brand-100 transition flex items-center gap-2">
+                        <i class="ph-bold ph-check"></i> حفظ البيانات
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

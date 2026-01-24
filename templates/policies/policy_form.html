@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800">{{ title }}</h2>
+            <p class="text-slate-500 text-sm mt-1">إدخال البيانات الأساسية لوثيقة التأمين</p>
+        </div>
+        <a href="{% url 'policies:policy_list' %}"
+            class="text-slate-500 hover:text-slate-700 font-medium text-sm flex items-center gap-2 transition">
+            <i class="ph-bold ph-arrow-right"></i> رجوع للقائمة
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-200 bg-slate-50">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                <i class="ph-duotone ph-file-text text-brand-600 text-xl"></i>
+                بيانات البوليصة والتعاقد
+            </h3>
+        </div>
+
+        <div class="p-8">
+            <form method="post" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">رقم البوليصة (أو مرجع العقد)</label>
+                        {{ form.policy_number }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">العميل (الشركة المستفيدة)</label>
+                        {{ form.client }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">جهة التأمين (Provider)</label>
+                        {{ form.provider }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">تاريخ البداية</label>
+                        {{ form.start_date }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">تاريخ الانتهاء</label>
+                        {{ form.end_date }}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">تحميل العقد (PDF)</label>
+                        {{ form.contract_file }}
+                        {% if policy.contract_file %}
+                        <p class="mt-2 text-xs text-brand-600 font-bold">يوجد ملف مرفق حالياً</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center h-5">
+                            {{ form.is_active }}
+                        </div>
+                        <div class="text-sm">
+                            <label for="{{ form.is_active.id_for_label }}" class="font-bold text-slate-700">بوليصة
+                                نشطة</label>
+                            <p class="text-slate-500 text-xs">تعطيل البوليصة سيمنع إصدار أي مطالبات جديدة عليها.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-slate-200 flex justify-end gap-3">
+                    <a href="{% url 'policies:policy_list' %}"
+                        class="px-6 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-bold transition">إلغاء</a>
+                    <button type="submit"
+                        class="px-8 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-bold shadow-lg shadow-brand-100 transition flex items-center gap-2">
+                        <i class="ph-bold ph-check"></i> حفظ بيانات البوليصة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

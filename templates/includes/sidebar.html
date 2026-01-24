@@ -39,7 +39,8 @@
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">شركات التأمين</span>
         </a>
 
-        <a href="#" class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition">
+        <a href="{% url 'policies:policy_list' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'policy' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-file-text text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">وثائق التأمين</span>
         </a>
@@ -47,6 +48,18 @@
         <a href="#" class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition">
             <i class="ph-duotone ph-hand-coins text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">جميع المطالبات</span>
+        </a>
+
+        <a href="{% url 'networks:network_list' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if '/networks/' in request.path and 'service-providers' not in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
+            <i class="ph-duotone ph-network text-xl"></i>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">الشبكات الطبية</span>
+        </a>
+
+        <a href="{% url 'networks:service_provider_list' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'service-providers' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
+            <i class="ph-duotone ph-first-aid text-xl"></i>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">مقدمي الخدمة</span>
         </a>
 
         <a href="{% url 'partner_list' %}"
@@ -66,6 +79,12 @@
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if '/users/' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-users-three text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">إدارة المستخدمين</span>
+        </a>
+
+        <a href="{% url 'policies:benefit_type_list' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'benefit-types' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
+            <i class="ph-duotone ph-list-checks text-xl"></i>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">أنواع المنافع</span>
         </a>
         {% endif %}
         {% endif %}

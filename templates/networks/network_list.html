@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+        <h2 class="text-2xl font-black text-slate-800">الشبكات الطبية</h2>
+        <p class="text-slate-500 text-sm mt-1">إدارة شبكات التغطية الطبية التابعة لشركات التأمين</p>
+    </div>
+    <a href="{% url 'networks:network_create' %}"
+        class="px-4 py-2 bg-brand-600 text-white rounded-xl hover:bg-brand-700 font-bold shadow-lg shadow-brand-200 transition flex items-center gap-2 text-sm">
+        <i class="ph-bold ph-plus"></i> إضافة شبكة جديدة
+    </a>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for n in networks %}
+    <div
+        class="group bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-brand-500 hover:shadow-xl hover:shadow-brand-500/5 transition-all relative overflow-hidden flex flex-col">
+        <div class="p-6 flex-1">
+            <div class="flex justify-between items-start mb-4">
+                <div
+                    class="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 font-black group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
+                    <i class="ph-duotone ph-tree-structure text-2xl"></i>
+                </div>
+                <div class="text-left">
+                    <span
+                        class="px-2 py-0.5 bg-brand-50 text-brand-600 text-[9px] font-black rounded border border-brand-100 uppercase tracking-widest">
+                        {{ n.provider.name_en|truncatechars:10 }}
+                    </span>
+                </div>
+            </div>
+
+            <h4 class="text-xl font-black text-slate-800">{{ n.name_ar }}</h4>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 mb-6">{{ n.name_en }}</p>
+
+            <div class="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                <i class="ph-duotone ph-hospital text-brand-600"></i>
+                <span class="text-xs font-bold text-slate-600">{{ n.hospitals.count }} مستشفى ومركز</span>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-slate-100 bg-slate-50/50 flex gap-2">
+            <a href="{% url 'networks:network_manage_hospitals' n.pk %}"
+                class="flex-1 py-2 bg-white border border-slate-200 text-slate-700 text-center rounded-lg text-[10px] font-black hover:bg-brand-50 hover:text-brand-600 hover:border-brand-200 transition">
+                إدارة المستشفيات
+            </a>
+            <a href="{% url 'networks:network_update' n.pk %}"
+                class="px-3 py-2 bg-white border border-slate-200 text-slate-400 rounded-lg hover:text-brand-600 hover:border-brand-200 transition">
+                <i class="ph-bold ph-pencil-simple"></i>
+            </a>
+        </div>
+        <i class="ph-duotone ph-shield-check absolute -bottom-6 -left-6 text-brand-500/5 text-9xl"></i>
+    </div>
+    {% empty %}
+    <div
+        class="md:col-span-2 lg:col-span-3 py-24 text-center bg-white rounded-2xl border-2 border-dashed border-slate-200">
+        <i class="ph-duotone ph-network text-6xl text-slate-300 mb-4 block"></i>
+        <p class="text-slate-500 font-bold">لم يتم إنشاء أي شبكات طبية بعد</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+
+    <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-3">
+                <a href="{% url 'networks:network_list' %}"
+                    class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-brand-600 transition shadow-sm">
+                    <i class="ph-bold ph-arrow-right"></i>
+                </a>
+                <h2 class="text-2xl font-black text-slate-800">إدارة مستشفيات الشبكة: {{ network.name_ar }}</h2>
+            </div>
+            <p class="text-slate-500 text-sm mt-1 mr-11">تابعة لشركة: {{ network.provider.name_ar }}</p>
+        </div>
+
+        <div class="relative group">
+            <input type="text" name="search" placeholder="بحث في جميع المستشفيات..."
+                class="w-80 pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium"
+                hx-get="{% url 'networks:network_manage_hospitals' network.pk %}" hx-trigger="keyup changed delay:300ms"
+                hx-target="#hospital-selection-list" hx-indicator=".search-spinner">
+            <i class="ph-duotone ph-magnifying-glass absolute right-3 top-3 text-slate-400 text-xl"></i>
+            <div class="search-spinner htmx-indicator absolute left-3 top-3.5">
+                <div class="animate-spin h-4 w-4 border-2 border-brand-500 border-t-transparent rounded-full"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+        <!-- Summary Stats -->
+        <div class="lg:col-span-1 space-y-6">
+            <div
+                class="bg-indigo-900 rounded-2xl p-6 text-white shadow-xl shadow-indigo-900/20 relative overflow-hidden">
+                <h4 class="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-6">المستشفيات المضافة
+                </h4>
+                <div class="text-5xl font-black mb-1" id="selected-count">{{ hospitals_in_network.count }}</div>
+                <p class="text-[10px] text-indigo-200 font-bold uppercase tracking-tighter">Selected Providers</p>
+                <i class="ph-duotone ph-hospital absolute -left-4 -bottom-4 text-white/10 text-8xl"></i>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h5 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">تعليمات</h5>
+                <ul class="space-y-3 text-xs text-slate-600 font-medium leading-relaxed">
+                    <li class="flex items-start gap-2">
+                        <i class="ph-bold ph-check-circle text-green-500 mt-0.5"></i>
+                        استخدم البحث للعثور على المستشفيات بالاسم أو المدينة.
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="ph-bold ph-check-circle text-green-500 mt-0.5"></i>
+                        الضغط على "إضافة" يربط المستشفى بالشبكة فورياً.
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="ph-bold ph-check-circle text-green-500 mt-0.5"></i>
+                        يمكنك إضافة عدد غير محدود من مقدمي الخدمة.
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Selection List -->
+        <div class="lg:col-span-3">
+            <div id="hospital-selection-list">
+                {% include 'networks/partials/hospital_selection_list.html' %}
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

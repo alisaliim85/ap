@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+        <h2 class="text-2xl font-black text-slate-800">مقدمي الخدمة الطبية</h2>
+        <p class="text-slate-500 text-sm mt-1">إدارة المستشفيات، المراكز، والصيدليات المتعاقد معها</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <div class="relative group">
+            <input type="text" name="search" placeholder="بحث عن مستشفى أو مدينة..."
+                class="w-64 pl-4 pr-10 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                hx-get="{% url 'networks:service_provider_list' %}" hx-trigger="keyup changed delay:500ms"
+                hx-target="#provider-table-container" hx-indicator=".search-spinner">
+            <i class="ph-duotone ph-magnifying-glass absolute right-3 top-2.5 text-slate-400 text-lg"></i>
+            <div class="search-spinner htmx-indicator absolute left-3 top-3">
+                <div class="animate-spin h-4 w-4 border-2 border-brand-500 border-t-transparent rounded-full"></div>
+            </div>
+        </div>
+
+        <a href="{% url 'networks:service_provider_create' %}"
+            class="px-4 py-2 bg-brand-600 text-white rounded-xl hover:bg-brand-700 font-bold shadow-lg shadow-brand-200 transition flex items-center gap-2 text-sm">
+            <i class="ph-bold ph-plus"></i> إضافة مقدم خدمة
+        </a>
+    </div>
+</div>
+
+<div id="provider-table-container">
+    {% include 'networks/partials/provider_table.html' %}
+</div>
+{% endblock %}
