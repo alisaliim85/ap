@@ -1,0 +1,176 @@
+<!-- Desktop View -->
+<div class="hidden md:block overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
+    <table class="w-full text-right text-sm">
+        <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+            <tr>
+                <th class="px-6 py-3">المستخدم</th>
+                <th class="px-6 py-3">الدور</th>
+                <th class="px-6 py-3">الجهة التابع لها</th>
+                <th class="px-6 py-3 text-center">الحالة</th>
+                <th class="px-6 py-3 w-32">الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for u in users %}
+            <tr class="hover:bg-brand-50/30 transition group">
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 font-bold text-xs uppercase">
+                            {{ u.username|slice:":2" }}
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-800">{{ u.get_full_name|default:u.username }}</div>
+                            <div class="text-[10px] text-slate-400 font-mono">{{ u.email }}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4">
+                    <span
+                        class="px-2 py-1 {% if u.is_broker %}bg-indigo-50 text-indigo-600 border-indigo-100{% elif u.is_hr %}bg-purple-50 text-purple-600 border-purple-100{% else %}bg-slate-50 text-slate-600 border-slate-100{% endif %} rounded text-[10px] font-black border uppercase tracking-wider">
+                        {{ u.get_role_display }}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
+                    {% if u.related_client %}
+                    <div class="text-slate-700 font-medium">{{ u.related_client.name_ar }}</div>
+                    {% elif u.related_partner %}
+                    <div class="text-slate-700 font-medium">{{ u.related_partner.name_ar }}</div>
+                    {% else %}
+                    <span class="text-slate-400 text-xs italic">طاقم الوسيط (AP Plus)</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-center">
+                    {% if u.is_active %}
+                    <span
+                        class="inline-flex items-center gap-1 text-green-600 text-[10px] font-bold bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> نشط
+                    </span>
+                    {% else %}
+                    <span
+                        class="inline-flex items-center gap-1 text-slate-400 text-[10px] font-bold bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span> معطل
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-left">
+                    <div class="flex items-center justify-end gap-2 transition-opacity group-hover:opacity-100">
+                        <a href="{% url 'user_update' u.pk %}"
+                            class="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-md transition"
+                            title="تعديل">
+                            <i class="ph-duotone ph-pencil-simple text-lg"></i>
+                        </a>
+                        <a href="{% url 'user_delete' u.pk %}"
+                            class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition"
+                            title="حذف">
+                            <i class="ph-duotone ph-trash text-lg"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="px-6 py-20 text-center">
+                    <div class="flex flex-col items-center justify-center text-slate-400">
+                        <i class="ph-duotone ph-users text-5xl mb-3"></i>
+                        <p>لا يوجد مستخدمين مضافين</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Mobile View -->
+<div class="md:hidden space-y-4">
+    {% for u in users %}
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div class="flex items-center gap-3 mb-4">
+            <div
+                class="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 font-bold uppercase">
+                {{ u.username|slice:":2" }}
+            </div>
+            <div class="flex-1">
+                <div class="flex items-center justify-between">
+                    <h4 class="font-bold text-slate-800">{{ u.get_full_name|default:u.username }}</h4>
+                    {% if u.is_active %}
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    {% else %}
+                    <span class="w-2 h-2 rounded-full bg-slate-300"></span>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-slate-400 font-mono">{{ u.email }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-[10px] font-bold uppercase tracking-widest mb-4">
+            <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                <span class="text-slate-400 block mb-1">الدور</span>
+                <span class="text-slate-700">{{ u.get_role_display }}</span>
+            </div>
+            <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                <span class="text-slate-400 block mb-1">تاريخ الانضمام</span>
+                <span class="text-slate-700">{{ u.date_joined|date:"Y-m-d" }}</span>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-4 pt-3 border-t border-slate-50">
+            <a href="{% url 'user_update' u.pk %}" class="text-brand-600 text-sm font-bold flex items-center gap-1.5">
+                <i class="ph-bold ph-pencil-simple"></i> تعديل
+            </a>
+            <a href="{% url 'user_delete' u.pk %}" class="text-red-500 text-sm font-bold flex items-center gap-1.5">
+                <i class="ph-bold ph-trash"></i> حذف
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination Section -->
+{% if page_obj.has_other_pages %}
+<div
+    class="mt-4 px-6 py-4 bg-white border border-slate-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+    <div class="text-xs text-slate-500 font-medium order-2 sm:order-1">
+        عرض <span class="font-bold text-slate-700">{{ page_obj.start_index }}</span> إلى <span
+            class="font-bold text-slate-700">{{ page_obj.end_index }}</span> من أصل <span
+            class="font-bold text-slate-700">{{ page_obj.paginator.count }}</span> مستخدم
+    </div>
+
+    <nav class="flex items-center gap-1 order-1 sm:order-2">
+        {% if page_obj.has_previous %}
+        <a href="javascript:void(0)"
+            hx-get="{% url 'user_list' %}?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+            hx-target="#user-table-container"
+            class="p-2 text-slate-400 hover:text-brand-600 hover:bg-slate-50 border border-transparent hover:border-slate-200 rounded-md transition-all">
+            <i class="ph-bold ph-caret-right"></i>
+        </a>
+        {% endif %}
+
+        <div class="flex items-center gap-1">
+            {% for i in page_obj.paginator.page_range %}
+            {% if page_obj.number == i %}
+            <span class="w-8 h-8 flex items-center justify-center bg-brand-600 text-white text-xs font-bold rounded-md">
+                {{ i }}
+            </span>
+            {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %} <a href="javascript:void(0)"
+                hx-get="{% url 'user_list' %}?page={{ i }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+                hx-target="#user-table-container"
+                class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-brand-600 hover:bg-slate-50 text-xs font-semibold rounded-md transition-all">
+                {{ i }}
+                </a>
+                {% endif %}
+                {% endfor %}
+        </div>
+
+        {% if page_obj.has_next %}
+        <a href="javascript:void(0)"
+            hx-get="{% url 'user_list' %}?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+            hx-target="#user-table-container"
+            class="p-2 text-slate-400 hover:text-brand-600 hover:bg-slate-50 border border-transparent hover:border-slate-200 rounded-md transition-all">
+            <i class="ph-bold ph-caret-left"></i>
+        </a>
+        {% endif %}
+    </nav>
+</div>
+{% endif %}

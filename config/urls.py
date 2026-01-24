@@ -1,21 +1,15 @@
 from django.contrib import admin
 from django.urls import path, include
-from accounts.views import login_view, logout_view, dashboard
+from accounts.views import login_view # Keep login_view for the root path if desired
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # روابط الحسابات
-    path('', login_view, name='login'),
-    path('logout/', logout_view, name='logout'),
-    path('dashboard/', dashboard, name='dashboard'),
+    # روابط الحسابات (شاملة تسجيل الدخول ولوحة التحكم وإدارة المستخدمين)
+    path('', include('accounts.urls')),
     
-    # روابط تطبيق العملاء
+    # روابط التطبيقات الأخرى
     path('clients/', include('clients.urls')),
-    
-    # روابط تطبيق شركات التأمين
     path('providers/', include('providers.urls')),
-
-    # روابط تطبيق الشركاء والمزودين
     path('partners/', include('partners.urls')),
 ]

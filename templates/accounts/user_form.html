@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800">{{ title }}</h2>
+            <p class="text-slate-500 text-sm mt-1">تأكد من اختيار الدور الصحيح والجهة التابع لها المستخدم</p>
+        </div>
+        <a href="{% url 'user_list' %}"
+            class="text-slate-500 hover:text-slate-700 font-medium text-sm flex items-center gap-2">
+            <i class="ph-bold ph-arrow-right"></i> رجوع للقائمة
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-200 bg-slate-50">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                <i class="ph-duotone ph-user-circle-plus text-brand-600 text-xl"></i>
+                بيانات حساب المستخدم
+            </h3>
+        </div>
+
+        <div class="p-8">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">اسم المستخدم (للدخول)</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.username.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">الاسم الأول</label>
+                        {{ form.first_name }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">اسم العائلة</label>
+                        {{ form.last_name }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">البريد الإلكتروني</label>
+                        {{ form.email }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">رقم الهاتف</label>
+                        {{ form.phone_number }}
+                    </div>
+
+                    <div class="pt-4 md:col-span-2 border-t border-slate-100">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">الدور (الصلاحية)</label>
+                                {{ form.role }}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">الجهة التابع لها</label>
+                                {{ form.related_client }}
+                                <p class="text-[10px] text-slate-400 mt-1">يُشترط اختيار شركة في حال اختيار دور HR.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 pt-4 border-t border-slate-100">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">كلمة المرور</label>
+                        {{ form.password }}
+                        {% if form.password.help_text %}
+                        <p class="text-[10px] text-slate-400 mt-2">{{ form.password.help_text }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center h-5">
+                            {{ form.is_active }}
+                        </div>
+                        <div class="text-sm">
+                            <label for="{{ form.is_active.id_for_label }}" class="font-bold text-slate-700">تمكين
+                                الحساب</label>
+                            <p class="text-slate-500 text-xs">تعطيل الحساب سيمنع المستخدم من تسجيل الدخول فوراً.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-slate-200 flex justify-end gap-3">
+                    <a href="{% url 'user_list' %}"
+                        class="px-6 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-bold transition">
+                        إلغاء
+                    </a>
+                    <button type="submit"
+                        class="px-8 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-bold shadow-lg shadow-brand-100 transition flex items-center gap-2">
+                        <i class="ph-bold ph-check"></i> حفظ البيانات
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
