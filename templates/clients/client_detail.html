@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800">تفاصيل الشركة</h2>
+            <p class="text-slate-500 text-sm mt-1">عرض البيانات الكاملة لـ {{ client.name_ar }}</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'client_list' %}"
+                class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 font-medium text-sm flex items-center gap-2">
+                <i class="ph-bold ph-arrow-right"></i> رجوع
+            </a>
+            <a href="{% url 'client_update' client.pk %}"
+                class="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-bold text-sm flex items-center gap-2">
+                <i class="ph-bold ph-pencil-simple"></i> تعديل
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- Main Info -->
+        <div class="md:col-span-2 space-y-6">
+            <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                    <i class="ph-duotone ph-buildings text-brand-600 text-2xl"></i>
+                    <h3 class="font-bold text-slate-800">البيانات الأساسية</h3>
+                </div>
+                <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">الاسم
+                            العربي</label>
+                        <p class="text-slate-800 font-bold text-lg">{{ client.name_ar }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">English
+                            Name</label>
+                        <p class="text-slate-800 font-bold text-lg">{{ client.name_en }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">رقم السجل
+                            التجاري</label>
+                        <p class="text-slate-600 font-mono">{{ client.commercial_record }}</p>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">الحالة</label>
+                        {% if client.is_active %}
+                        <span
+                            class="inline-flex items-center gap-1.5 text-green-600 text-sm font-bold bg-green-50 px-3 py-1 rounded-full border border-green-100">
+                            <span class="w-2 h-2 rounded-full bg-green-500"></span> نشط
+                        </span>
+                        {% else %}
+                        <span
+                            class="inline-flex items-center gap-1.5 text-red-600 text-sm font-bold bg-red-50 px-3 py-1 rounded-full border border-red-100">
+                            <span class="w-2 h-2 rounded-full bg-red-400"></span> معطل
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- More sections can be added here (Employees, Invoices, etc.) -->
+        </div>
+
+        <!-- Sidebar Info -->
+        <div class="space-y-6">
+            <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-200 bg-slate-50">
+                    <h4 class="font-bold text-slate-800">التصنيف</h4>
+                </div>
+                <div class="p-4">
+                    {% if client.parent %}
+                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-3">
+                        <i class="ph-duotone ph-tree-structure text-slate-400 text-xl"></i>
+                        <div>
+                            <span class="block text-xs text-slate-400 font-bold uppercase">شركة تابعة لـ</span>
+                            <a href="{% url 'client_detail' client.parent.pk %}"
+                                class="text-brand-600 font-bold hover:underline">{{ client.parent.name_ar }}</a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="p-3 bg-brand-50 rounded-lg border border-brand-100 flex items-center gap-3">
+                        <i class="ph-duotone ph-crown text-brand-600 text-xl"></i>
+                        <div>
+                            <span class="block text-xs text-brand-600 font-bold uppercase">مجموعة قابضة</span>
+                            <span class="text-slate-800 font-bold">حساب رئيسي</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-200 bg-slate-50">
+                    <h4 class="font-bold text-slate-800">التاريخ</h4>
+                </div>
+                <div class="p-4 space-y-4">
+                    <div>
+                        <span class="block text-xs text-slate-400 font-bold uppercase mb-1">تاريخ الإضافة</span>
+                        <div class="text-slate-600 text-sm flex items-center gap-2">
+                            <i class="ph-duotone ph-calendar text-slate-400"></i>
+                            {{ client.created_at|date:"Y-m-d" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

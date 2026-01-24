@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800">{{ title }}</h2>
+            <p class="text-slate-500 text-sm mt-1">يرجى ملء جميع الحقول الإلزامية</p>
+        </div>
+        <a href="{% url 'client_list' %}"
+            class="text-slate-500 hover:text-slate-700 font-medium text-sm flex items-center gap-2">
+            <i class="ph-bold ph-arrow-right"></i> رجوع للقائمة
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-200 bg-slate-50">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                <i class="ph-duotone ph-identification-card text-brand-600 text-xl"></i>
+                بيانات الشركة
+            </h3>
+        </div>
+
+        <div class="p-6">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Form Field Helper -->
+                    <!-- We assume form fields are rendered with default Django widgets, so we wrap them or customize attributes in Python form. 
+                         However, for this template, we'll assume we can wrap them in standard containers. 
+                         Ideally, the Form class should add Tailwind classes to widgets. -->
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">الاسم (إنجليزي)</label>
+                        <div class="relative">
+                            {{ form.name_en }}
+                            <!-- Note: Ensure your Django Form sets class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500" -->
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">الاسم (عربي)</label>
+                        <div class="relative">
+                            {{ form.name_ar }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">السجل التجاري</label>
+                        <div class="relative">
+                            {{ form.commercial_record }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">البريد الإلكتروني</label>
+                        <div class="relative">
+                            {{ form.email }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">رقم الهاتف</label>
+                        <div class="relative">
+                            {{ form.phone }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">الشركة الأم (إن وجدت)</label>
+                        <div class="relative">
+                            {{ form.parent }}
+                            <p class="mt-1 text-xs text-slate-400">اتركه فارغاً إذا كانت هذه شركة قابضة.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center h-5">
+                            {{ form.is_active }}
+                        </div>
+                        <div class="text-sm">
+                            <label for="{{ form.is_active.id_for_label }}" class="font-medium text-slate-700">الشركة
+                                نشطة</label>
+                            <p class="text-slate-500 text-xs">تفعيل الوصول للنظام لهذه الشركة.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-slate-200 flex justify-end gap-3">
+                    <a href="{% url 'client_list' %}"
+                        class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 font-medium transition">
+                        إلغاء
+                    </a>
+                    <button type="submit"
+                        class="px-6 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-bold shadow-sm transition flex items-center gap-2">
+                        <i class="ph-bold ph-check"></i> حفظ البيانات
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

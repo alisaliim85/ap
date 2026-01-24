@@ -1,0 +1,60 @@
+{% comment %}
+Reusable Sidebar Drawer (Slide-over) Component
+Usage:
+<div x-data="{ open: false }">
+    <button @click="open = true">Open Drawer</button>
+    {% include 'includes/drawer.html' with id="my-drawer" title="Drawer Title" %}
+</div>
+{% endcomment %}
+
+<div class="relative z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true" x-show="open" x-cloak>
+
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" x-show="open"
+        x-transition:enter="ease-in-out duration-300" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in-out duration-300"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"></div>
+
+    <div class="fixed inset-0 overflow-hidden">
+        <div class="absolute inset-0 overflow-hidden">
+            <!-- Left-aligned drawer for RTL layout -->
+            <div class="pointer-events-none fixed inset-y-0 left-0 flex max-w-full">
+                <div class="pointer-events-auto w-screen max-w-md transition duration-300 ease-in-out transform"
+                    x-show="open" @click.away="open = false"
+                    x-transition:enter="transform transition ease-in-out duration-300"
+                    x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
+                    x-transition:leave="transform transition ease-in-out duration-300"
+                    x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full">
+
+                    <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-2xl">
+                        <!-- Drawer Header -->
+                        <div
+                            class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center sticky top-0 z-10">
+                            <h2 class="text-lg font-extrabold text-slate-800" id="slide-over-title">
+                                {{ title|default:"تفاصيل" }}
+                            </h2>
+                            <button @click="open = false" class="p-2 text-slate-400 hover:text-red-500 transition">
+                                <i class="ph-bold ph-x text-xl"></i>
+                            </button>
+                        </div>
+
+                        <!-- Drawer Content -->
+                        <div class="relative flex-1 px-6 py-6" id="{{ id }}-content">
+                            {% block drawer_content %}{% endblock %}
+                        </div>
+
+                        <!-- Drawer Footer -->
+                        <div
+                            class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3 sticky bottom-0 z-10">
+                            <button @click="open = false"
+                                class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 text-sm font-bold transition">
+                                إغلاق
+                            </button>
+                            {% block drawer_actions %}{% endblock %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

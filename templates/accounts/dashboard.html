@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة التحكم الرئيسية{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div>
+        <h2 class="text-2xl font-bold text-slate-800">مرحباً، {{ user.first_name }} 👋</h2>
+        <p class="text-slate-500 text-sm mt-1">إليك نظرة عامة على ما يحدث اليوم في النظام.</p>
+    </div>
+    <div class="text-left bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm flex items-center gap-3">
+        <div class="text-right">
+            <span class="block text-xs font-bold text-slate-500 uppercase tracking-wider">{{ user.get_role_display
+                }}</span>
+            <div class="text-xs text-brand-600 font-bold mt-0.5">
+                {% if user.is_broker %}
+                {{ user.related_partner.name_ar }}
+                {% elif user.is_hr %}
+                {{ user.related_client.name_ar }}
+                {% endif %}
+            </div>
+        </div>
+        <div
+            class="h-10 w-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 border border-brand-100">
+            <i class="ph-bold ph-user"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+    <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition">
+        <div class="flex justify-between items-start mb-4">
+            <div class="p-2 bg-brand-50 rounded-md text-brand-600">
+                {% if user.is_broker %}
+                <i class="ph-duotone ph-buildings text-2xl"></i>
+                {% else %}
+                <i class="ph-duotone ph-users text-2xl"></i>
+                {% endif %}
+            </div>
+            <span
+                class="inline-flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                <i class="ph-bold ph-arrow-up-right"></i> 2.5%
+            </span>
+        </div>
+        <h3 class="text-2xl font-bold text-slate-800 mb-1">124</h3>
+        <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">
+            {% if user.is_broker %}
+            إجمالي الشركات
+            {% elif user.is_hr %}
+            عدد الموظفين
+            {% else %}
+            المرضى النشطين
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition">
+        <div class="flex justify-between items-start mb-4">
+            <div class="p-2 bg-orange-50 rounded-md text-orange-600">
+                <i class="ph-duotone ph-receipt text-2xl"></i>
+            </div>
+            <span class="text-xs font-medium text-slate-400">هذا الشهر</span>
+        </div>
+        <h3 class="text-2xl font-bold text-slate-800 mb-1">8</h3>
+        <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">المطالبات المعلقة</p>
+    </div>
+
+    <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition">
+        <div class="flex justify-between items-start mb-4">
+            <div class="p-2 bg-green-50 rounded-md text-green-600">
+                <i class="ph-duotone ph-check-circle text-2xl"></i>
+            </div>
+        </div>
+        <h3 class="text-2xl font-bold text-slate-800 mb-1">45,200 <span
+                class="text-sm text-slate-400 font-normal">ر.س</span></h3>
+        <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">المطالبات المدفوعة</p>
+    </div>
+
+    <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition">
+        <div class="flex justify-between items-start mb-4">
+            <div class="p-2 bg-red-50 rounded-md text-red-600">
+                <i class="ph-duotone ph-heartbeat text-2xl"></i>
+            </div>
+        </div>
+        <h3 class="text-2xl font-bold text-slate-800 mb-1">12</h3>
+        <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">حالات الأمراض المزمنة</p>
+    </div>
+
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+    <!-- Recent Activity Table -->
+    <div class="lg:col-span-2 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h5 class="font-bold text-slate-800">آخر النشاطات</h5>
+            <button class="text-brand-600 text-sm font-bold hover:text-brand-700">عرض الكل</button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-right">
+                <thead class="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
+                    <tr>
+                        <th class="px-6 py-3">المرجع</th>
+                        <th class="px-6 py-3">صاحب الطلب</th>
+                        <th class="px-6 py-3">النوع</th>
+                        <th class="px-6 py-3">التاريخ</th>
+                        <th class="px-6 py-3">الحالة</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-6 py-4 font-mono text-brand-600 font-bold">CLM-2024-001</td>
+                        <td class="px-6 py-4 text-slate-800">أحمد محمد</td>
+                        <td class="px-6 py-4 text-slate-600">استعاضة مالية</td>
+                        <td class="px-6 py-4 text-slate-500">24 Jan 2026</td>
+                        <td class="px-6 py-4"><span
+                                class="px-2 py-1 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded text-xs font-bold">قيد
+                                المراجعة</span></td>
+                    </tr>
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-6 py-4 font-mono text-brand-600 font-bold">REQ-2024-089</td>
+                        <td class="px-6 py-4 text-slate-800">سارة علي</td>
+                        <td class="px-6 py-4 text-slate-600">رعاية مزمنة</td>
+                        <td class="px-6 py-4 text-slate-500">23 Jan 2026</td>
+                        <td class="px-6 py-4"><span
+                                class="px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded text-xs font-bold">تم
+                                الاعتماد</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Quick Actions & Alerts -->
+    <div class="space-y-6">
+
+        <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-slate-200 bg-slate-50">
+                <h5 class="font-bold text-slate-800">إجراءات سريعة</h5>
+            </div>
+            <div class="p-4 space-y-3">
+                {% if user.is_broker %}
+                <a href="{% url 'client_create' %}"
+                    class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-bold shadow-sm transition">
+                    <i class="ph-bold ph-plus-circle"></i> إضافة عميل جديد
+                </a>
+                <button
+                    class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 font-medium transition">
+                    <i class="ph-bold ph-file-text"></i> إنشاء بوليصة تأمين
+                </button>
+                {% elif user.is_hr %}
+                <button
+                    class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-bold shadow-sm transition">
+                    <i class="ph-bold ph-user-plus"></i> إضافة موظف جديد
+                </button>
+                <button
+                    class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 font-medium transition">
+                    <i class="ph-bold ph-upload-simple"></i> رفع مطالبات (Excel)
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-slate-200 bg-slate-50">
+                <h5 class="font-bold text-slate-800">تنبيهات النظام</h5>
+            </div>
+            <div class="divide-y divide-slate-100">
+                <div class="p-4 flex gap-3 hover:bg-slate-50 transition">
+                    <i class="ph-fill ph-info text-blue-500 text-xl mt-0.5"></i>
+                    <div>
+                        <p class="text-sm text-slate-800">تم تحديث سياسة الخصوصية للنظام.</p>
+                        <span class="text-xs text-slate-400 mt-1 block">منذ ساعتين</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

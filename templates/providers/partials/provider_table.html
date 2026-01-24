@@ -1,0 +1,203 @@
+<!-- Desktop View -->
+<div class="hidden md:block overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
+    <table class="w-full text-right text-sm">
+        <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+            <tr>
+                <th class="px-6 py-3">الشركة</th>
+                <th class="px-6 py-3">رقم الترخيص</th>
+                <th class="px-6 py-3">بريد المطالبات</th>
+                <th class="px-6 py-3 text-center">الحالة</th>
+                <th class="px-6 py-3 w-32">الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for provider in providers %}
+            <tr class="hover:bg-brand-50/30 transition group">
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        {% if provider.logo %}
+                        <img src="{{ provider.logo.url }}" alt="{{ provider.name_en }}"
+                            class="w-8 h-8 rounded border border-slate-100 object-contain">
+                        {% else %}
+                        <div
+                            class="w-8 h-8 bg-slate-100 rounded border border-slate-200 flex items-center justify-center">
+                            <i class="ph-duotone ph-image text-slate-400"></i>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <div class="font-bold text-slate-800">{{ provider.name_ar }}</div>
+                            <div class="text-xs text-slate-400">{{ provider.name_en }}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 text-slate-600 font-mono">{{ provider.license_number }}</td>
+                <td class="px-6 py-4">
+                    {% if provider.claim_email %}
+                    <a href="mailto:{{ provider.claim_email }}" class="text-brand-600 hover:underline">
+                        {{ provider.claim_email }}
+                    </a>
+                    {% else %}
+                    <span class="text-slate-300">-</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-center">
+                    {% if provider.is_active %}
+                    <span class="flex items-center justify-center gap-1.5 text-green-600 text-xs font-bold">
+                        <span class="w-2 h-2 rounded-full bg-green-500"></span> نشط
+                    </span>
+                    {% else %}
+                    <span class="flex items-center justify-center gap-1.5 text-red-600 text-xs font-bold">
+                        <span class="w-2 h-2 rounded-full bg-red-400"></span> معطل
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-left">
+                    <div class="flex items-center justify-end gap-2 transition-opacity group-hover:opacity-100">
+                        <a href="{% url 'provider_detail' provider.pk %}"
+                            class="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-md transition"
+                            title="تفاصيل">
+                            <i class="ph-duotone ph-eye text-lg"></i>
+                        </a>
+                        <a href="{% url 'provider_update' provider.pk %}"
+                            class="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-md transition"
+                            title="تعديل">
+                            <i class="ph-duotone ph-pencil-simple text-lg"></i>
+                        </a>
+                        <a href="{% url 'provider_delete' provider.pk %}"
+                            class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition"
+                            title="حذف">
+                            <i class="ph-duotone ph-trash text-lg"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="px-6 py-20 text-center">
+                    <div class="flex flex-col items-center justify-center text-slate-400">
+                        <i class="ph-duotone ph-buildings text-5xl mb-3"></i>
+                        <p>لا توجد شركات تأمين مضافة</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Mobile View -->
+<div class="md:hidden space-y-4">
+    {% for provider in providers %}
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div class="flex items-center gap-3 mb-4">
+            {% if provider.logo %}
+            <img src="{{ provider.logo.url }}" alt="{{ provider.name_en }}"
+                class="w-12 h-12 rounded-lg border border-slate-100 object-contain">
+            {% else %}
+            <div class="w-12 h-12 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-center">
+                <i class="ph-duotone ph-buildings text-slate-300 text-2xl"></i>
+            </div>
+            {% endif %}
+            <div class="flex-1">
+                <div class="flex items-center justify-between">
+                    <h4 class="font-bold text-slate-800">{{ provider.name_ar }}</h4>
+                    {% if provider.is_active %}
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    {% else %}
+                    <span class="w-2 h-2 rounded-full bg-red-400"></span>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-slate-500">{{ provider.name_en }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 text-xs font-medium mb-4">
+            <div class="bg-slate-50 p-2 rounded-lg">
+                <span class="text-slate-400 block mb-0.5">رقم الترخيص</span>
+                <span class="text-slate-700 font-mono">{{ provider.license_number }}</span>
+            </div>
+            <div class="bg-slate-50 p-2 rounded-lg">
+                <span class="text-slate-400 block mb-0.5">تاريخ الإضافة</span>
+                <span class="text-slate-700">{{ provider.created_at|date:"Y-m-d" }}</span>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-50">
+            <a href="{% url 'provider_detail' provider.pk %}"
+                class="text-slate-600 text-sm font-bold flex items-center gap-1.5">
+                <i class="ph-bold ph-eye"></i> تفاصيل
+            </a>
+            <a href="{% url 'provider_update' provider.pk %}"
+                class="text-brand-600 text-sm font-bold flex items-center gap-1.5">
+                <i class="ph-bold ph-pencil-simple"></i> تعديل
+            </a>
+            <a href="{% url 'provider_delete' provider.pk %}"
+                class="text-red-500 text-sm font-bold flex items-center gap-1.5">
+                <i class="ph-bold ph-trash"></i> حذف
+            </a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-20 bg-white rounded-xl border border-slate-200">
+        <i class="ph-duotone ph-buildings text-5xl text-slate-200 mb-2"></i>
+        <p class="text-slate-400">لا يوجد بيانات</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination Section -->
+{% if page_obj.has_other_pages %}
+<div
+    class="mt-4 px-6 py-4 bg-white border border-slate-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+    <div class="text-xs text-slate-500 font-medium order-2 sm:order-1">
+        عرض <span class="font-bold text-slate-700">{{ page_obj.start_index }}</span> إلى <span
+            class="font-bold text-slate-700">{{ page_obj.end_index }}</span> من أصل <span
+            class="font-bold text-slate-700">{{ page_obj.paginator.count }}</span> شركة
+    </div>
+
+    <nav class="flex items-center gap-1 order-1 sm:order-2">
+        {% if page_obj.has_previous %}
+        <a href="javascript:void(0)"
+            hx-get="{% url 'provider_list' %}?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+            hx-target="#provider-table-container"
+            class="p-2 text-slate-400 hover:text-brand-600 hover:bg-slate-50 border border-transparent hover:border-slate-200 rounded-md transition-all">
+            <i class="ph-bold ph-caret-right"></i>
+        </a>
+        {% else %}
+        <span class="p-2 text-slate-200 cursor-not-allowed">
+            <i class="ph-bold ph-caret-right"></i>
+        </span>
+        {% endif %}
+
+        <div class="flex items-center gap-1">
+            {% for i in page_obj.paginator.page_range %}
+            {% if page_obj.number == i %}
+            <span
+                class="w-8 h-8 flex items-center justify-center bg-brand-600 text-white text-xs font-bold rounded-md shadow-sm shadow-brand-200">
+                {{ i }}
+            </span>
+            {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %} <a href="javascript:void(0)"
+                hx-get="{% url 'provider_list' %}?page={{ i }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+                hx-target="#provider-table-container"
+                class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-brand-600 hover:bg-slate-50 text-xs font-semibold rounded-md transition-all border border-transparent hover:border-slate-100">
+                {{ i }}
+                </a>
+                {% endif %}
+                {% endfor %}
+        </div>
+
+        {% if page_obj.has_next %}
+        <a href="javascript:void(0)"
+            hx-get="{% url 'provider_list' %}?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+            hx-target="#provider-table-container"
+            class="p-2 text-slate-400 hover:text-brand-600 hover:bg-slate-50 border border-transparent hover:border-slate-200 rounded-md transition-all">
+            <i class="ph-bold ph-caret-left"></i>
+        </a>
+        {% else %}
+        <span class="p-2 text-slate-200 cursor-not-allowed">
+            <i class="ph-bold ph-caret-left"></i>
+        </span>
+        {% endif %}
+    </nav>
+</div>
+{% endif %}

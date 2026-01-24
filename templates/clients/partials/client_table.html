@@ -1,0 +1,185 @@
+<!-- Desktop View (Visible on md and up) -->
+<div class="hidden md:block overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
+    <table class="w-full text-right text-sm">
+        <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+            <tr>
+                <th class="px-6 py-3">اسم المنشأة</th>
+                <th class="px-6 py-3">السجل التجاري</th>
+                <th class="px-6 py-3 text-center">التصنيف</th>
+                <th class="px-6 py-3 text-center">الحالة</th>
+                <th class="px-6 py-3 w-28">الاجراءات</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for client in clients %}
+            <tr class="hover:bg-brand-50/30 transition group">
+                <td class="px-6 py-4 font-medium text-slate-800">
+                    <div>{{ client.name_ar }}</div>
+                    <div class="text-xs text-slate-400 font-normal mt-0.5">{{ client.name_en }}</div>
+                </td>
+                <td class="px-6 py-4 text-slate-600 font-mono">{{ client.commercial_record }}</td>
+                <td class="px-6 py-4 text-center">
+                    {% if client.parent %}
+                    <span
+                        class="px-2 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded text-xs font-bold">شركة
+                        تابعة</span>
+                    {% else %}
+                    <span
+                        class="px-2 py-1 bg-brand-50 text-brand-700 border border-brand-100 rounded text-xs font-bold">مجموعة
+                        قابضة</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-center">
+                    {% if client.is_active %}
+                    <span class="flex items-center justify-center gap-1 text-green-600 text-xs font-bold">
+                        <span class="w-2 h-2 rounded-full bg-green-500"></span> نشط
+                    </span>
+                    {% else %}
+                    <span class="flex items-center justify-center gap-1 text-red-600 text-xs font-bold">
+                        <span class="w-2 h-2 rounded-full bg-red-400"></span> معطل
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-left">
+                    <div class="flex items-center justify-end gap-2 transition-opacity group-hover:opacity-100">
+                        <a href="{% url 'client_detail' client.pk %}" class="p-1 hover:text-brand-600 transition"
+                            title="تفاصيل">
+                            <i class="ph-duotone ph-eye text-lg"></i>
+                        </a>
+                        <a href="{% url 'client_update' client.pk %}" class="p-1 hover:text-brand-600 transition"
+                            title="تعديل">
+                            <i class="ph-duotone ph-pencil-simple text-lg"></i>
+                        </a>
+                        <a href="{% url 'client_delete' client.pk %}" class="p-1 hover:text-red-600 transition"
+                            title="حذف">
+                            <i class="ph-duotone ph-trash text-lg"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="px-6 py-12 text-center text-slate-500">
+                    <div class="flex flex-col items-center justify-center">
+                        <i class="ph-duotone ph-buildings text-4xl text-slate-300 mb-3"></i>
+                        <p>لا توجد شركات مسجلة</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Mobile View (Stacked Cards) -->
+<div class="md:hidden space-y-3 bg-slate-50 p-4 rounded-lg">
+    {% for client in clients %}
+    <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+        <div class="flex justify-between items-start mb-2">
+            <div>
+                <h4 class="font-bold text-slate-800">{{ client.name_ar }}</h4>
+                <p class="text-xs text-slate-500 mt-0.5">{{ client.name_en }}</p>
+            </div>
+            {% if client.is_active %}
+            <span
+                class="text-green-600 text-[10px] bg-green-50 px-2 py-1 rounded border border-green-100 font-bold">نشط</span>
+            {% else %}
+            <span
+                class="text-red-600 text-[10px] bg-red-50 px-2 py-1 rounded border border-red-100 font-bold">معطل</span>
+            {% endif %}
+        </div>
+
+        <div class="text-sm text-slate-500 mb-3 space-y-1">
+            <div class="flex justify-between">
+                <span>السجل التجاري</span>
+                <span class="font-mono text-slate-700">{{ client.commercial_record }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>التصنيف</span>
+                {% if client.parent %}
+                <span class="text-xs bg-slate-100 px-1 rounded">شركة تابعة</span>
+                {% else %}
+                <span class="text-xs bg-brand-50 text-brand-700 px-1 rounded">مجموعة قابضة</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+
+            <a href="{% url 'client_detail' client.pk %}"
+                class="text-slate-600 text-sm font-medium hover:text-slate-700 flex items-center gap-1">
+                <i class="ph-bold ph-eye"></i> تفاصيل
+            </a>
+            <a href="{% url 'client_update' client.pk %}"
+                class="text-brand-600 text-sm font-medium hover:text-brand-700 flex items-center gap-1">
+                <i class="ph-bold ph-pencil-simple"></i> تعديل
+            </a>
+            <a href="{% url 'client_delete' client.pk %}"
+                class="text-red-600 text-sm font-medium hover:text-red-700 flex items-center gap-1">
+                <i class="ph-bold ph-trash"></i> حذف
+            </a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-8 text-slate-500">
+        لا توجد بيانات
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination Section -->
+{% if page_obj.has_other_pages %}
+<div
+    class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="text-xs text-slate-500 font-medium order-2 sm:order-1">
+        عرض <span class="font-bold text-slate-700">{{ page_obj.start_index }}</span> إلى <span
+            class="font-bold text-slate-700">{{ page_obj.end_index }}</span> من أصل <span
+            class="font-bold text-slate-700">{{ page_obj.paginator.count }}</span> منشأة
+    </div>
+
+    <nav class="flex items-center gap-1 order-1 sm:order-2">
+        {% if page_obj.has_previous %}
+        <a href="javascript:void(0)"
+            hx-get="{% url 'client_list' %}?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+            hx-target="#client-table-container"
+            class="p-2 text-slate-400 hover:text-brand-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all">
+            <i class="ph-bold ph-caret-right"></i>
+        </a>
+        {% else %}
+        <span class="p-2 text-slate-200 cursor-not-allowed">
+            <i class="ph-bold ph-caret-right"></i>
+        </span>
+        {% endif %}
+
+        <div class="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200">
+            {% for i in page_obj.paginator.page_range %}
+            {% if page_obj.number == i %}
+            <span
+                class="w-8 h-8 flex items-center justify-center bg-brand-600 text-white text-xs font-bold rounded-md shadow-sm shadow-brand-200">
+                {{ i }}
+            </span>
+            {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %} <a href="javascript:void(0)"
+                hx-get="{% url 'client_list' %}?page={{ i }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+                hx-target="#client-table-container"
+                class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-brand-600 hover:bg-brand-50 text-xs font-semibold rounded-md transition-all">
+                {{ i }}
+                </a>
+                {% endif %}
+                {% endfor %}
+        </div>
+
+        {% if page_obj.has_next %}
+        <a href="javascript:void(0)"
+            hx-get="{% url 'client_list' %}?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+            hx-target="#client-table-container"
+            class="p-2 text-slate-400 hover:text-brand-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all">
+            <i class="ph-bold ph-caret-left"></i>
+        </a>
+        {% else %}
+        <span class="p-2 text-slate-200 cursor-not-allowed">
+            <i class="ph-bold ph-caret-left"></i>
+        </span>
+        {% endif %}
+    </nav>
+</div>
+{% endif %}

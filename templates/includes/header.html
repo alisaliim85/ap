@@ -1,0 +1,70 @@
+<header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-10">
+    <div class="flex items-center gap-4">
+        <!-- Mobile Toggle -->
+        <button class="md:hidden text-slate-600 hover:text-brand-600" @click="sidebarOpen = !sidebarOpen">
+            <i class="ph-bold ph-list text-2xl"></i>
+        </button>
+
+        <h1 class="text-xl font-bold text-slate-800">
+            {% block header_title %}نظام الوسيط{% endblock %}
+        </h1>
+    </div>
+
+    <!-- Center Toast Area (Placeholder for messages) -->
+    <div id="toast-container" class="hidden md:flex items-center justify-center">
+        <!-- Messages will be injected here via HTMX or Alpine -->
+    </div>
+
+    <div class="flex items-center gap-4">
+        {% if user.is_authenticated %}
+        <!-- Notifications -->
+        <div class="relative">
+            <button class="p-2 text-slate-500 hover:text-brand-600 transition">
+                <i class="ph-duotone ph-bell text-2xl"></i>
+                <span
+                    class="absolute top-1.5 right-1.5 h-2.5 w-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+            </button>
+        </div>
+
+        <!-- User Profile Dropdown -->
+        <div class="relative" x-data="{ open: false }" @click.away="open = false">
+            <button @click="open = !open" class="flex items-center gap-3 hover:bg-slate-50 p-1 rounded-lg transition">
+                <div
+                    class="h-9 w-9 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold border border-brand-200">
+                    {{ user.first_name|first }}{{ user.last_name|first }}
+                </div>
+                <div class="hidden sm:block text-right">
+                    <div class="text-sm font-bold text-slate-800 leading-none">{{ user.first_name }} {{ user.last_name
+                        }}</div>
+                    <div class="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-wider">{{
+                        user.get_role_display }}</div>
+                </div>
+                <i class="ph-bold ph-caret-down text-xs text-slate-400" :class="open ? 'rotate-180' : ''"></i>
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div x-show="open" x-cloak x-transition:enter="transition ease-out duration-100"
+                x-transition:enter-start="transform opacity-0 scale-95"
+                x-transition:enter-end="transform opacity-100 scale-100"
+                class="absolute left-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl py-1 z-50">
+                <a href="#" class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                    <i class="ph-duotone ph-user"></i> الملف الشخصي
+                </a>
+                <a href="#" class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                    <i class="ph-duotone ph-gear"></i> الإعدادات
+                </a>
+                <div class="border-t border-slate-100 my-1"></div>
+                <a href="{% url 'logout' %}"
+                    class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                    <i class="ph-duotone ph-sign-out"></i> تسجيل الخروج
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <a href="{% url 'login' %}"
+            class="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 text-sm font-bold shadow-sm transition">
+            تسجيل الدخول
+        </a>
+        {% endif %}
+    </div>
+</header>

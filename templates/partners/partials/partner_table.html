@@ -1,0 +1,186 @@
+<!-- Desktop View -->
+<div class="hidden md:block overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
+    <table class="w-full text-right text-sm">
+        <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+            <tr>
+                <th class="px-6 py-3">الشريك</th>
+                <th class="px-6 py-3">النوع</th>
+                <th class="px-6 py-3">السجل التجاري</th>
+                <th class="px-6 py-3">المسؤول</th>
+                <th class="px-6 py-3 text-center">الحالة</th>
+                <th class="px-6 py-3 w-32">الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for partner in partners %}
+            <tr class="hover:bg-brand-50/30 transition group">
+                <td class="px-6 py-4">
+                    <div class="font-bold text-slate-800">{{ partner.name_ar }}</div>
+                    <div class="text-xs text-slate-400">{{ partner.name_en }}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <span
+                        class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-bold border border-slate-200">
+                        {{ partner.get_partner_type_display }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-slate-600 font-mono">{{ partner.commercial_record }}</td>
+                <td class="px-6 py-4">
+                    <div class="text-slate-800 font-medium">{{ partner.contact_person }}</div>
+                    <div class="text-[10px] text-slate-400">{{ partner.email }}</div>
+                </td>
+                <td class="px-6 py-4 text-center">
+                    {% if partner.is_active %}
+                    <span
+                        class="inline-flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> نشط
+                    </span>
+                    {% else %}
+                    <span
+                        class="inline-flex items-center gap-1 text-red-600 text-xs font-bold bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
+                        <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span> معطل
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-left">
+                    <div class="flex items-center justify-end gap-2 transition-opacity group-hover:opacity-100">
+                        <a href="{% url 'partner_detail' partner.pk %}"
+                            class="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-md transition"
+                            title="تفاصيل">
+                            <i class="ph-duotone ph-eye text-lg"></i>
+                        </a>
+                        <a href="{% url 'partner_update' partner.pk %}"
+                            class="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-md transition"
+                            title="تعديل">
+                            <i class="ph-duotone ph-pencil-simple text-lg"></i>
+                        </a>
+                        <a href="{% url 'partner_delete' partner.pk %}"
+                            class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition"
+                            title="حذف">
+                            <i class="ph-duotone ph-trash text-lg"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="px-6 py-20 text-center">
+                    <div class="flex flex-col items-center justify-center text-slate-400">
+                        <i class="ph-duotone ph-handshake text-5xl mb-3"></i>
+                        <p>لا يوجد شركاء مضافين</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Mobile View -->
+<div class="md:hidden space-y-4">
+    {% for partner in partners %}
+    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+        <div
+            class="absolute top-0 right-0 w-1 h-full {% if partner.is_active %}bg-green-500{% else %}bg-red-400{% endif %}">
+        </div>
+
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <h4 class="font-bold text-slate-800 text-lg">{{ partner.name_ar }}</h4>
+                <p class="text-xs text-slate-400 font-mono">{{ partner.name_en }}</p>
+            </div>
+            <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                {{ partner.get_partner_type_display }}
+            </span>
+        </div>
+
+        <div class="space-y-3 text-sm mb-5">
+            <div class="flex justify-between items-center text-slate-500">
+                <span class="text-xs">المسؤول:</span>
+                <span class="font-bold text-slate-800">{{ partner.contact_person }}</span>
+            </div>
+            <div class="flex justify-between items-center text-slate-500">
+                <span class="text-xs">السجل التجاري:</span>
+                <span class="font-mono text-slate-700">{{ partner.commercial_record }}</span>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-50">
+            <a href="{% url 'partner_detail' partner.pk %}"
+                class="flex-1 py-2 text-center text-slate-600 text-xs font-bold border border-slate-200 rounded-lg hover:bg-slate-50 transition">
+                <i class="ph-bold ph-eye"></i> تفاصيل
+            </a>
+            <a href="{% url 'partner_update' partner.pk %}"
+                class="flex-1 py-2 text-center text-brand-600 text-xs font-bold border border-brand-100 bg-brand-50/30 rounded-lg hover:bg-brand-50 transition">
+                <i class="ph-bold ph-pencil-simple"></i> تعديل
+            </a>
+            <a href="{% url 'partner_delete' partner.pk %}"
+                class="flex-1 py-2 text-center text-red-500 text-xs font-bold border border-red-100 bg-red-50/30 rounded-lg hover:bg-red-50 transition">
+                <i class="ph-bold ph-trash"></i> حذف
+            </a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-20 bg-white rounded-xl border border-slate-200">
+        <i class="ph-duotone ph-handshake text-5xl text-slate-200 mb-2"></i>
+        <p class="text-slate-400">لا يوجد بيانات</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination Section -->
+{% if page_obj.has_other_pages %}
+<div
+    class="mt-4 px-6 py-4 bg-white border border-slate-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+    <div class="text-xs text-slate-500 font-medium order-2 sm:order-1">
+        عرض <span class="font-bold text-slate-700">{{ page_obj.start_index }}</span> إلى <span
+            class="font-bold text-slate-700">{{ page_obj.end_index }}</span> من أصل <span
+            class="font-bold text-slate-700">{{ page_obj.paginator.count }}</span> شريك
+    </div>
+
+    <nav class="flex items-center gap-1 order-1 sm:order-2">
+        {% if page_obj.has_previous %}
+        <a href="javascript:void(0)"
+            hx-get="{% url 'partner_list' %}?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+            hx-target="#partner-table-container"
+            class="p-2 text-slate-400 hover:text-brand-600 hover:bg-slate-50 border border-transparent hover:border-slate-200 rounded-md transition-all">
+            <i class="ph-bold ph-caret-right"></i>
+        </a>
+        {% else %}
+        <span class="p-2 text-slate-200 cursor-not-allowed">
+            <i class="ph-bold ph-caret-right"></i>
+        </span>
+        {% endif %}
+
+        <div class="flex items-center gap-1">
+            {% for i in page_obj.paginator.page_range %}
+            {% if page_obj.number == i %}
+            <span
+                class="w-8 h-8 flex items-center justify-center bg-brand-600 text-white text-xs font-bold rounded-md shadow-sm shadow-brand-200">
+                {{ i }}
+            </span>
+            {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %} <a href="javascript:void(0)"
+                hx-get="{% url 'partner_list' %}?page={{ i }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+                hx-target="#partner-table-container"
+                class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-brand-600 hover:bg-brand-50 text-xs font-semibold rounded-md transition-all border border-transparent hover:border-slate-100">
+                {{ i }}
+                </a>
+                {% endif %}
+                {% endfor %}
+        </div>
+
+        {% if page_obj.has_next %}
+        <a href="javascript:void(0)"
+            hx-get="{% url 'partner_list' %}?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+            hx-target="#partner-table-container"
+            class="p-2 text-slate-400 hover:text-brand-600 hover:bg-slate-50 border border-transparent hover:border-slate-200 rounded-md transition-all">
+            <i class="ph-bold ph-caret-left"></i>
+        </a>
+        {% else %}
+        <span class="p-2 text-slate-200 cursor-not-allowed">
+            <i class="ph-bold ph-caret-left"></i>
+        </span>
+        {% endif %}
+    </nav>
+</div>
+{% endif %}

@@ -1,0 +1,41 @@
+{% if messages %}
+<div class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[60] flex flex-col items-center gap-2 pointer-events-none w-full max-w-md px-4"
+    x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)">
+    {% for message in messages %}
+    <div
+        class="pointer-events-auto bg-slate-800 text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-opacity animate-bounce-short">
+        {% if message.tags == 'success' %}
+        <i class="ph-fill ph-check-circle text-brand-500 text-xl"></i>
+        {% elif message.tags == 'error' %}
+        <i class="ph-fill ph-x-circle text-red-500 text-xl"></i>
+        {% else %}
+        <i class="ph-fill ph-info text-blue-500 text-xl"></i>
+        {% endif %}
+
+        <span class="text-sm font-medium">{{ message }}</span>
+
+        <button @click="show = false" class="mr-4 text-slate-400 hover:text-white font-bold">
+            <i class="ph ph-x"></i>
+        </button>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+    @keyframes bounce-short {
+
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-4px);
+        }
+    }
+
+    .animate-bounce-short {
+        animation: bounce-short 0.5s ease-in-out forwards;
+    }
+</style>
+{% endif %}

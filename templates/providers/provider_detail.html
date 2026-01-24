@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800">بيانات شركة التأمين</h2>
+            <p class="text-slate-500 text-sm mt-1">عرض وتفاصيل {{ provider.name_ar }}</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'provider_list' %}"
+                class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-bold text-sm flex items-center gap-2 transition">
+                <i class="ph-bold ph-arrow-right"></i> رجوع
+            </a>
+            <a href="{% url 'provider_update' provider.pk %}"
+                class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-bold text-sm flex items-center gap-2 shadow-md shadow-brand-100 transition">
+                <i class="ph-bold ph-pencil-simple"></i> تعديل
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- Main Stats & Info -->
+        <div class="md:col-span-2 space-y-6">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-12 h-12 bg-white border border-slate-200 rounded-lg flex items-center justify-center p-2">
+                            {% if provider.logo %}
+                            <img src="{{ provider.logo.url }}" alt="Logo" class="object-contain w-full h-full">
+                            {% else %}
+                            <i class="ph-duotone ph-buildings text-brand-600 text-2xl"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800">{{ provider.name_ar }}</h3>
+                            <p class="text-xs text-slate-500 font-mono">{{ provider.name_en }}</p>
+                        </div>
+                    </div>
+                    {% if provider.is_active %}
+                    <span
+                        class="px-3 py-1 bg-green-50 text-green-600 rounded-full border border-green-100 text-xs font-bold">نشط</span>
+                    {% else %}
+                    <span
+                        class="px-3 py-1 bg-red-50 text-red-600 rounded-full border border-red-100 text-xs font-bold">معطل</span>
+                    {% endif %}
+                </div>
+                <div class="p-8 grid grid-cols-1 sm:grid-cols-2 gap-y-8 gap-x-12">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">رقم
+                            الترخيص</label>
+                        <p class="text-slate-800 font-bold text-lg font-mono">{{ provider.license_number }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">بريد
+                            المطالبات</label>
+                        {% if provider.claim_email %}
+                        <a href="mailto:{{ provider.claim_email }}"
+                            class="text-brand-600 font-bold text-lg hover:underline">{{ provider.claim_email }}</a>
+                        {% else %}
+                        <p class="text-slate-300 font-bold text-lg">-</p>
+                        {% endif %}
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">الموقع
+                            الإلكتروني</label>
+                        {% if provider.website %}
+                        <a href="{{ provider.website }}" target="_blank"
+                            class="text-slate-600 font-medium flex items-center gap-2 hover:text-brand-600 transition">
+                            <i class="ph-bold ph-link text-slate-400"></i>
+                            {{ provider.website }}
+                        </a>
+                        {% else %}
+                        <p class="text-slate-300 font-bold">-</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Future: Connection Status / Active Policies, etc. -->
+            <div class="bg-indigo-50 border border-indigo-100 p-6 rounded-xl flex items-center gap-4">
+                <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-indigo-600 shadow-sm">
+                    <i class="ph-duotone ph-activity text-2xl"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-indigo-900">حالة الربط التقني</h4>
+                    <p class="text-indigo-700 text-sm mt-0.5">هذه الشركة لا تدعم الربط المباشر حالياً، يتم الرفع يدوياً.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Actions/Metadata -->
+        <div class="space-y-6">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-200 bg-slate-50">
+                    <h4 class="font-bold text-slate-800">إحصائيات سريعة</h4>
+                </div>
+                <div class="p-4 space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span class="text-xs text-slate-400 font-bold">الوثائق النشطة</span>
+                        <span class="text-slate-800 font-bold">0</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span class="text-xs text-slate-400 font-bold">المطالبات المعلقة</span>
+                        <span class="text-slate-800 font-bold text-brand-600">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-200 bg-slate-50">
+                    <h4 class="font-bold text-slate-800">معلومات النظام</h4>
+                </div>
+                <div class="p-4 space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">تاريخ
+                            الإضافة</label>
+                        <p class="text-slate-700 text-sm flex items-center gap-2">
+                            <i class="ph-duotone ph-calendar text-slate-400"></i>
+                            {{ provider.created_at|date:"Y-m-d" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

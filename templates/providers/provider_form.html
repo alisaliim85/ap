@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800">{{ title }}</h2>
+            <p class="text-slate-500 text-sm mt-1">إدخال بيانات شركة تأمين جديدة في النظام</p>
+        </div>
+        <a href="{% url 'provider_list' %}"
+            class="text-slate-500 hover:text-slate-700 font-medium text-sm flex items-center gap-2">
+            <i class="ph-bold ph-arrow-right"></i> رجوع للقائمة
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-200 bg-slate-50">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                <i class="ph-duotone ph-buildings text-brand-600 text-xl"></i>
+                بيانات شركة التأمين
+            </h3>
+        </div>
+
+        <div class="p-8">
+            <form method="post" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">اسم الشركة (عربي)</label>
+                        {{ form.name_ar }}
+                        {% if form.name_ar.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.name_ar.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">English Name</label>
+                        {{ form.name_en }}
+                        {% if form.name_en.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.name_en.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">رقم الترخيص</label>
+                        {{ form.license_number }}
+                        {% if form.license_number.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.license_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">بريد المطالبات</label>
+                        {{ form.claim_email }}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">الموقع الإلكتروني</label>
+                        {{ form.website }}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">شعار الشركة</label>
+                        <div
+                            class="mt-1 flex items-center gap-4 p-4 border border-dashed border-slate-300 rounded-lg bg-slate-50/50">
+                            {% if provider.logo %}
+                            <img src="{{ provider.logo.url }}" alt="Logo"
+                                class="w-16 h-16 rounded border border-slate-200 object-contain bg-white">
+                            {% else %}
+                            <div
+                                class="w-16 h-16 border border-slate-200 rounded bg-white flex items-center justify-center">
+                                <i class="ph-duotone ph-image text-slate-300 text-2xl"></i>
+                            </div>
+                            {% endif %}
+                            <div class="flex-1">
+                                {{ form.logo }}
+                                <p class="text-[10px] text-slate-400 mt-2">يفضل استخدام صور PNG أو SVG بخلفية شفافة</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center h-5">
+                            {{ form.is_active }}
+                        </div>
+                        <div class="text-sm">
+                            <label for="{{ form.is_active.id_for_label }}" class="font-bold text-slate-700">نشطة في
+                                النظام</label>
+                            <p class="text-slate-500 text-xs">تعطيل الشركة سيمنع إصدار وثائق جديدة مرتبطة بها.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-slate-200 flex justify-end gap-3">
+                    <a href="{% url 'provider_list' %}"
+                        class="px-6 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-bold transition">
+                        إلغاء
+                    </a>
+                    <button type="submit"
+                        class="px-8 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-bold shadow-lg shadow-brand-100 transition flex items-center gap-2">
+                        <i class="ph-bold ph-check"></i> حفظ البيانات
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
