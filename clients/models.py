@@ -43,3 +43,7 @@ class Client(models.Model):
         if self.parent:
             return f"{self.name_en} (Sub of {self.parent.name_en})"
         return self.name_en
+
+    @property
+    def is_holding(self):
+        return self.subsidiaries.exists()

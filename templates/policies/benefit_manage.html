@@ -20,6 +20,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
         <!-- Form Section -->
+        {% if not policy_class.policy.is_subsidiary %}
         <div class="lg:col-span-1">
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden sticky top-6">
                 <div class="p-5 border-b border-slate-200 bg-slate-50">
@@ -79,6 +80,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- List Section -->
         <div class="lg:col-span-2 space-y-4">
@@ -121,12 +123,14 @@
                             <span class="text-brand-600 font-black">{{ b.deductible_percentage }}%</span>
                         </div>
                         <div class="flex gap-1">
+                            {% if not policy_class.policy.is_subsidiary %}
                             <button
                                 onclick="editBenefit('{{ b.id }}', '{{ b.benefit_type.id }}', '{{ b.limit_amount }}', '{{ b.deductible_percentage }}', '{{ b.description|escapejs }}')"
                                 class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition"
                                 title="تعديل">
                                 <i class="ph-bold ph-pencil-simple"></i>
                             </button>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

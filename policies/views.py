@@ -79,8 +79,15 @@ def policy_detail(request, pk):
         messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
         return redirect('dashboard')
     
-    classes = policy.classes.all()
-    return render(request, 'policies/policy_detail.html', {'policy': policy, 'classes': classes})
+    classes = policy.effective_classes
+    sub_policies = policy.sub_policies.all() if not policy.is_subsidiary else None
+    
+    context = {
+        'policy': policy, 
+        'classes': classes,
+        'sub_policies': sub_policies
+    }
+    return render(request, 'policies/policy_detail.html', context)
 
 @login_required
 def policy_delete(request, pk):

@@ -12,8 +12,16 @@
                 </a>
                 <h2 class="text-2xl font-black text-slate-800">تفاصيل البوليصة: {{ policy.policy_number }}</h2>
             </div>
-            <p class="text-slate-500 text-sm mt-1 mr-11">بوليصة تابعة لـ {{ policy.client.name_ar }} من خلال {{
+            {% if policy.is_subsidiary %}
+            <p class="text-slate-500 text-sm mt-1 mr-11">
+                وثيقة تابعة لـ <a href="{% url 'policies:policy_detail' policy.master_policy.pk %}"
+                    class="text-brand-600 hover:underline font-bold">{{ policy.master_policy.policy_number }}</a>
+                - {{ policy.client.name_ar }}
+            </p>
+            {% else %}
+            <p class="text-slate-500 text-sm mt-1 mr-11">بوليصة رئيسية لـ {{ policy.client.name_ar }} من خلال {{
                 policy.provider.name_ar }}</p>
+            {% endif %}
         </div>
         <div class="flex gap-2">
             <a href="{% url 'policies:policy_update' policy.pk %}"
@@ -87,10 +95,18 @@
                         <i class="ph-duotone ph-users-three text-brand-600 text-xl"></i>
                         الفئات والشبكات (Policy Classes)
                     </h3>
+                    {% if not policy.is_subsidiary %}
                     <a href="{% url 'policies:policy_class_create' policy.pk %}"
                         class="px-3 py-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-bold text-[10px] transition flex items-center gap-1">
                         <i class="ph-bold ph-plus"></i> إضافة فئة جديدة
                     </a>
+                    {% else %}
+                    <div
+                        class="flex items-center gap-2 text-xs bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg border border-amber-100 font-bold">
+                        <i class="ph-duotone ph-lock-key text-lg"></i>
+                        الفئات موروثة من الوثيقة الأم
+                    </div>
+                    {% endif %}
                 </div>
 
                 <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -113,8 +129,9 @@
                         <div
                             class="grid grid-cols-2 gap-2 text-[10px] font-bold text-slate-500 mt-6 pt-4 border-t border-slate-100">
                             <a href="{% url 'policies:class_benefit_manage' c.pk %}"
-                                class="py-2 bg-white border border-slate-200 rounded-lg text-center hover:bg-brand-50 hover:text-brand-600 transition">إدارة
-                                المنافع</a>
+                                class="py-2 bg-white border border-slate-200 rounded-lg text-center hover:bg-brand-50 hover:text-brand-600 transition">
+                                {% if policy.is_subsidiary %}عرض المنافع{% else %}إدارة المنافع{% endif %}
+                            </a>
                             <a href="#"
                                 class="py-2 bg-white border border-slate-200 rounded-lg text-center hover:bg-brand-50 hover:text-brand-600 transition text-slate-400">تعديل
                                 الفئة</a>
@@ -131,15 +148,49 @@
                 </div>
             </div>
 
-            <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-10 text-center">
-                <i class="ph-duotone ph-info text-4xl text-slate-300 mb-2"></i>
-                <p class="text-slate-400 text-sm font-medium leading-relaxed">
-                    بعد إضافة الفئات، يمكنك تحديد سقف التغطية لكل منفعة (مثل الأسنان، البصريات، الحمل والولادة) <br>
-                    بشكل مستقل لكل فئة تأمينية.
-                </p>
-            </div>
-
         </div>
+
+        {% if sub_policies %}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-200 bg-slate-50">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-tree-structure text-brand-600 text-xl"></i>
+                    الوثائق التابعة ({{ sub_policies.count }})
+                </h3>
+            </div>
+            <div class="divide-y divide-slate-100">
+                {% for sub in sub_policies %}
+                <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition">
+                    <div>
+                        <a href="{% url 'policies:policy_detail' sub.pk %}"
+                            class="font-bold text-slate-800 hover:text-brand-600">
+                            {{ sub.policy_number }}
+                        </a>
+                        <p class="text-xs text-slate-500 mt-1">{{ sub.client.name_ar }}</p>
+                    </div>
+                    <span class="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">
+                        {{ sub.start_date|date:"Y-m-d" }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-10 text-center">
+            <i class="ph-duotone ph-info text-4xl text-slate-300 mb-2"></i>
+            <p class="text-slate-400 text-sm font-medium leading-relaxed">
+                {% if policy.is_subsidiary %}
+                هذه الوثيقة تابعة لوثيقة أم، لذا فهي ترث الفئات والمنافع منها.<br>
+                يمكنك فقط استعراض المنافع ولا يمكن تعديلها من هنا.
+                {% else %}
+                بعد إضافة الفئات، يمكنك تحديد سقف التغطية لكل منفعة (مثل الأسنان، البصريات، الحمل والولادة) <br>
+                بشكل مستقل لكل فئة تأمينية.
+                {% endif %}
+            </p>
+        </div>
+
     </div>
+</div>
 </div>
 {% endblock %}
