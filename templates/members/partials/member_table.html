@@ -120,8 +120,8 @@
 
     {% if page_obj.has_other_pages %}
     <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">عرض {{ page_obj.start_index }}-{{
-            page_obj.end_index }} من أصل {{ page_obj.paginator.count }}</span>
+        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">عرض
+            {{ page_obj.start_index }}-{{ page_obj.end_index }} من أصل {{ page_obj.paginator.count }}</span>
         <div class="flex gap-2">
             {% if page_obj.has_previous %}
             <button

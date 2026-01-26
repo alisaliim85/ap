@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6" x-data="{ isDragging: false }">
+
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">{% trans "Bulk Member Upload" %}</h1>
+            <p class="text-sm text-slate-500">{% trans "Upload Excel file to add multiple members at once." %}</p>
+        </div>
+        <a href="{% url 'members:member_list' %}"
+            class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 text-sm font-medium flex items-center gap-2">
+            <i class="ph-duotone ph-arrow-right"></i> {% trans "Back to List" %}
+        </a>
+    </div>
+
+    <!-- Upload Card -->
+    <div class="bg-white p-6 rounded-md border border-slate-200">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+            <!-- Instructions -->
+            <div class="space-y-4">
+                <h3 class="font-bold text-slate-800 border-b border-slate-100 pb-2">{% trans "Instructions" %}</h3>
+                <ul class="space-y-2 text-sm text-slate-600 list-disc list-inside">
+                    <li>{% trans "Download the template first to ensure correct format." %}</li>
+                    <li>{% trans "Valid format is strict Excel (.xlsx)." %}</li>
+                    <li>{% trans "Use exact Policy Class names." %}</li>
+                    <li>{% trans "Dependents must follow their Sponsor's Policy Class." %}</li>
+                    <li>{% trans "Existing members will be skipped (Duplicate Check)." %}</li>
+                </ul>
+
+                <a href="{% url 'members:member_download_template' %}"
+                    class="inline-flex items-center gap-2 text-brand-600 font-medium hover:text-brand-700 text-sm">
+                    <i class="ph-duotone ph-download-simple"></i>
+                    {% trans "Download Excel Template" %}
+                </a>
+            </div>
+
+            <!-- Upload Area -->
+            <div>
+                <form method="post" enctype="multipart/form-data" class="space-y-4">
+                    {% csrf_token %}
+
+                    <div class="relative w-full">
+                        <label for="id_file"
+                            class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-brand-50 hover:border-brand-400 transition"
+                            :class="{'border-brand-500 bg-brand-50': isDragging, 'border-slate-300': !isDragging}"
+                            @dragover.prevent="isDragging = true" @dragleave.prevent="isDragging = false"
+                            @drop.prevent="isDragging = false; $refs.fileInput.files = $event.dataTransfer.files; $event.target.closest('form').submit()">
+                            <!-- Optional: Auto submit or just visual feedback -->
+
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i class="ph-duotone ph-cloud-arrow-up text-4xl text-slate-400 mb-3"
+                                    :class="{'text-brand-500': isDragging}"></i>
+                                <p class="mb-2 text-sm text-slate-500"><span class="font-semibold">{% trans "Click to
+                                        upload" %}</span> {% trans "or drag and drop" %}</p>
+                                <p class="text-xs text-slate-500">.XLSX (MAX. 10MB)</p>
+                            </div>
+                            <!-- Actual Input -->
+                            <input id="id_file" name="file" type="file" class="hidden" x-ref="fileInput" accept=".xlsx"
+                                onchange="this.form.submit()" />
+                        </label>
+                    </div>
+
+                    {% if form.errors %}
+                    <div class="p-3 bg-red-50 text-red-700 rounded-md text-sm border border-red-100">
+                        {{ form.errors }}
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    {% if results %}
+    <div class="space-y-6" id="results-area">
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white p-4 rounded-md border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-bold uppercase">{% trans "Total Processed" %}</p>
+                    <h3 class="text-2xl font-bold text-slate-800">{{ results.total_rows }}</h3>
+                </div>
+                <div class="p-2 bg-slate-100 rounded text-slate-600"><i class="ph-duotone ph-list-numbers text-xl"></i>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-md border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-bold uppercase">{% trans "Success" %}</p>
+                    <h3 class="text-2xl font-bold text-green-600">{{ results.success|length }}</h3>
+                </div>
+                <div class="p-2 bg-green-50 rounded text-green-600"><i class="ph-duotone ph-check-circle text-xl"></i>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-md border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-bold uppercase">{% trans "Failed" %}</p>
+                    <h3 class="text-2xl font-bold text-red-600">{{ results.failed|length }}</h3>
+                </div>
+                <div class="p-2 bg-red-50 rounded text-red-600"><i class="ph-duotone ph-warning text-xl"></i></div>
+            </div>
+        </div>
+
+        <!-- Failure Table -->
+        {% if results.failed %}
+        <div class="bg-white rounded-md border border-red-200 overflow-hidden shadow-sm">
+            <div class="px-6 py-4 bg-red-50 border-b border-red-100 flex items-center gap-2">
+                <i class="ph-duotone ph-warning-circle text-red-600 text-xl"></i>
+                <h3 class="font-bold text-red-800">{% trans "Errors / Skipped Records" %}</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-right text-sm">
+                    <thead class="bg-red-50/50 text-red-700 font-semibold border-b border-red-100">
+                        <tr>
+                            <th class="px-6 py-3">#</th>
+                            <th class="px-6 py-3">{% trans "Name" %}</th>
+                            <th class="px-6 py-3">{% trans "Reason" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-red-100">
+                        {% for item in results.failed %}
+                        <tr class="hover:bg-red-50/30">
+                            <td class="px-6 py-4 text-red-600 font-mono">{{ item.row }}</td>
+                            <td class="px-6 py-4 font-medium">{{ item.name }}</td>
+                            <td class="px-6 py-4 text-red-600">{{ item.error }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Success Table (Optional, maybe just first 5 or collapsible) -->
+        {% if results.success %}
+        <div class="bg-white rounded-md border border-green-200 overflow-hidden shadow-sm" x-data="{ expanded: false }">
+            <div class="px-6 py-4 bg-green-50 border-b border-green-100 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="ph-duotone ph-check-circle text-green-600 text-xl"></i>
+                    <h3 class="font-bold text-green-800">{% trans "Successfully Uploaded" %}</h3>
+                </div>
+                <button @click="expanded = !expanded" class="text-green-700 text-sm hover:underline">
+                    <span x-show="!expanded">{% trans "Show All" %}</span>
+                    <span x-show="expanded">{% trans "Collapse" %}</span>
+                </button>
+            </div>
+            <div class="overflow-x-auto" x-show="expanded" x-transition>
+                <table class="w-full text-right text-sm">
+                    <thead class="bg-green-50/50 text-green-700 font-semibold border-b border-green-100">
+                        <tr>
+                            <th class="px-6 py-3">#</th>
+                            <th class="px-6 py-3">{% trans "Name" %}</th>
+                            <th class="px-6 py-3">{% trans "National ID" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-green-100">
+                        {% for item in results.success %}
+                        <tr class="hover:bg-green-50/30">
+                            <td class="px-6 py-4 text-green-600 font-mono">{{ item.row }}</td>
+                            <td class="px-6 py-4 font-medium">{{ item.name }}</td>
+                            <td class="px-6 py-4">{{ item.nid }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

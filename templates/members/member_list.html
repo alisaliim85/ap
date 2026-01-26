@@ -9,6 +9,10 @@
             <p class="text-slate-500 font-medium mt-1">إدارة بيانات الموظفين وعوائلهم المسجلين في النظام</p>
         </div>
         <div class="flex gap-3">
+            <a href="{% url 'members:member_bulk_upload' %}"
+                class="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-bold shadow-sm transition-all flex items-center gap-2">
+                <i class="ph-duotone ph-upload-simple"></i> رفع ملف (Excel)
+            </a>
             <a href="{% url 'members:member_create' %}"
                 class="px-6 py-3 bg-brand-600 text-white rounded-xl hover:bg-brand-700 font-bold shadow-lg shadow-brand-200 transition-all flex items-center gap-2">
                 <i class="ph-bold ph-plus"></i> إضافة عضو جديد

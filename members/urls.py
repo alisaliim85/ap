@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, views_upload
 
 app_name = 'members'
 
@@ -10,6 +10,10 @@ urlpatterns = [
     path('<uuid:pk>/edit/', views.member_update, name='member_update'),
     path('<uuid:pk>/delete/', views.member_delete, name='member_delete'),
     
+    # Upload / Template
+    path('upload/', views_upload.MemberBulkUploadView.as_view(), name='member_bulk_upload'),
+    path('upload/template/', views_upload.MemberDownloadTemplateView.as_view(), name='member_download_template'),
+
     # AJAX / HTMX
     path('ajax/load-policy-classes/', views.load_policy_classes, name='ajax_load_policy_classes'),
 ]

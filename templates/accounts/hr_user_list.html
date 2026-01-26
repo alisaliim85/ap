@@ -42,16 +42,16 @@
                                 <div>
                                     <p class="font-bold text-slate-800">{{ user.get_full_name|default:user.username }}
                                     </p>
-                                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">@{{
-                                        user.username }}</p>
+                                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                        @{{ user.username }}</p>
                                 </div>
                             </div>
                         </td>
                         <td class="px-6 py-4 text-center">
                             <div class="flex flex-col items-center gap-1">
                                 <span class="text-xs font-medium text-slate-600">{{ user.email }}</span>
-                                <span class="text-[10px] font-bold text-slate-400">{{ user.phone_number|default:"-"
-                                    }}</span>
+                                <span class="text-[10px] font-bold text-slate-400">
+                                    {{ user.phone_number|default:"-" }}</span>
                             </div>
                         </td>
                         <td class="px-6 py-4 text-center">
