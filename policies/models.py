@@ -21,7 +21,17 @@ class BenefitType(models.Model):
 class Policy(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     client = models.ForeignKey('clients.Client', on_delete=models.CASCADE, related_name='policies')
-    provider = models.ForeignKey('providers.Provider', on_delete=models.CASCADE, related_name='issued_policies')
+    
+    # ربط الوثيقة بالأم (للشركات القابضة) - التعديل الجديد
+    master_policy = models.ForeignKey(
+        'self', 
+        on_delete=models.PROTECT, 
+        null=True, 
+        blank=True, 
+        related_name='sub_policies',
+        verbose_name=_("Master Policy (For Holding)")
+    )
+    provider = models.ForeignKey('providers.Provider', on_delete=models.CASCADE, related_name='issued_policies',null=True, blank=True)
     policy_number = models.CharField(_("Policy Number"), max_length=100)
     start_date = models.DateField(_("Start Date"))
     end_date = models.DateField(_("End Date"))
@@ -31,10 +41,60 @@ class Policy(models.Model):
 
     class Meta:
         unique_together = ('client', 'policy_number')
+    # 3. المنطق الذكي لاسترجاع المزود
+    @property
+    def effective_provider(self):
+        """
+        استرجاع المزود الفعلي.
+        إذا كانت وثيقة تابعة، نعود لمزود الوثيقة الأم.
+        """
+        if self.master_policy:
+            return self.master_policy.provider
+        return self.provider
+
+    # 4. التحقق والملء التلقائي قبل الحفظ
+    def clean(self):
+        # التحقق: لا يمكن أن يكون كلاهما فارغاً
+        if not self.master_policy and not self.provider:
+            raise ValidationError(_("Either a Master Policy or an Insurance Provider must be specified."))
+        
+        # التحقق: إذا كانت تابعة، يجب أن لا نحدد مزوداً مختلفاً (اختياري، أو نفرضه)
+        if self.master_policy and self.provider:
+            if self.master_policy.provider != self.provider:
+                raise ValidationError(_("Subsidiary policy must have the same provider as the master policy."))
+
+    def save(self, *args, **kwargs):
+        # قبل الحفظ، إذا كانت وثيقة تابعة، يمكننا نسخ المزود من الأم لسهولة البحث (اختياري)
+        # أو نتركه فارغاً ونعتمد على effective_provider
+        
+        # الخيار الأفضل للأداء (Denormalization for Performance):
+        # نقوم بنسخ المزود للحقل لكي تعمل استعلامات الفلترة السريعة (Filtering) دون Join معقد
+        if self.master_policy:
+            self.provider = self.master_policy.provider
+            
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.policy_number} - {self.client.name_en}"
+        type_str = "Sub-Policy" if self.master_policy else "Master"
+        return f"{self.policy_number} - {self.client.name_en} ({type_str})"
 
+    # --- دوال المنطق الذكي (Business Logic) ---
+
+    @property
+    def is_subsidiary(self):
+        """هل هذه وثيقة تابعة لشركة قابضة؟"""
+        return self.master_policy is not None
+
+    @property
+    def effective_classes(self):
+        """
+        إرجاع الفئات المتاحة لهذه الوثيقة.
+        - إذا كانت وثيقة أم: تُرجع فئاتها الخاصة.
+        - إذا كانت وثيقة تابعة: ترث وتُرجع فئات الوثيقة الأم.
+        """
+        if self.is_subsidiary:
+            return self.master_policy.classes.all()
+        return self.classes.all()
 # --- 3. الفئة (تم التعديل لإزالة الحقول الثابتة) ---
 class PolicyClass(models.Model):
     """
