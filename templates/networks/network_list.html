@@ -1,62 +1,160 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-    <div>
-        <h2 class="text-2xl font-black text-slate-800">الشبكات الطبية</h2>
-        <p class="text-slate-500 text-sm mt-1">إدارة شبكات التغطية الطبية التابعة لشركات التأمين</p>
-    </div>
-    <a href="{% url 'networks:network_create' %}"
-        class="px-4 py-2 bg-brand-600 text-white rounded-xl hover:bg-brand-700 font-bold shadow-lg shadow-brand-200 transition flex items-center gap-2 text-sm">
-        <i class="ph-bold ph-plus"></i> إضافة شبكة جديدة
-    </a>
-</div>
+<div class="w-full px-6" x-data="{ filterOpen: false }">
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {% for n in networks %}
-    <div
-        class="group bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-brand-500 hover:shadow-xl hover:shadow-brand-500/5 transition-all relative overflow-hidden flex flex-col">
-        <div class="p-6 flex-1">
-            <div class="flex justify-between items-start mb-4">
-                <div
-                    class="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 font-black group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
-                    <i class="ph-duotone ph-tree-structure text-2xl"></i>
-                </div>
-                <div class="text-left">
-                    <span
-                        class="px-2 py-0.5 bg-brand-50 text-brand-600 text-[9px] font-black rounded border border-brand-100 uppercase tracking-widest">
-                        {{ n.provider.name_en|truncatechars:10 }}
-                    </span>
-                </div>
-            </div>
-
-            <h4 class="text-xl font-black text-slate-800">{{ n.name_ar }}</h4>
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 mb-6">{{ n.name_en }}</p>
-
-            <div class="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                <i class="ph-duotone ph-hospital text-brand-600"></i>
-                <span class="text-xs font-bold text-slate-600">{{ n.hospitals.count }} مستشفى ومركز</span>
-            </div>
+    <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-black text-slate-800">الشبكات الطبية</h2>
+            <p class="text-slate-500 font-medium mt-1">إدارة شبكات التغطية الطبية التابعة لشركات التأمين</p>
         </div>
-
-        <div class="p-4 border-t border-slate-100 bg-slate-50/50 flex gap-2">
-            <a href="{% url 'networks:network_manage_hospitals' n.pk %}"
-                class="flex-1 py-2 bg-white border border-slate-200 text-slate-700 text-center rounded-lg text-[10px] font-black hover:bg-brand-50 hover:text-brand-600 hover:border-brand-200 transition">
-                إدارة المستشفيات
-            </a>
-            <a href="{% url 'networks:network_update' n.pk %}"
-                class="px-3 py-2 bg-white border border-slate-200 text-slate-400 rounded-lg hover:text-brand-600 hover:border-brand-200 transition">
-                <i class="ph-bold ph-pencil-simple"></i>
+        <div class="flex gap-3">
+            <a href="{% url 'networks:network_create' %}"
+                class="px-6 py-3 bg-brand-600 text-white rounded-xl hover:bg-brand-700 font-bold shadow-lg shadow-brand-200 transition-all flex items-center gap-2">
+                <i class="ph-bold ph-plus"></i> إضافة شبكة جديدة
             </a>
         </div>
-        <i class="ph-duotone ph-shield-check absolute -bottom-6 -left-6 text-brand-500/5 text-9xl"></i>
     </div>
-    {% empty %}
+
+    <!-- Search & Filter Bar -->
     <div
-        class="md:col-span-2 lg:col-span-3 py-24 text-center bg-white rounded-2xl border-2 border-dashed border-slate-200">
-        <i class="ph-duotone ph-network text-6xl text-slate-300 mb-4 block"></i>
-        <p class="text-slate-500 font-bold">لم يتم إنشاء أي شبكات طبية بعد</p>
+        class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
+        <div class="relative w-full md:w-96">
+            <i class="ph-duotone ph-magnifying-glass absolute top-3 right-3 text-slate-400 text-lg"></i>
+            <input type="text" placeholder="بحث باسم الشبكة..."
+                class="w-full pl-4 pr-10 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium">
+        </div>
+        <button @click="filterOpen = true"
+            class="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-bold transition-all shadow-sm flex items-center gap-2">
+            <i class="ph-duotone ph-funnel text-lg"></i> تصفية
+        </button>
     </div>
-    {% endfor %}
+
+    <!-- Data Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-right">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">اسم الشبكة
+                        </th>
+                        <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">
+                            شركة التأمين</th>
+                        <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">
+                            عدد المستشفيات</th>
+                        <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-left">
+                            الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for n in networks %}
+                    <tr class="hover:bg-slate-50 transition group">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
+                                    <i class="ph-duotone ph-tree-structure text-xl"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-slate-800">{{ n.name_ar }}</p>
+                                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{{
+                                        n.name_en }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <span
+                                class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-slate-200">
+                                {{ n.provider.name_en }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <span
+                                class="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-50 text-brand-700 rounded-lg text-xs font-bold border border-brand-100">
+                                <i class="ph-duotone ph-hospital"></i> {{ n.hospitals.count }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-left">
+                            <div class="flex items-center justify-end gap-2 text-slate-400">
+                                <a href="{% url 'networks:network_manage_hospitals' n.pk %}"
+                                    class="p-1 hover:text-brand-600 transition-colors" title="إدارة المستشفيات">
+                                    <i class="ph-duotone ph-buildings text-lg"></i>
+                                </a>
+                                <a href="{% url 'networks:network_update' n.pk %}"
+                                    class="p-1 hover:text-brand-600 transition-colors" title="تعديل">
+                                    <i class="ph-duotone ph-pencil-simple text-lg"></i>
+                                </a>
+                                <a href="{% url 'networks:network_delete' n.pk %}"
+                                    class="p-1 hover:text-red-600 transition-colors" title="حذف">
+                                    <i class="ph-duotone ph-trash text-lg"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="py-20 text-center">
+                            <div class="flex flex-col items-center gap-3 text-slate-400">
+                                <i class="ph-duotone ph-network text-6xl opacity-20"></i>
+                                <p class="font-bold">لم يتم إنشاء أي شبكات طبية بعد</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Filter Drawer -->
+    <div class="relative z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true" x-show="filterOpen"
+        x-cloak>
+        <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" x-show="filterOpen"
+            x-transition.opacity @click="filterOpen = false"></div>
+        <div class="fixed inset-0 overflow-hidden">
+            <div class="absolute inset-0 overflow-hidden">
+                <div class="pointer-events-none fixed inset-y-0 left-0 flex max-w-full pl-10">
+                    <div class="pointer-events-auto w-screen max-w-md" x-show="filterOpen"
+                        x-transition:enter="transform transition ease-in-out duration-300"
+                        x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
+                        x-transition:leave="transform transition ease-in-out duration-300"
+                        x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full">
+                        <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
+                            <div
+                                class="px-6 py-6 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                                <h2 class="text-lg font-bold text-slate-900">تصفية الشبكات</h2>
+                                <button @click="filterOpen = false" class="text-slate-400 hover:text-slate-500"><i
+                                        class="ph-bold ph-x text-xl"></i></button>
+                            </div>
+                            <div class="relative mt-6 flex-1 px-4 sm:px-6 space-y-6">
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-700 mb-2">اسم الشبكة</label>
+                                    <input type="text"
+                                        class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-brand-500 focus:border-brand-500 transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-700 mb-2">شركة التأمين</label>
+                                    <select
+                                        class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-brand-500 focus:border-brand-500 transition-all">
+                                        <option value="">الكل</option>
+                                        <!-- Add provider options loop here -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div
+                                class="flex flex-shrink-0 justify-end px-4 py-4 bg-slate-50 border-t border-slate-200 gap-3">
+                                <button @click="filterOpen = false"
+                                    class="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all">إلغاء</button>
+                                <button
+                                    class="flex-1 rounded-xl border border-transparent bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-brand-700 transition-all">تطبيق
+                                    التصفية</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}

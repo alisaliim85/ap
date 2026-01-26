@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="w-full px-6">
+
+    <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-black text-slate-800">الأعضاء والمستفيدين</h2>
+            <p class="text-slate-500 font-medium mt-1">إدارة بيانات الموظفين وعوائلهم المسجلين في النظام</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'members:member_create' %}"
+                class="px-6 py-3 bg-brand-600 text-white rounded-xl hover:bg-brand-700 font-bold shadow-lg shadow-brand-200 transition-all flex items-center gap-2">
+                <i class="ph-bold ph-plus"></i> إضافة عضو جديد
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <form hx-get="{% url 'members:member_list' %}" hx-target="#member-table-container"
+            hx-trigger="change, keyup delay:300ms from:#search-input" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="md:col-span-2 relative">
+                <input type="text" name="search" id="search-input" placeholder="البحث بالاسم أو رقم البطاقة الطبية..."
+                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none font-medium">
+                <i class="ph-bold ph-magnifying-glass absolute left-3 top-3.5 text-slate-400"></i>
+            </div>
+
+            {% if request.user.is_broker %}
+            <div>
+                <select name="client"
+                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none font-medium text-slate-700">
+                    <option value="">جميع الشركات</option>
+                    {% for c in clients %}
+                    <option value="{{ c.id }}">{{ c.name_ar }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div>
+                <select name="relation"
+                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none font-medium text-slate-700">
+                    <option value="">جميع الفئات</option>
+                    {% for val, label in relations %}
+                    <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <div id="member-table-container">
+        {% include 'members/partials/member_table.html' %}
+    </div>
+
+</div>
+{% endblock %}

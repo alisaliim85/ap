@@ -67,7 +67,7 @@ class Member(models.Model):
         help_text=_("Encrypted Address Details")
     )
     
-    medical_card_number = models.CharField(_("Medical Card ID"), max_length=50, unique=True)
+    medical_card_number = models.CharField(_("Medical Card ID"), max_length=50, unique=True, null=True, blank=True)
     
     birth_date = models.DateField(_("Date of Birth"))
     gender = models.CharField(_("Gender"), max_length=1, choices=Gender.choices)

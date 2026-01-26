@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-12">
+    <div class="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-2xl shadow-red-900/10">
+        <div
+            class="w-24 h-24 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse">
+            <i class="ph-duotone ph-warning-circle text-6xl"></i>
+        </div>
+
+        <h2 class="text-3xl font-black text-slate-800 mb-4">هل أنت متأكد من الحذف؟</h2>
+        <p class="text-slate-500 mb-10 leading-relaxed">
+            أنت على وشك حذف الشبكة الطبية <span class="text-red-600 font-black">{{ network.name_ar }}</span>.<br>
+            سيؤدي هذا الإجراء إلى حذف الشبكة ومحتوياتها ولا يمكن التراجع عنه.
+        </p>
+
+        <form method="post" class="flex flex-col sm:flex-row gap-4 justify-center">
+            {% csrf_token %}
+            <button type="submit"
+                class="px-12 py-4 bg-red-600 text-white rounded-2xl font-black shadow-xl shadow-red-200 hover:bg-red-700 hover:-translate-y-1 transition-all">
+                نعم، تأكيد الحذف
+            </button>
+            <a href="{% url 'networks:network_list' %}"
+                class="px-12 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 transition-all">
+                إلغاء وتراجع
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

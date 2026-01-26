@@ -1,0 +1,108 @@
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <table class="w-full text-right">
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+                <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">عضو</th>
+                <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">البطاقة الطبية</th>
+                <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">جهة
+                    التبعية</th>
+                <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">الفئة</th>
+                <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">الحالة
+                </th>
+                <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-left">الإجراءات
+                </th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for m in members %}
+            <tr class="hover:bg-slate-50 transition group">
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
+                            <i class="ph-duotone ph-user text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-800">{{ m.full_name }}</p>
+                            <span
+                                class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-black uppercase tracking-tighter">
+                                {{ m.get_relation_display }}
+                            </span>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 font-mono text-sm text-slate-500">{{ m.medical_card_number }}</td>
+                <td class="px-6 py-4 text-center">
+                    <p class="text-sm font-bold text-slate-700">{{ m.client.name_ar }}</p>
+                    {% if m.sponsor %}
+                    <p class="text-[10px] text-slate-400">تابع لـ: {{ m.sponsor.full_name }}</p>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-center">
+                    <span
+                        class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-black border border-indigo-100">
+                        {{ m.policy_class.name }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-center">
+                    {% if m.is_active %}
+                    <span class="inline-flex items-center gap-1 text-green-600 text-[10px] font-black uppercase">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> نشط
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1 text-slate-400 text-[10px] font-black uppercase">
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span> معلق
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-left">
+                    <div class="flex items-center justify-end gap-2 text-slate-400">
+                        <a href="{% url 'members:member_detail' m.pk %}"
+                            class="p-1 hover:text-brand-600 transition-colors" title="التفاصيل">
+                            <i class="ph-duotone ph-eye text-lg"></i>
+                        </a>
+                        <a href="{% url 'members:member_update' m.pk %}"
+                            class="p-1 hover:text-brand-600 transition-colors" title="تعديل">
+                            <i class="ph-duotone ph-pencil-simple text-lg"></i>
+                        </a>
+                        <a href="{% url 'members:member_delete' m.pk %}"
+                            class="p-1 hover:text-red-600 transition-colors" title="حذف">
+                            <i class="ph-duotone ph-trash text-lg"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="py-20 text-center">
+                    <div class="flex flex-col items-center gap-3 text-slate-400">
+                        <i class="ph-duotone ph-users text-6xl opacity-20"></i>
+                        <p class="font-bold">لا يوجد أعضاء مطابقين للبحث</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if page_obj.has_other_pages %}
+    <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-500">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages
+            }}</span>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}"
+                class="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-brand-600 transition">
+                <i class="ph-bold ph-caret-right"></i>
+            </a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}"
+                class="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-brand-600 transition">
+                <i class="ph-bold ph-caret-left"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>

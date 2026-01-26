@@ -45,6 +45,12 @@
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">وثائق التأمين</span>
         </a>
 
+        <a href="{% url 'members:member_list' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'member' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
+            <i class="ph-duotone ph-users text-xl"></i>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">الأعضاء والمؤمن عليهم</span>
+        </a>
+
         <a href="#" class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition">
             <i class="ph-duotone ph-hand-coins text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">جميع المطالبات</span>
@@ -96,7 +102,8 @@
             <div class="h-px bg-slate-800 w-full mt-2" x-show="!sidebarOpen"></div>
         </div>
         <!-- Add HR links here with ph-duotone icons -->
-        <a href="#" class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition">
+        <a href="{% url 'members:member_list' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'member' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-users text-xl"></i>
             <span class="mr-3" x-show="sidebarOpen">سجل الموظفين</span>
         </a>

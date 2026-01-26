@@ -18,8 +18,11 @@
         </div>
 
         <div id="hospital-btn-{{ hospital.id }}">
-            {% include 'networks/partials/hospital_status_btn.html' with is_in_network=hospital in hospitals_in_network
-            %}
+            {% if hospital in hospitals_in_network %}
+            {% include 'networks/partials/hospital_status_btn.html' with is_in_network=True %}
+            {% else %}
+            {% include 'networks/partials/hospital_status_btn.html' with is_in_network=False %}
+            {% endif %}
         </div>
     </div>
     {% empty %}

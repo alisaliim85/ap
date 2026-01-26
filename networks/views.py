@@ -124,6 +124,20 @@ def network_update(request, pk):
     return render(request, 'networks/network_form.html', {'form': form, 'title': f'تعديل الشبكة: {network.name_ar}'})
 
 @login_required
+def network_delete(request, pk):
+    network = get_object_or_404(Network, pk=pk)
+    if not request.user.is_broker:
+        return redirect('dashboard')
+        
+    if request.method == 'POST':
+        name = network.name_ar
+        network.delete()
+        messages.success(request, f"تم حذف الشبكة {name} بنجاح")
+        return redirect('networks:network_list')
+        
+    return render(request, 'networks/network_confirm_delete.html', {'network': network})
+
+@login_required
 def network_manage_hospitals(request, pk):
     """
     إدارة المستشفيات داخل الشبكة (إضافة/حذف)
@@ -168,7 +182,8 @@ def network_manage_hospitals(request, pk):
     context = {
         'network': network,
         'page_obj': page_obj,
-        'hospitals_in_network': network.hospitals.all()
+        # Evaluate to avoid N+1 queries during 'in' checks in template loop
+        'hospitals_in_network': list(network.hospitals.all()) 
     }
     
     if request.headers.get('HX-Request'):

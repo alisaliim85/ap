@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+
+    <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'members:member_list' %}"
+                class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-brand-600 transition-all shadow-sm">
+                <i class="ph-bold ph-arrow-right"></i>
+            </a>
+            <div>
+                <div class="flex items-center gap-3">
+                    <h2 class="text-3xl font-black text-slate-800">{{ member.full_name }}</h2>
+                    {% if member.is_active %}
+                    <span
+                        class="bg-green-50 text-green-600 text-[10px] font-black uppercase px-2 py-0.5 rounded border border-green-100">نشط</span>
+                    {% else %}
+                    <span
+                        class="bg-slate-100 text-slate-400 text-[10px] font-black uppercase px-2 py-0.5 rounded border border-slate-200">معلق</span>
+                    {% endif %}
+                </div>
+                <p class="text-slate-500 font-medium mt-1">
+                    {{ member.get_relation_display }} | {{ member.client.name_ar }}
+                </p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'members:member_update' member.pk %}"
+                class="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 hover:text-brand-600 hover:border-brand-500 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2">
+                <i class="ph-duotone ph-pencil-simple text-brand-600 text-xl"></i> تعديل
+            </a>
+            <a href="{% url 'members:member_delete' member.pk %}"
+                class="px-5 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold transition-all flex items-center gap-2">
+                <i class="ph-duotone ph-trash text-xl"></i> حذف
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Member Information -->
+        <div class="lg:col-span-2 space-y-8">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                    <h3 class="font-black text-slate-800 flex items-center gap-2">
+                        <i class="ph-duotone ph-identification-card text-brand-600 text-2xl"></i>
+                        البيانات الشخصية
+                    </h3>
+                </div>
+                <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">رقم
+                            الهوية / الإقامة</label>
+                        <p class="text-slate-800 font-bold text-lg font-mono">{{ member.national_id }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">رقم
+                            البطاقة الطبية</label>
+                        <p class="text-slate-800 font-bold text-lg font-mono">{{ member.medical_card_number }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">تاريخ
+                            الميلاد</label>
+                        <p class="text-slate-700 font-bold">{{ member.birth_date|date:"Y-m-d" }}</p>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">الجنس</label>
+                        <p class="text-slate-700 font-bold">{{ member.get_gender_display }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">رقم
+                            الجوال</label>
+                        <p class="text-slate-700 font-bold">{{ member.phone_number }}</p>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">العلاقة</label>
+                        <p class="text-slate-700 font-bold">{{ member.get_relation_display }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {% if member.relation == 'PRINCIPAL' %}
+            <!-- Dependents Table -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                    <h3 class="font-black text-slate-800 flex items-center gap-2">
+                        <i class="ph-duotone ph-users text-brand-600 text-2xl"></i>
+                        التابعين ({{ dependents.count }})
+                    </h3>
+                    <a href="{% url 'members:member_create' %}?sponsor_id={{ member.pk }}&client_id={{ member.client.pk }}&relation=SPOUSE"
+                        class="px-4 py-2 bg-brand-600 text-white rounded-xl hover:bg-brand-700 text-xs font-black transition-all flex items-center gap-2">
+                        <i class="ph-bold ph-plus"></i> إضافة تابع
+                    </a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right">
+                        <thead class="bg-slate-50 border-b border-slate-100">
+                            <tr>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                    الاسم</th>
+                                <th
+                                    class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">
+                                    العلاقة</th>
+                                <th
+                                    class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">
+                                    رقم البطاقة</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-sm">
+                            {% for dep in dependents %}
+                            <tr class="hover:bg-slate-50 transition group">
+                                <td class="px-6 py-4 font-bold text-slate-800">{{ dep.full_name }}</td>
+                                <td class="px-6 py-4 text-center">
+                                    <span
+                                        class="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-black">{{
+                                        dep.get_relation_display }}</span>
+                                </td>
+                                <td class="px-6 py-4 text-center font-mono text-slate-500">{{ dep.medical_card_number }}
+                                </td>
+                                <td class="px-6 py-4 text-left">
+                                    <a href="{% url 'members:member_detail' dep.pk %}"
+                                        class="opacity-0 group-hover:opacity-100 text-brand-600 hover:underline font-bold">عرض</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="py-12 text-center text-slate-400 italic">لا يوجد تابعين مسجلين
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar Coverage & Support -->
+        <div class="space-y-8">
+            <div
+                class="bg-indigo-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-xl shadow-indigo-900/30">
+                <div class="relative z-10">
+                    <h4 class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-6">التغطية التأمينية
+                    </h4>
+                    <div class="mb-6">
+                        <span class="block text-3xl font-black mb-1">{{ member.policy_class.name }}</span>
+                        <span class="text-xs text-indigo-300 font-medium">الحد السنوي العام: {{
+                            member.policy_class.annual_limit|floatformat:0 }} SAR</span>
+                    </div>
+
+                    <div class="space-y-4 pt-6 border-t border-indigo-800">
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-indigo-400">الشبكة الطبية</span>
+                            <span class="font-black">{{ member.policy_class.network.name_ar|default:"-" }}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-indigo-400">مزود الخدمة</span>
+                            <span class="font-black">{{ member.policy_class.policy.provider.name_ar|default:"-"
+                                }}</span>
+                        </div>
+                    </div>
+                </div>
+                <i class="ph-duotone ph-shield-check absolute -bottom-10 -left-10 text-9xl text-white/5"></i>
+            </div>
+
+            {% if member.sponsor %}
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">بيانات الموظف الكفيل
+                </h4>
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                        <i class="ph-duotone ph-user text-2xl"></i>
+                    </div>
+                    <div>
+                        <a href="{% url 'members:member_detail' member.sponsor.pk %}"
+                            class="block font-black text-slate-800 hover:text-brand-600 transition">{{
+                            member.sponsor.full_name }}</a>
+                        <span class="text-[10px] text-slate-400 font-bold uppercase">{{
+                            member.sponsor.medical_card_number }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">الفواتير والمطالبات
+                </h4>
+                <div class="text-center py-6">
+                    <i class="ph-duotone ph-receipt text-4xl text-slate-300 mb-3 block"></i>
+                    <p class="text-xs text-slate-500 font-medium">قريباً: عرض تاريخ المطالبات والتعميدات الطبية للعضو
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
