@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="w-full px-6 space-y-8">
+
+    <!-- 1. Header & Quick Actions -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+            <h1 class="text-3xl font-black text-slate-800">مرحباً، {{ request.user.first_name }} 👋</h1>
+            <p class="text-slate-500 font-medium mt-1 text-lg">لوحة تحكم: <span class="text-brand-600 font-bold">{{
+                    client.name_ar }}</span></p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'members:member_create' %}?client_id={{ client.id }}"
+                class="px-6 py-3 bg-brand-600 text-white rounded-xl hover:bg-brand-700 font-bold shadow-lg shadow-brand-200 transition-all flex items-center gap-2">
+                <i class="ph-bold ph-plus"></i> إضافة موظف/عضو
+            </a>
+            <button
+                class="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-bold transition-all shadow-sm flex items-center gap-2">
+                <i class="ph-bold ph-download-simple"></i> تقارير
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+        <!-- Total Members -->
+        <div
+            class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-brand-500 transition-all">
+            <div class="relative z-10">
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">إجمالي الأعضاء</p>
+                <h3 class="text-4xl font-black text-slate-800">{{ stats.total_members }}</h3>
+                <div class="mt-4 flex items-center gap-1 text-xs font-bold text-green-600">
+                    <i class="ph-bold ph-trend-up"></i>
+                    <span>نشط حالياً</span>
+                </div>
+            </div>
+            <i
+                class="ph-duotone ph-users-three absolute -bottom-4 -left-4 text-slate-100 text-9xl group-hover:text-brand-50 transition-colors"></i>
+        </div>
+
+        <!-- Employees -->
+        <div
+            class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-blue-500 transition-all">
+            <div class="relative z-10">
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">الموظفين (Principals)</p>
+                <h3 class="text-4xl font-black text-slate-800">{{ stats.employees }}</h3>
+                <div class="mt-4 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-blue-500 h-1.5 rounded-full" style="width: 70%"></div>
+                </div>
+            </div>
+            <i
+                class="ph-duotone ph-briefcase absolute -bottom-4 -left-4 text-slate-100 text-9xl group-hover:text-blue-50 transition-colors"></i>
+        </div>
+
+        <!-- Dependents -->
+        <div
+            class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-purple-500 transition-all">
+            <div class="relative z-10">
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">التابعين (Dependents)</p>
+                <h3 class="text-4xl font-black text-slate-800">{{ stats.dependents }}</h3>
+                <div class="mt-4 flex gap-2 text-[10px] font-bold text-slate-500">
+                    <span class="bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-100">أزواج: {{
+                        stats.spouses }}</span>
+                    <span class="bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-100">أبناء: {{
+                        stats.children }}</span>
+                </div>
+            </div>
+            <i
+                class="ph-duotone ph-baby absolute -bottom-4 -left-4 text-slate-100 text-9xl group-hover:text-purple-50 transition-colors"></i>
+        </div>
+
+        <!-- Pending Requests -->
+        <div
+            class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-orange-500 transition-all">
+            <div class="relative z-10">
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">طلبات معلقة/غير نشطة</p>
+                <h3 class="text-4xl font-black text-slate-800">{{ stats.pending_requests }}</h3>
+                <div class="mt-4 flex items-center gap-1 text-xs font-bold text-orange-600">
+                    <i class="ph-bold ph-clock"></i>
+                    <span>بانتظار التفعيل</span>
+                </div>
+            </div>
+            <i
+                class="ph-duotone ph-hourglass-medium absolute -bottom-4 -left-4 text-slate-100 text-9xl group-hover:text-orange-50 transition-colors"></i>
+        </div>
+    </div>
+
+    <!-- 3. Requests & Quick Links -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Recent Requests List -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="font-black text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-list-checks text-brand-600 text-xl"></i>
+                    آخر الطلبات / الإضافات
+                </h3>
+                <a href="{% url 'members:member_list' %}?status=inactive"
+                    class="text-xs font-bold text-brand-600 hover:text-brand-700">عرض الجميع</a>
+            </div>
+
+            <div class="flex-1 overflow-x-auto">
+                <table class="w-full text-right">
+                    <thead class="bg-slate-50 text-slate-500 border-b border-slate-100">
+                        <tr>
+                            <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-center">الاسم</th>
+                            <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-center">نوع الطلب
+                            </th>
+                            <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-center">الفئة</th>
+                            <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-center">الحالة</th>
+                            <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-left">الإجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for req in recent_requests %}
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                                        <i class="ph-bold ph-user"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-slate-800 text-sm">{{ req.full_name }}</p>
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase">{{
+                                            req.get_relation_display }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span
+                                    class="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black border border-blue-100">إضافة
+                                    عضو</span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="text-xs font-bold text-slate-600">{{ req.policy_class.name|default:"-"
+                                    }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span
+                                    class="inline-flex items-center gap-1 text-orange-600 text-[10px] font-black uppercase bg-orange-50 px-2 py-1 rounded border border-orange-100">
+                                    <i class="ph-fill ph-circle"></i> معلق
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-left">
+                                <a href="{% url 'members:member_detail' req.pk %}"
+                                    class="text-xs font-bold text-slate-500 hover:text-brand-600">عرض</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="py-12 text-center text-slate-400">
+                                <i class="ph-duotone ph-tray text-4xl mb-2 opacity-50"></i>
+                                <p class="text-sm font-bold">لا توجد طلبات معلقة حالياً</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- System Status / Info -->
+        <div class="space-y-6">
+            <!-- Company Info Widget -->
+            <div
+                class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
+                <div
+                    class="w-20 h-20 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-600 mb-4 shadow-sm">
+                    <i class="ph-duotone ph-buildings text-4xl"></i>
+                </div>
+                <h4 class="text-lg font-black text-slate-800 mb-1">{{ client.name_ar }}</h4>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">{{ client.name_en }}</p>
+
+                <div class="w-full space-y-3">
+                    <a href="{% url 'policies:policy_list' %}"
+                        class="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors group border border-slate-100">
+                        <span class="text-xs font-bold text-slate-600 flex items-center gap-2">
+                            <i class="ph-bold ph-file-text text-brand-500"></i> وثيقة التأمين
+                        </span>
+                        <i
+                            class="ph-bold ph-caret-left text-slate-300 group-hover:text-brand-600 transition-colors"></i>
+                    </a>
+                    <a href="{% url 'networks:network_list' %}"
+                        class="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors group border border-slate-100">
+                        <span class="text-xs font-bold text-slate-600 flex items-center gap-2">
+                            <i class="ph-bold ph-tree-structure text-brand-500"></i> الشبكة الطبية
+                        </span>
+                        <i
+                            class="ph-bold ph-caret-left text-slate-300 group-hover:text-brand-600 transition-colors"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Support Widget -->
+            <div
+                class="bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 rounded-2xl text-white shadow-lg shadow-indigo-900/20 relative overflow-hidden">
+                <div class="relative z-10">
+                    <h4 class="font-black text-lg mb-2">هل تحتاج مساعدة؟</h4>
+                    <p class="text-indigo-100 text-xs font-medium leading-relaxed mb-6 opacity-90">فريق الدعم في
+                        "الوسيط" جاهز لخدمتكم على مدار الساعة للرد على استفساراتكم.</p>
+                    <button
+                        class="w-full py-2.5 bg-white text-indigo-700 rounded-xl font-bold text-xs hover:bg-indigo-50 transition-colors shadow-sm">
+                        تواصل معنا
+                    </button>
+                </div>
+                <i class="ph-duotone ph-headset absolute -bottom-4 -left-4 text-white/10 text-8xl"></i>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

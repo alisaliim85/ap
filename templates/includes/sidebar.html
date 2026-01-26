@@ -97,16 +97,37 @@
 
         {% if user.is_hr %}
         <div class="px-6 pt-4 pb-2">
-            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest" x-show="sidebarOpen">الموظفين
-                والتأمين</p>
+            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest" x-show="sidebarOpen">إدارة التأمين
+                والموظفين</p>
             <div class="h-px bg-slate-800 w-full mt-2" x-show="!sidebarOpen"></div>
         </div>
-        <!-- Add HR links here with ph-duotone icons -->
+
+        <a href="{% url 'policies:policy_list' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'policy' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
+            <i class="ph-duotone ph-file-text text-xl"></i>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">وثائق التأمين</span>
+        </a>
+
         <a href="{% url 'members:member_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'member' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-users text-xl"></i>
-            <span class="mr-3" x-show="sidebarOpen">سجل الموظفين</span>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">سجل الأعضاء</span>
         </a>
+
+        <a href="{% url 'networks:network_list' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'networks' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
+            <i class="ph-duotone ph-tree-structure text-xl"></i>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">الشبكة الطبية</span>
+        </a>
+
+        <!-- HR Users Management (HR Admin Only) -->
+        {% if user.role == "HR_ADMIN" %}
+        <a href="{% url 'hr_user_list' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if '/staff/' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
+            <i class="ph-duotone ph-user-gear text-xl"></i>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">إدارة الموظفين</span>
+        </a>
+        {% endif %}
         {% endif %}
 
     </nav>

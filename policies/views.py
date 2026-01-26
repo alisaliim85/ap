@@ -11,11 +11,14 @@ def policy_list(request):
     """
     عرض قائمة بوالص التأمين
     """
-    if not request.user.is_broker:
+    policies_list = Policy.objects.all().order_by('-created_at')
+
+    # تصفية الصلاحيات
+    if request.user.is_hr:
+        policies_list = policies_list.filter(client=request.user.related_client)
+    elif not request.user.is_broker:
         messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
         return redirect('dashboard')
-
-    policies_list = Policy.objects.all().order_by('-created_at')
 
     # البحث
     search_query = request.GET.get('search', '')
@@ -75,7 +78,13 @@ def policy_update(request, pk):
 @login_required
 def policy_detail(request, pk):
     policy = get_object_or_404(Policy, pk=pk)
-    if not request.user.is_broker:
+    
+    # التحقق من الصلاحية
+    if request.user.is_hr:
+        if policy.client != request.user.related_client:
+             messages.error(request, "ليس لديك صلاحية الوصول لهذه البوليصة")
+             return redirect('policies:policy_list')
+    elif not request.user.is_broker:
         messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
         return redirect('dashboard')
     

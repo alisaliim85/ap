@@ -62,8 +62,9 @@ class StaffUserForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # تخصيص قائمة الشركات
-        self.fields['related_client'].required = False
-        self.fields['related_client'].empty_label = "لا يتبع لشركة (خاص بموظفي الوسيط)"
+        if 'related_client' in self.fields:
+            self.fields['related_client'].required = False
+            self.fields['related_client'].empty_label = "لا يتبع لشركة (خاص بموظفي الوسيط)"
         
         # إذا كان تعديلاً، كلمة المرور ليست إلزامية
         if self.instance.pk:
@@ -79,3 +80,16 @@ class StaffUserForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+
+class HRStaffForm(StaffUserForm):
+    """
+    نموذج مبسط لمدراء الموارد البشرية لإضافة موظفيهم
+    """
+    class Meta(StaffUserForm.Meta):
+        fields = ['username', 'first_name', 'last_name', 'email', 'phone_number', 'is_active']
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # إزالة الحقول التي لا يحق للـ HR التحكم بها
+        if 'role' in self.fields: del self.fields['role']
+        if 'related_client' in self.fields: del self.fields['related_client']

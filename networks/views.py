@@ -84,10 +84,15 @@ def service_provider_delete(request, pk):
 
 @login_required
 def network_list(request):
-    if not request.user.is_broker:
-        return redirect('dashboard')
-
     networks = Network.objects.all().select_related('provider').order_by('provider__name_ar', 'name_ar')
+
+    # تصفية الصلاحيات
+    if request.user.is_hr:
+        # عرض الشبكات المرتبطة بسياسات الشركة فقط
+        networks = networks.filter(policy_classes__policy__client=request.user.related_client).distinct()
+    elif not request.user.is_broker:
+        return redirect('dashboard')
+        
     return render(request, 'networks/network_list.html', {'networks': networks})
 
 @login_required
@@ -143,11 +148,21 @@ def network_manage_hospitals(request, pk):
     إدارة المستشفيات داخل الشبكة (إضافة/حذف)
     """
     network = get_object_or_404(Network, pk=pk)
-    if not request.user.is_broker:
+    
+    # التحقق من الصلاحيات
+    is_broker = request.user.is_broker
+    is_hr = request.user.is_hr
+    
+    if is_hr:
+         # التأكد من أن الشبكة مرتبطة بسياسة تابعة لشركة الـ HR
+         has_access = network.policy_classes.filter(policy__client=request.user.related_client).exists()
+         if not has_access:
+             return redirect('networks:network_list')
+    elif not is_broker:
         return redirect('dashboard')
 
-    # التعامل مع طلبات التبديل (HTMX)
-    if request.method == 'POST' and request.headers.get('HX-Request'):
+    # التعامل مع طلبات التبديل (HTMX) - للوسطاء فقط
+    if request.method == 'POST' and request.headers.get('HX-Request') and is_broker:
         hospital_id = request.POST.get('hospital_id')
         action = request.POST.get('action')
         hospital = get_object_or_404(ServiceProvider, pk=hospital_id)

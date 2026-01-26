@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="w-full px-6 space-y-6">
+
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-black text-slate-800">إدارة الموظفين</h1>
+            <p class="text-slate-500 font-medium mt-1">إدارة صلاحيات موظفي الموارد البشرية للشركة</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'hr_user_create' %}"
+                class="px-6 py-3 bg-brand-600 text-white rounded-xl hover:bg-brand-700 font-bold shadow-lg shadow-brand-200 transition-all flex items-center gap-2">
+                <i class="ph-bold ph-plus"></i> إضافة موظف جديد
+            </a>
+        </div>
+    </div>
+
+    <!-- User List -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-right">
+                <thead class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                    <tr>
+                        <th class="px-6 py-4 text-xs font-black uppercase tracking-widest">الموظف</th>
+                        <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-center">بيانات الاتصال
+                        </th>
+                        <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-center">الحالة</th>
+                        <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-left">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for user in users %}
+                    <tr class="hover:bg-slate-50 transition group">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
+                                    <i class="ph-duotone ph-user-gear text-xl"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-slate-800">{{ user.get_full_name|default:user.username }}
+                                    </p>
+                                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">@{{
+                                        user.username }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex flex-col items-center gap-1">
+                                <span class="text-xs font-medium text-slate-600">{{ user.email }}</span>
+                                <span class="text-[10px] font-bold text-slate-400">{{ user.phone_number|default:"-"
+                                    }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if user.is_active %}
+                            <span
+                                class="inline-flex items-center gap-1 text-green-600 text-[10px] font-black uppercase px-2 py-1 bg-green-50 rounded border border-green-100">
+                                <i class="ph-fill ph-check-circle"></i> نشط
+                            </span>
+                            {% else %}
+                            <span
+                                class="inline-flex items-center gap-1 text-slate-400 text-[10px] font-black uppercase px-2 py-1 bg-slate-100 rounded border border-slate-200">
+                                <i class="ph-fill ph-minus-circle"></i> معطل
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-left">
+                            <div class="flex items-center justify-end gap-2 text-slate-400">
+                                <a href="{% url 'hr_user_update' user.pk %}"
+                                    class="p-1.5 hover:text-brand-600 transition-colors rounded hover:bg-brand-50"
+                                    title="تعديل">
+                                    <i class="ph-duotone ph-pencil-simple text-lg"></i>
+                                </a>
+                                <a href="{% url 'hr_user_delete' user.pk %}"
+                                    class="p-1.5 hover:text-red-600 transition-colors rounded hover:bg-red-50"
+                                    title="حذف">
+                                    <i class="ph-duotone ph-trash text-lg"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="py-20 text-center">
+                            <div class="flex flex-col items-center gap-3 text-slate-400">
+                                <i class="ph-duotone ph-users-three text-6xl opacity-20"></i>
+                                <p class="font-bold">لا يوجد موظفين إضافيين</p>
+                                <p class="text-sm">أضف موظف جديد لمساعدتك في إدارة التأمين</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if users.has_other_pages %}
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-500">صفحة {{ users.number }} من {{ users.paginator.num_pages
+                }}</span>
+            <div class="flex gap-2">
+                {% if users.has_previous %}
+                <a href="?page={{ users.previous_page_number }}"
+                    class="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-brand-600 transition">
+                    <i class="ph-bold ph-caret-right"></i>
+                </a>
+                {% endif %}
+                {% if users.has_next %}
+                <a href="?page={{ users.next_page_number }}"
+                    class="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-brand-600 transition">
+                    <i class="ph-bold ph-caret-left"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-8">
+
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-3 text-sm text-slate-500 mb-2">
+            <a href="{% url 'hr_user_list' %}" class="hover:text-brand-600 transition">إدارة الموظفين</a>
+            <i class="ph-bold ph-caret-left text-xs"></i>
+            <span class="text-slate-800 font-bold">{{ title }}</span>
+        </div>
+        <h1 class="text-3xl font-black text-slate-800">{{ title }}</h1>
+    </div>
+
+    <!-- Form Layout -->
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Login Info -->
+        <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+            <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <i class="ph-duotone ph-lock-key text-brand-600"></i> بيانات الدخول
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Username -->
+                <div class="col-span-2">
+                    <label for="{{ form.username.id_for_label }}"
+                        class="block text-sm font-bold text-slate-700 mb-2">اسم المستخدم (English)</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.username.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-slate-400">يستخدم لتسجيل الدخول للنظام</p>
+                </div>
+
+                <!-- Password -->
+                <div class="col-span-2">
+                    <label for="{{ form.password.id_for_label }}" class="block text-sm font-bold text-slate-700 mb-2">{{
+                        form.password.label }}</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.password.errors.0 }}</p>
+                    {% endif %}
+                    {% if form.password.help_text %}
+                    <p class="mt-1 text-xs text-slate-400">{{ form.password.help_text }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Personal Info -->
+        <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+            <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <i class="ph-duotone ph-user-circle text-brand-600"></i> البيانات الشخصية
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- First Name -->
+                <div>
+                    <label for="{{ form.first_name.id_for_label }}"
+                        class="block text-sm font-bold text-slate-700 mb-2">الاسم الأول</label>
+                    {{ form.first_name }}
+                </div>
+
+                <!-- Last Name -->
+                <div>
+                    <label for="{{ form.last_name.id_for_label }}"
+                        class="block text-sm font-bold text-slate-700 mb-2">اسم العائلة</label>
+                    {{ form.last_name }}
+                </div>
+
+                <!-- Email -->
+                <div class="col-span-2">
+                    <label for="{{ form.email.id_for_label }}"
+                        class="block text-sm font-bold text-slate-700 mb-2">البريد الإلكتروني</label>
+                    {{ form.email }}
+                </div>
+
+                <!-- Phone -->
+                <div class="col-span-2">
+                    <label for="{{ form.phone_number.id_for_label }}"
+                        class="block text-sm font-bold text-slate-700 mb-2">رقم الجوال</label>
+                    {{ form.phone_number }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex items-center gap-3">
+                {{ form.is_active }}
+                <label for="{{ form.is_active.id_for_label }}"
+                    class="text-sm font-bold text-slate-700 select-none cursor-pointer">حساب نشط (يمكنه تسجيل
+                    الدخول)</label>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-4 pt-4">
+            <button type="submit"
+                class="px-8 py-3 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 shadow-lg shadow-brand-200 transition-all flex items-center gap-2">
+                <i class="ph-bold ph-check"></i> حفظ البيانات
+            </button>
+            <a href="{% url 'hr_user_list' %}"
+                class="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all">
+                إلغاء
+            </a>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

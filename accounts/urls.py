@@ -11,4 +11,10 @@ urlpatterns = [
     path('users/add/', views.user_create, name='user_create'),
     path('users/<uuid:pk>/edit/', views.user_update, name='user_update'),
     path('users/<uuid:pk>/delete/', views.user_delete, name='user_delete'),
+
+    # إدارة موظفي الـ HR
+    path('staff/', views.hr_user_list, name='hr_user_list'),
+    path('staff/add/', views.hr_user_create, name='hr_user_create'),
+    path('staff/<uuid:pk>/edit/', views.hr_user_update, name='hr_user_update'),
+    path('staff/<uuid:pk>/delete/', views.hr_user_delete, name='hr_user_delete'),
 ]
