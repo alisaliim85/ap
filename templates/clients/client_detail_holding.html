@@ -17,8 +17,8 @@
                     <h1 class="text-3xl font-black text-slate-800">{{ client.name_ar }}</h1>
                 </div>
                 <div class="flex items-center gap-6 text-slate-500 text-sm font-medium">
-                    <span class="flex items-center gap-2"><i class="ph-duotone ph-globe"></i> {{ client.name_en
-                        }}</span>
+                    <span class="flex items-center gap-2"><i class="ph-duotone ph-globe"></i>
+                        {{ client.name_en}}</span>
                     <span class="flex items-center gap-2"><i class="ph-duotone ph-identification-card"></i> CR: <span
                             class="font-mono">{{ client.commercial_record }}</span></span>
                 </div>
@@ -62,8 +62,8 @@
             <div class="px-4 border-r border-slate-100">
                 <span class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">صلاحية
                     الوثيقة</span>
-                <p class="text-sm font-bold text-slate-800">{{ master_policy.start_date|date:"Y/m/d" }} - {{
-                    master_policy.end_date|date:"Y/m/d" }}</p>
+                <p class="text-sm font-bold text-slate-800">
+                    {{ master_policy.start_date|date:"Y/m/d" }} - {{ master_policy.end_date|date:"Y/m/d" }}</p>
                 {% if master_policy.is_active %}
                 <span
                     class="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full inline-block mt-1">سارية
@@ -153,12 +153,12 @@
                             </td>
                             <td class="px-6 py-4 font-mono text-sm text-slate-600">{{ sub.commercial_record }}</td>
                             <td class="px-6 py-4 text-center">
-                                <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-bold">{{
-                                    sub.total_employees }}</span>
+                                <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-bold">
+                                    {{ sub.total_employees }}</span>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold">{{
-                                    sub.total_lives }}</span>
+                                <span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold">
+                                    {{ sub.total_lives }}</span>
                             </td>
                             <td class="px-6 py-4 text-left">
                                 <a href="{% url 'client_detail' sub.pk %}"
@@ -206,8 +206,8 @@
                                 <p class="text-xs font-bold text-slate-800">{{ benefit.limit_amount|floatformat:0 }}
                                     <span class="text-[9px] text-slate-400">SAR</span>
                                 </p>
-                                <p class="text-[10px] font-bold text-brand-600">تحمل: {{ benefit.deductible_percentage
-                                    }}%</p>
+                                <p class="text-[10px] font-bold text-brand-600">تحمل:
+                                    {{ benefit.deductible_percentage }}%</p>
                             </div>
                         </div>
                         {% empty %}

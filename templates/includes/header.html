@@ -34,10 +34,10 @@
                     {{ user.first_name|first }}{{ user.last_name|first }}
                 </div>
                 <div class="hidden sm:block text-right">
-                    <div class="text-sm font-bold text-slate-800 leading-none">{{ user.first_name }} {{ user.last_name
-                        }}</div>
-                    <div class="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-wider">{{
-                        user.get_role_display }}</div>
+                    <div class="text-sm font-bold text-slate-800 leading-none">
+                        {{ user.first_name }} {{ user.last_name }}</div>
+                    <div class="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-wider">
+                        {{ user.get_role_display }}</div>
                 </div>
                 <i class="ph-bold ph-caret-down text-xs text-slate-400" :class="open ? 'rotate-180' : ''"></i>
             </button>

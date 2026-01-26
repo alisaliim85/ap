@@ -149,19 +149,22 @@
                     </h4>
                     <div class="mb-6">
                         <span class="block text-3xl font-black mb-1">{{ member.policy_class.name }}</span>
-                        <span class="text-xs text-indigo-300 font-medium">الحد السنوي العام: {{
-                            member.policy_class.annual_limit|floatformat:0 }} SAR</span>
+                        <span class="text-xs text-indigo-300 font-medium">الحد السنوي العام :
+                            {{ member.policy_class.annual_limit|floatformat:0 }} SAR</span>
                     </div>
 
                     <div class="space-y-4 pt-6 border-t border-indigo-800">
                         <div class="flex justify-between items-center text-sm">
                             <span class="text-indigo-400">الشبكة الطبية</span>
-                            <span class="font-black">{{ member.policy_class.network.name_ar|default:"-" }}</span>
+                            <span class="font-black">
+                                {{ member.policy_class.network.name_ar|default:"-" }}
+                            </span>
                         </div>
                         <div class="flex justify-between items-center text-sm">
                             <span class="text-indigo-400">مزود الخدمة</span>
-                            <span class="font-black">{{ member.policy_class.policy.provider.name_ar|default:"-"
-                                }}</span>
+                            <span class="font-black">
+                                {{ member.policy_class.policy.provider.name_ar|default:"-" }}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -178,10 +181,10 @@
                     </div>
                     <div>
                         <a href="{% url 'members:member_detail' member.sponsor.pk %}"
-                            class="block font-black text-slate-800 hover:text-brand-600 transition">{{
-                            member.sponsor.full_name }}</a>
-                        <span class="text-[10px] text-slate-400 font-bold uppercase">{{
-                            member.sponsor.medical_card_number }}</span>
+                            class="block font-black text-slate-800 hover:text-brand-600 transition">
+                            {{ member.sponsor.full_name }}</a>
+                        <span class="text-[10px] text-slate-400 font-bold uppercase">
+                            {{ member.sponsor.medical_card_number }}</span>
                     </div>
                 </div>
             </div>

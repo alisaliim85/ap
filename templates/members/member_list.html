@@ -17,35 +17,46 @@
     </div>
 
     <!-- Filters Section -->
-    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-6">
+    <div class="bg-white p-1 rounded-2xl border border-slate-200 shadow-sm mb-6">
         <form hx-get="{% url 'members:member_list' %}" hx-target="#member-table-container"
-            hx-trigger="change, keyup delay:300ms from:#search-input" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="md:col-span-2 relative">
-                <input type="text" name="search" id="search-input" placeholder="البحث بالاسم أو رقم البطاقة الطبية..."
-                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none font-medium">
-                <i class="ph-bold ph-magnifying-glass absolute left-3 top-3.5 text-slate-400"></i>
+            hx-trigger="change, keyup delay:300ms from:#search-input" class="flex flex-col md:flex-row gap-1">
+
+            <div class="flex-1 relative">
+                <input type="text" name="search" id="search-input"
+                    placeholder="البحث بالاسم، رقم الهوية، أو البطاقة الطبية..."
+                    class="w-full pl-10 pr-4 py-3 bg-white hover:bg-slate-50 focus:bg-white rounded-xl focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 transition-all outline-none font-medium border-none">
+                <i class="ph-duotone ph-magnifying-glass absolute left-3 top-3.5 text-slate-400 text-xl"></i>
             </div>
 
+            <div class="h-12 w-px bg-slate-100 hidden md:block"></div>
+
             {% if request.user.is_broker %}
-            <div>
+            <div class="w-full md:w-64 relative group">
+                <i
+                    class="ph-duotone ph-buildings absolute right-3 top-3.5 text-slate-400 pointer-events-none group-hover:text-brand-500 transition-colors"></i>
                 <select name="client"
-                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none font-medium text-slate-700">
+                    class="w-full pr-10 pl-4 py-3 bg-white hover:bg-slate-50 rounded-xl focus:ring-4 focus:ring-brand-500/10 focus:outline-none font-bold text-slate-600 cursor-pointer appearance-none border-none">
                     <option value="">جميع الشركات</option>
                     {% for c in clients %}
                     <option value="{{ c.id }}">{{ c.name_ar }}</option>
                     {% endfor %}
                 </select>
+                <i class="ph-bold ph-caret-down absolute left-3 top-4 text-slate-300 pointer-events-none text-xs"></i>
             </div>
+            <div class="h-12 w-px bg-slate-100 hidden md:block"></div>
             {% endif %}
 
-            <div>
+            <div class="w-full md:w-56 relative group">
+                <i
+                    class="ph-duotone ph-users-three absolute right-3 top-3.5 text-slate-400 pointer-events-none group-hover:text-brand-500 transition-colors"></i>
                 <select name="relation"
-                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none font-medium text-slate-700">
+                    class="w-full pr-10 pl-4 py-3 bg-white hover:bg-slate-50 rounded-xl focus:ring-4 focus:ring-brand-500/10 focus:outline-none font-bold text-slate-600 cursor-pointer appearance-none border-none">
                     <option value="">جميع الفئات</option>
                     {% for val, label in relations %}
                     <option value="{{ val }}">{{ label }}</option>
                     {% endfor %}
                 </select>
+                <i class="ph-bold ph-caret-down absolute left-3 top-4 text-slate-300 pointer-events-none text-xs"></i>
             </div>
         </form>
     </div>

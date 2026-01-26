@@ -1,106 +1,144 @@
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-    <table class="w-full text-right">
-        <thead class="bg-slate-50 border-b border-slate-200">
-            <tr>
-                <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">عضو</th>
-                <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">البطاقة الطبية</th>
-                <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">جهة
-                    التبعية</th>
-                <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">الفئة</th>
-                <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">الحالة
-                </th>
-                <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-left">الإجراءات
-                </th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-            {% for m in members %}
-            <tr class="hover:bg-slate-50 transition group">
-                <td class="px-6 py-4">
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
-                            <i class="ph-duotone ph-user text-xl"></i>
+    <div class="overflow-x-auto">
+        <table class="w-full text-right">
+            <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                <tr>
+                    <th
+                        class="px-6 py-4 text-[10px] font-black text-indigo-900/50 uppercase tracking-widest text-right">
+                        المؤمن عليه</th>
+                    <th
+                        class="px-6 py-4 text-[10px] font-black text-indigo-900/50 uppercase tracking-widest text-center">
+                        البطاقة الطبية</th>
+                    <th
+                        class="px-6 py-4 text-[10px] font-black text-indigo-900/50 uppercase tracking-widest text-center">
+                        الشركة / التبعية</th>
+                    <th
+                        class="px-6 py-4 text-[10px] font-black text-indigo-900/50 uppercase tracking-widest text-center">
+                        الفئة</th>
+                    <th
+                        class="px-6 py-4 text-[10px] font-black text-indigo-900/50 uppercase tracking-widest text-center">
+                        الحالة</th>
+                    <th class="px-6 py-4 text-[10px] font-black text-indigo-900/50 uppercase tracking-widest text-left">
+                        الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for m in members %}
+                <tr class="hover:bg-slate-50/30 transition group">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 group-hover:bg-brand-600 group-hover:text-white group-hover:shadow-lg group-hover:shadow-brand-500/20 transition-all duration-300">
+                                <i class="ph-duotone ph-user text-2xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-sm mb-0.5">{{ m.full_name }}</h4>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200 font-bold uppercase tracking-wide group-hover:border-brand-200 group-hover:bg-brand-50 group-hover:text-brand-700 transition-colors">
+                                        {{ m.get_relation_display }}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <p class="font-bold text-slate-800">{{ m.full_name }}</p>
-                            <span
-                                class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-black uppercase tracking-tighter">
-                                {{ m.get_relation_display }}
+                    </td>
+                    <td class="px-6 py-4 font-mono text-sm font-bold text-slate-600 tracking-wider text-center">
+                        {{ m.medical_card_number|default:"-" }}</td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="flex flex-col items-center">
+                            <p class="text-xs font-bold text-slate-800">{{ m.client.name_ar }}</p>
+                            {% if m.sponsor %}
+                            <p class="text-[10px] text-slate-400 mt-0.5 font-medium">
+                                <i class="ph-bold ph-arrow-elbow-down-right"></i>
+                                تابع لـ: {{ m.sponsor.full_name }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span
+                            class="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-black shadow-sm group-hover:border-brand-200 group-hover:text-brand-700 transition-all">
+                            {{ m.policy_class.name }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        {% if m.is_active %}
+                        <span
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100/50">
+                            <span class="relative flex h-2 w-2">
+                                <span
+                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                             </span>
+                            <span class="text-[10px] font-black uppercase tracking-wider">نشط</span>
+                        </span>
+                        {% else %}
+                        <span
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                            <span class="h-2 w-2 rounded-full bg-slate-400"></span>
+                            <span class="text-[10px] font-black uppercase tracking-wider">معلق</span>
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-left">
+                        <div
+                            class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                            <a href="{% url 'members:member_detail' m.pk %}"
+                                class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:border-brand-200 hover:shadow-lg hover:shadow-brand-500/10 transition-all"
+                                title="التفاصيل">
+                                <i class="ph-duotone ph-eye text-lg"></i>
+                            </a>
+                            <a href="{% url 'members:member_update' m.pk %}"
+                                class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/10 transition-all"
+                                title="تعديل">
+                                <i class="ph-duotone ph-pencil-simple text-lg"></i>
+                            </a>
+                            <a href="{% url 'members:member_delete' m.pk %}"
+                                class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-600 hover:border-red-200 hover:shadow-lg hover:shadow-red-500/10 transition-all"
+                                title="حذف">
+                                <i class="ph-duotone ph-trash text-lg"></i>
+                            </a>
                         </div>
-                    </div>
-                </td>
-                <td class="px-6 py-4 font-mono text-sm text-slate-500">{{ m.medical_card_number }}</td>
-                <td class="px-6 py-4 text-center">
-                    <p class="text-sm font-bold text-slate-700">{{ m.client.name_ar }}</p>
-                    {% if m.sponsor %}
-                    <p class="text-[10px] text-slate-400">تابع لـ: {{ m.sponsor.full_name }}</p>
-                    {% endif %}
-                </td>
-                <td class="px-6 py-4 text-center">
-                    <span
-                        class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-black border border-indigo-100">
-                        {{ m.policy_class.name }}
-                    </span>
-                </td>
-                <td class="px-6 py-4 text-center">
-                    {% if m.is_active %}
-                    <span class="inline-flex items-center gap-1 text-green-600 text-[10px] font-black uppercase">
-                        <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> نشط
-                    </span>
-                    {% else %}
-                    <span class="inline-flex items-center gap-1 text-slate-400 text-[10px] font-black uppercase">
-                        <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span> معلق
-                    </span>
-                    {% endif %}
-                </td>
-                <td class="px-6 py-4 text-left">
-                    <div class="flex items-center justify-end gap-2 text-slate-400">
-                        <a href="{% url 'members:member_detail' m.pk %}"
-                            class="p-1 hover:text-brand-600 transition-colors" title="التفاصيل">
-                            <i class="ph-duotone ph-eye text-lg"></i>
-                        </a>
-                        <a href="{% url 'members:member_update' m.pk %}"
-                            class="p-1 hover:text-brand-600 transition-colors" title="تعديل">
-                            <i class="ph-duotone ph-pencil-simple text-lg"></i>
-                        </a>
-                        <a href="{% url 'members:member_delete' m.pk %}"
-                            class="p-1 hover:text-red-600 transition-colors" title="حذف">
-                            <i class="ph-duotone ph-trash text-lg"></i>
-                        </a>
-                    </div>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6" class="py-20 text-center">
-                    <div class="flex flex-col items-center gap-3 text-slate-400">
-                        <i class="ph-duotone ph-users text-6xl opacity-20"></i>
-                        <p class="font-bold">لا يوجد أعضاء مطابقين للبحث</p>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="py-20 text-center">
+                        <div class="flex flex-col items-center gap-3 text-slate-300">
+                            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-2">
+                                <i class="ph-duotone ph-users-three text-4xl opacity-50"></i>
+                            </div>
+                            <h4 class="text-slate-500 font-bold text-lg">لا يوجد أعضاء مطابقين</h4>
+                            <p class="text-sm font-medium">حاول تغيير معايير البحث أو الفلترة</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
     {% if page_obj.has_other_pages %}
     <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-        <span class="text-xs font-bold text-slate-500">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages
-            }}</span>
+        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">عرض {{ page_obj.start_index }}-{{
+            page_obj.end_index }} من أصل {{ page_obj.paginator.count }}</span>
         <div class="flex gap-2">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}"
-                class="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-brand-600 transition">
+            <button
+                hx-get="{% url 'members:member_list' %}?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.client %}&client={{ request.GET.client }}{% endif %}{% if request.GET.relation %}&relation={{ request.GET.relation }}{% endif %}"
+                hx-target="#member-table-container"
+                class="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-500 hover:text-brand-600 hover:border-brand-200 transition shadow-sm">
                 <i class="ph-bold ph-caret-right"></i>
-            </a>
+            </button>
             {% endif %}
+
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}"
-                class="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-brand-600 transition">
+            <button
+                hx-get="{% url 'members:member_list' %}?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.client %}&client={{ request.GET.client }}{% endif %}{% if request.GET.relation %}&relation={{ request.GET.relation }}{% endif %}"
+                hx-target="#member-table-container"
+                class="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-500 hover:text-brand-600 hover:border-brand-200 transition shadow-sm">
                 <i class="ph-bold ph-caret-left"></i>
-            </a>
+            </button>
             {% endif %}
         </div>
     </div>
