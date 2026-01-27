@@ -12,8 +12,8 @@
                 </a>
                 <h2 class="text-2xl font-black text-slate-800">إدارة منافع الفئة: {{ policy_class.name }}</h2>
             </div>
-            <p class="text-slate-500 text-sm mt-1 mr-11">{{ policy_class.policy.client.name_ar }} - بوليصة رقم: {{
-                policy_class.policy.policy_number }}</p>
+            <p class="text-slate-500 text-sm mt-1 mr-11">{{ policy_class.policy.client.name_ar }} - بوليصة رقم:
+                {{ policy_class.policy.policy_number }}</p>
         </div>
     </div>
 
@@ -106,8 +106,8 @@
                         </div>
                         <div>
                             <h4 class="font-black text-slate-800">{{ b.benefit_type.name_ar }}</h4>
-                            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{{
-                                b.benefit_type.name_en }}</p>
+                            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+                                {{ b.benefit_type.name_en }}</p>
                         </div>
                     </div>
 
