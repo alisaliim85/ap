@@ -107,6 +107,26 @@
                         </div>
                     </div>
                 </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-200 bg-slate-50">
+                    <h4 class="font-bold text-slate-800">إعدادات الخدمة</h4>
+                </div>
+                <div class="p-4 space-y-4">
+                    <div>
+                        <span class="block text-xs text-slate-400 font-bold uppercase mb-2">إدارة المطالبات (Claims)</span>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                            <span class="text-sm font-medium text-slate-700">تجاوز مراجعة HR</span>
+                            {% if client.services_config.claims.bypass_hr_review %}
+                            <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded border border-green-200">نعم</span>
+                            {% else %}
+                            <span class="bg-slate-100 text-slate-500 text-xs font-bold px-2 py-1 rounded border border-slate-200">لا</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
