@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
-from .forms import LoginForm, StaffUserForm, HRStaffForm
+from .forms import LoginForm, StaffUserForm, HRStaffForm, ProfileForm
 from .models import User
 
 def login_view(request):
@@ -249,3 +249,25 @@ def hr_user_delete(request, pk):
         return redirect('hr_user_list')
     
     return render(request, 'accounts/hr_user_confirm_delete.html', {'user_to_delete': user_to_delete})
+
+
+# --- الملف الشخصي ---
+
+@login_required
+def profile_view(request):
+    return render(request, 'accounts/profile.html', {
+        'user': request.user
+    })
+
+@login_required
+def user_profile_edit(request):
+    if request.method == 'POST':
+        form = ProfileForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "تم تحديث الملف الشخصي بنجاح")
+            return redirect('profile')
+    else:
+        form = ProfileForm(instance=request.user)
+    
+    return render(request, 'accounts/profile_edit.html', {'form': form})

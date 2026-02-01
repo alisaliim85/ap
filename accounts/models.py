@@ -26,6 +26,8 @@ class User(AbstractUser):
         # 4. عام
         VIEWER = 'VIEWER', _('Viewer / Auditor')
 
+        MEMBER = 'MEMBER', _('Member / Beneficiary')
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     role = models.CharField(
@@ -82,3 +84,7 @@ class User(AbstractUser):
     @property
     def is_partner(self):
         return self.role in [self.Roles.PHARMACIST, self.Roles.CHRONIC_ADMIN, self.Roles.CHRONIC_STAFF]
+
+    @property
+    def is_member(self):
+        return self.role == self.Roles.MEMBER

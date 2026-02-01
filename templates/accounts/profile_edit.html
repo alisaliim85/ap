@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}تعديل الملف الشخصي{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    
+    <!-- رأس الصفحة -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">تعديل الملف الشخصي</h1>
+            <p class="text-slate-500 mt-1">تحديث البيانات الشخصية ومعلومات الاتصال</p>
+        </div>
+    </div>
+
+    <form method="post" class="space-y-6 bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="p-4 bg-red-50 text-red-700 rounded-lg text-sm">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <!-- readonly sensitive data -->
+        <h3 class="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2 mb-4">معلومات الحساب (للقراءة فقط)</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-slate-500 mb-1">اسم المستخدم</label>
+                <div class="w-full px-3 py-2 border border-slate-200 bg-slate-50 text-slate-500 rounded-md">
+                    {{ user.username }}
+                </div>
+                <p class="text-xs text-slate-400 mt-1">لا يمكن تغيير اسم المستخدم</p>
+            </div>
+            
+            <div>
+                 <label class="block text-sm font-medium text-slate-500 mb-1">الصلاحية / الدور</label>
+                 <div class="w-full px-3 py-2 border border-slate-200 bg-slate-50 text-slate-500 rounded-md">
+                    {{ user.get_role_display }}
+                 </div>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-slate-500 mb-1">الجهة التابعة</label>
+                <div class="w-full px-3 py-2 border border-slate-200 bg-slate-50 text-slate-500 rounded-md">
+                    {% if user.related_client %}
+                        {{ user.related_client.name_ar }} (شركة)
+                    {% elif user.related_partner %}
+                        {{ user.related_partner.name_ar }} (شريك)
+                    {% else %}
+                        نظام (AP Plus)
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <h3 class="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2 mb-4 pt-4">البيانات الشخصية</h3>
+
+        <div class="grid grid-cols-1 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">الاسم الأول</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.first_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">الاسم الأخير</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.last_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">البريد الإلكتروني</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.email.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">رقم الهاتف</label>
+                {{ form.phone_number }}
+                {% if form.phone_number.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.phone_number.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-4 pt-4 border-t border-slate-100">
+            <a href="{% url 'profile' %}" class="px-4 py-2 text-slate-700 hover:text-slate-900 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition">
+                إلغاء
+            </a>
+            <button type="submit" class="px-6 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 shadow-sm font-bold transition flex items-center gap-2">
+                <i class="ph-bold ph-check"></i>
+                حفظ التغييرات
+            </button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

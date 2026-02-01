@@ -93,3 +93,16 @@ class HRStaffForm(StaffUserForm):
         # إزالة الحقول التي لا يحق للـ HR التحكم بها
         if 'role' in self.fields: del self.fields['role']
         if 'related_client' in self.fields: del self.fields['related_client']
+
+class ProfileForm(StaffUserForm):
+    class Meta(StaffUserForm.Meta):
+        fields = ['first_name', 'last_name', 'email', 'phone_number']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Remove fields that we don't want editable or even in the form
+        if 'password' in self.fields: del self.fields['password']
+        if 'role' in self.fields: del self.fields['role']
+        if 'related_client' in self.fields: del self.fields['related_client']
+        if 'is_active' in self.fields: del self.fields['is_active']
+        if 'username' in self.fields: del self.fields['username']

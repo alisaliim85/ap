@@ -17,4 +17,8 @@ urlpatterns = [
     path('staff/add/', views.hr_user_create, name='hr_user_create'),
     path('staff/<uuid:pk>/edit/', views.hr_user_update, name='hr_user_update'),
     path('staff/<uuid:pk>/delete/', views.hr_user_delete, name='hr_user_delete'),
+
+    # الملف الشخصي
+    path('profile/', views.profile_view, name='profile'),
+    path('profile/edit/', views.user_profile_edit, name='profile_edit'),
 ]
