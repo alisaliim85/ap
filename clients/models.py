@@ -2,6 +2,14 @@ import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+
+def default_services_config():
+    return {
+        "claims": {
+            "bypass_hr_review": False,
+        }
+    }
+
 class Client(models.Model):
     """
     يمثل هذا الجدول الشركات أو المؤسسات المتعاقدة (مثل SBG).
@@ -28,6 +36,13 @@ class Client(models.Model):
     # تفاصيل الاتصال
     email = models.EmailField(_("Contact Email"), blank=True)
     phone = models.CharField(_("Phone Number"), max_length=20, blank=True)
+
+    services_config = models.JSONField(
+        _("Services Configuration"),
+        default=default_services_config,
+        blank=True, # يسمح بأن يكون فارغاً في الأدمن
+        help_text=_("JSON configuration for various services (e.g., claims workflow settings).")
+    )
     
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
