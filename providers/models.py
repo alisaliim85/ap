@@ -28,6 +28,9 @@ class Provider(models.Model):
         verbose_name = _("Insurance Provider")
         verbose_name_plural = _("Insurance Providers")
         ordering = ['name_en']
+        permissions = [
+            ("manage_insurance_companies", "Can create/edit insurance companies"),
+        ]
 
     def __str__(self):
         return f"{self.name_en} ({self.name_ar})"

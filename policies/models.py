@@ -14,6 +14,11 @@ class BenefitType(models.Model):
     name_en = models.CharField(_("English Name"), max_length=100) # Dental
     icon = models.CharField(max_length=50, blank=True, help_text="FontAwesome icon name (e.g., fa-tooth)")
     
+    class Meta:
+        permissions = [
+            ("manage_benefit_types", "Can create/edit benefit types"),
+        ]
+    
     def __str__(self):
         return self.name_en
 
@@ -41,6 +46,10 @@ class Policy(models.Model):
 
     class Meta:
         unique_together = ('client', 'policy_number')
+        permissions = [
+            ("manage_policy_structure", "Can create/edit policies and classes"),
+            ("view_policy_details", "Can view policy coverage details"),
+        ]
     # 3. المنطق الذكي لاسترجاع المزود
     @property
     def effective_provider(self):

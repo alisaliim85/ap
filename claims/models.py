@@ -32,6 +32,8 @@ class Currency(models.Model):
         _("Exchange Rate to SAR"), 
         max_digits=10, decimal_places=4, default=1.0000
     )
+    class Meta:
+        default_permissions = ('add', 'change', 'delete', 'view')   
 
     def __str__(self):
         return self.code
@@ -89,6 +91,15 @@ class Claim(models.Model):
         verbose_name = _("Claim Request")
         verbose_name_plural = _("Claim Requests")
         ordering = ['-created_at']
+        permissions = [
+            ("can_submit_claim", "Can submit new claim"),
+            ("can_approve_hr", "Can approve claim as HR"),
+            ("can_reject_hr", "Can return/reject claim as HR"),
+            ("can_process_broker", "Can process claim as Broker"),
+            ("can_approve_payment", "Can mark claim as Paid"),
+            ("can_view_all_claims", "Can view all claims"),
+            ("view_sensitive_medical_data", "Can view sensitive medical attachments"),
+        ]
 
     def __str__(self):
         return f"{self.claim_reference} ({self.status})"
@@ -228,6 +239,7 @@ class ClaimAttachment(models.Model):
     
     description = models.CharField(max_length=100, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
+      
 
 
 # --- 4. التعليقات (الجديد) ---
@@ -260,6 +272,9 @@ class ClaimComment(models.Model):
 
     class Meta:
         ordering = ['created_at']
+        permissions = [
+            ("view_internal_comments", "Can view internal comments (Hidden from Member)"),
+        ]       
 
     def __str__(self):
         return f"Comment by {self.author.username} on {self.claim.claim_reference}"

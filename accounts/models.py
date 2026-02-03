@@ -10,8 +10,10 @@ class User(AbstractUser):
     """
     
     class Roles(models.TextChoices):
+        # 0. مدير النظام (المطور/المالك)
+        SUPER_ADMIN = 'SUPER_ADMIN', _('Super Admin (Owner)')
         # 1. فريق الوسيط (AP PLUS)
-        BROKER_ADMIN = 'BROKER_ADMIN', _('Broker Admin (Super)')
+        BROKER_ADMIN = 'BROKER_ADMIN', _('Broker Admin')
         BROKER_STAFF = 'BROKER_STAFF', _('Broker Staff')
         
         # 2. فريق العملاء (مثل SBG)
@@ -28,13 +30,21 @@ class User(AbstractUser):
 
         MEMBER = 'MEMBER', _('Member / Beneficiary')
 
+    class Meta:
+        permissions = [
+            ("view_broker_dashboard", "Can view Broker Dashboard"),
+            ("view_hr_dashboard", "Can view HR Dashboard"),
+            ("view_partner_dashboard", "Can view Partner Dashboard"),
+            ("manage_users", "Can manage system users"),
+        ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     role = models.CharField(
         _("Role"), 
         max_length=50, 
         choices=Roles.choices, 
-        default=Roles.VIEWER
+        default=Roles.MEMBER
     )
 
     # --- علاقات التبعية (لمن يتبع هذا المستخدم؟) ---
@@ -69,22 +79,46 @@ class User(AbstractUser):
     
     phone_number = models.CharField(_("Phone Number"), max_length=20, blank=True)
 
+    def save(self, *args, **kwargs):
+        # 1. السوبر أدمن (أنت فقط)
+        if self.role == self.Roles.SUPER_ADMIN:
+            self.is_superuser = True
+            self.is_staff = True
+        
+        # 2. موظفو الوسيط (يدخلون الأدمن لكن ليسوا سوبر)
+        elif self.role in [self.Roles.BROKER_ADMIN, self.Roles.BROKER_STAFF]:
+            self.is_superuser = False # سحب الصلاحية المطلقة منهم
+            self.is_staff = True      # السماح بدخول لوحة التحكم
+            
+        # 3. باقي المستخدمين (لا يدخلون لوحة تحكم دجانغو الافتراضية)
+        else:
+            self.is_superuser = False
+            self.is_staff = False
+            
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
 
     # --- دوال مساعدة للتحقق من الصلاحيات في القوالب ---
     @property
     def is_broker(self):
-        return self.role in [self.Roles.BROKER_ADMIN, self.Roles.BROKER_STAFF]
+        return self.has_perm('accounts.view_broker_dashboard')
 
     @property
     def is_hr(self):
-        return self.role in [self.Roles.HR_ADMIN, self.Roles.HR_STAFF]
+        return self.has_perm('accounts.view_hr_dashboard')
         
     @property
     def is_partner(self):
-        return self.role in [self.Roles.PHARMACIST, self.Roles.CHRONIC_ADMIN, self.Roles.CHRONIC_STAFF]
+        return self.has_perm('accounts.view_partner_dashboard')
 
     @property
     def is_member(self):
+        # Members might not have a specific 'view' permission, or they are just the default.
+        # Strict check:
         return self.role == self.Roles.MEMBER
+        # Or if we want to check lack of other perms? 
+        # For now, keeping role check for MEMBER is fine as it's the base, 
+        # or we could add a 'view_member_portal' perm if needed. 
+        # Let's stick to role check for member for now to avoid complexity if no perm exists for it.

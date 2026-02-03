@@ -27,6 +27,10 @@ class ServiceProvider(models.Model):
     class Meta:
         verbose_name = _("Medical Service Provider")
         verbose_name_plural = _("Medical Service Providers")
+        permissions = [
+            ("manage_providers", "Can create/edit providers"),
+            ("bulk_upload_providers", "Can upload provider lists via Excel"),
+        ]
 
     def __str__(self):
         return f"{self.name_en} - {self.city}"
@@ -63,6 +67,9 @@ class Network(models.Model):
         verbose_name = _("Medical Network")
         verbose_name_plural = _("Medical Networks")
         unique_together = ('provider', 'name_en') # منع تكرار اسم الشبكة لنفس الشركة
+        permissions = [
+            ("manage_networks", "Can create/edit networks"),
+        ]
 
     def __str__(self):
         return f"{self.name_en} ({self.provider.name_en})"

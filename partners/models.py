@@ -36,6 +36,10 @@ class Partner(models.Model):
     class Meta:
         verbose_name = _("Partner Company")
         verbose_name_plural = _("Partner Companies")
+        permissions = [
+            ("manage_partners", "Can create/edit partners"),
+            ("view_partner_contracts", "Can view/download sensitive contract files"),
+        ]
 
     def __str__(self):
         return f"{self.name_en} ({self.get_partner_type_display()})"

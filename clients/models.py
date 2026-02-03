@@ -52,6 +52,11 @@ class Client(models.Model):
         verbose_name = _("Client / Company")
         verbose_name_plural = _("Clients / Companies")
         ordering = ['name_en']
+        permissions = [
+            ("manage_clients", "Can create/edit clients"),
+            ("view_client_dashboard", "Can view client dashboard statistics"),
+            
+        ]
 
     def __str__(self):
         # يعرض اسم الشركة، ولو كانت فرعية يوضح ذلك

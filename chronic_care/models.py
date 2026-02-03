@@ -9,6 +9,10 @@ class ChronicDisease(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name_ar = models.CharField(_("Disease Name (AR)"), max_length=100)
     name_en = models.CharField(_("Disease Name (EN)"), max_length=100)
+    class Meta:
+         permissions = [
+            ("manage_disease_list", "Can manage disease list configuration"),
+        ]
     
     def __str__(self):
         return self.name_en
@@ -35,6 +39,12 @@ class ChronicRequest(models.Model):
         related_name='assigned_chronic_requests'
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        permissions = [
+            ("manage_chronic_requests", "Can create/edit chronic requests"),
+            ("approve_request", "Can approve/reject chronic requests"),
+            ("assign_partner", "Can assign partner to chronic requests"),
+        ]
 
 # --- 3. ملف الحالة وإعدادات الجدولة الآلية ---
 class ChronicCase(models.Model):
@@ -72,6 +82,12 @@ class ChronicCase(models.Model):
     # الموقع الجغرافي للمنزل (يتم جلبه من عنوان المريض)
     home_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     home_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    class Meta: 
+        permissions = [
+            ("manage_chronic_cases", "Can create/edit chronic cases"),
+            ("suspend_case", "Can suspend or terminate chronic cases"),
+
+        ]
 
     def __str__(self):
         return f"Home Care: {self.request.member.full_name}"
@@ -115,6 +131,11 @@ class HomeVisit(models.Model):
 
     class Meta:
         ordering = ['scheduled_date']
+        permissions = [
+            ("manage_home_visits", "Can create/edit home visits"),
+            ("process_visit", "Can start/complete home visits"),
+            ("view_sensitive_medical_data", "Can view encrypted doctor notes"),
+        ]   
 
     def __str__(self):
         return f"Visit: {self.case.request.member.full_name} on {self.scheduled_date.date()}"
@@ -141,7 +162,8 @@ class VisitPrescription(models.Model):
     instructions = EncryptedTextField(_("Instructions"), blank=True)
     
     is_dispensed = models.BooleanField(default=False)
-
+    class Meta:
+        default_permissions = ('add', 'change', 'delete', 'view')
 
 class VisitLabRequest(models.Model):
     """
@@ -171,6 +193,9 @@ class VisitLabRequest(models.Model):
     # هل تم إبلاغ المريض؟
     patient_notified = models.BooleanField(default=False)
     notification_notes = models.TextField(blank=True, help_text="e.g. Called patient at 5 PM")
-
+    class Meta:
+        permissions = [
+            ("upload_lab_result", "Can upload lab test results"),
+        ]
     def __str__(self):
         return f"{self.test_name} ({self.get_status_display()})"

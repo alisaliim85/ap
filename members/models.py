@@ -85,6 +85,11 @@ class Member(models.Model):
             models.Index(fields=['medical_card_number']),
             models.Index(fields=['full_name']), # تسريع البحث بالاسم
         ]
+        permissions = [
+            ("view_all_members", "Can view members of their company"),
+            ("manage_members", "Can add/edit members"),
+            ("bulk_upload_members", "Can perform bulk upload"),
+        ]
 
     def __str__(self):
         return f"{self.full_name} ({self.client.name_en})"

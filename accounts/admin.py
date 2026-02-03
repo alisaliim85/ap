@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import User
+from django.contrib.auth.models import Permission
+
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
@@ -21,3 +23,7 @@ class CustomUserAdmin(UserAdmin):
             return f"Partner: {obj.related_partner.name_en}"
         return "-"
     get_link.short_description = "Affiliation"
+
+
+
+admin.site.register(Permission)
