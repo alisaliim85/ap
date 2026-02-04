@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.db.models import Q
 from django.core.paginator import Paginator
@@ -8,19 +8,16 @@ from .forms import MemberForm
 from clients.models import Client
 
 @login_required
+@permission_required('members.view_member', raise_exception=True)
 def member_list(request):
     """
     عرض قائمة أعضاء التأمين
     """
-    if not (request.user.is_broker or request.user.is_hr):
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
-
     members_list = Member.objects.all().select_related('client', 'policy_class', 'sponsor').order_by('-created_at')
 
     # تصفية الصلاحيات (HR)
-    if request.user.is_hr:
-        members_list = members_list.filter(client=request.user.related_client)
+    if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
+         members_list = members_list.filter(client=request.user.related_client)
 
     # البحث والفلاتر
     search_query = request.GET.get('search', '')
@@ -45,7 +42,7 @@ def member_list(request):
     page_obj = paginator.get_page(page_number)
 
     # للفلترة في القالب
-    clients = Client.objects.all() if request.user.is_broker else []
+    clients = Client.objects.all() if request.user.has_perm('accounts.view_broker_dashboard') else []
 
     context = {
         'members': page_obj,
@@ -60,13 +57,15 @@ def member_list(request):
     return render(request, 'members/member_list.html', context)
 
 @login_required
+@permission_required('members.view_member', raise_exception=True)
 def member_detail(request, pk):
     member = get_object_or_404(Member, pk=pk)
     
     # التحقق من الصلاحية
-    if request.user.is_hr and member.client != request.user.related_client:
-        messages.error(request, "لا يمكنك الوصول لبيانات هذا العضو")
-        return redirect('members:member_list')
+    if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
+        if member.client != request.user.related_client:
+            messages.error(request, "لا يمكنك الوصول لبيانات هذا العضو")
+            return redirect('members:member_list')
 
     dependents = member.dependents.all()
     
@@ -76,6 +75,7 @@ def member_detail(request, pk):
     })
 
 @login_required
+@permission_required('members.add_member', raise_exception=True)
 def member_create(request):
     client_id = request.GET.get('client_id')
     sponsor_id = request.GET.get('sponsor_id')
@@ -107,11 +107,13 @@ def member_create(request):
     })
 
 @login_required
+@permission_required('members.change_member', raise_exception=True)
 def member_update(request, pk):
     member = get_object_or_404(Member, pk=pk)
     
-    if request.user.is_hr and member.client != request.user.related_client:
-        return redirect('members:member_list')
+    if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
+         if member.client != request.user.related_client:
+            return redirect('members:member_list')
 
     if request.method == 'POST':
         form = MemberForm(request.POST, instance=member, user=request.user)
@@ -129,10 +131,12 @@ def member_update(request, pk):
     })
 
 @login_required
+@permission_required('members.delete_member', raise_exception=True)
 def member_delete(request, pk):
     member = get_object_or_404(Member, pk=pk)
-    if request.user.is_hr and member.client != request.user.related_client:
-        return redirect('members:member_list')
+    if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
+         if member.client != request.user.related_client:
+            return redirect('members:member_list')
 
     if request.method == 'POST':
         name = member.full_name

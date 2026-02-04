@@ -10,6 +10,7 @@
         </div>
     </div>
 
+
     <!-- Navigation Links -->
     <nav class="flex-1 overflow-y-auto py-4 space-y-1">
 
@@ -20,73 +21,92 @@
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">لوحة التحكم</span>
         </a>
 
-        {% if user.is_broker %}
+
+        {% if perms.accounts.view_broker_dashboard or user.is_superuser %}
         <div class="px-6 pt-4 pb-2">
             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest" x-show="sidebarOpen">إدارة الوسيط
             </p>
             <div class="h-px bg-slate-800 w-full mt-2" x-show="!sidebarOpen"></div>
         </div>
+        {% endif %}
 
+        {% if perms.accounts.view_broker_dashboard %}
         <a href="{% url 'client_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'client' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-buildings text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">العملاء والشركات</span>
         </a>
+        {% endif %}
 
+        {% if perms.accounts.view_broker_dashboard %}
         <a href="{% url 'provider_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'provider' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-shield-check text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">شركات التأمين</span>
         </a>
+        {% endif %}
 
+        {% if perms.accounts.view_broker_dashboard %}
         <a href="{% url 'policies:policy_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'policy' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-file-text text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">وثائق التأمين</span>
         </a>
+        {% endif %}
 
+        {% if perms.accounts.view_broker_dashboard %}
         <a href="{% url 'members:member_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'member' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-users text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">الأعضاء والمؤمن عليهم</span>
         </a>
-
+        {% endif %}
+        {% if perms.accounts.view_broker_dashboard %}
         <a href="#" class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition">
             <i class="ph-duotone ph-hand-coins text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">جميع المطالبات</span>
         </a>
-
+        {% endif %}
+        {% if perms.accounts.view_broker_dashboard %}
         <a href="{% url 'networks:network_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if '/networks/' in request.path and 'service-providers' not in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-network text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">الشبكات الطبية</span>
         </a>
+        {% endif %}
 
+        {% if perms.accounts.view_broker_dashboard %}
         <a href="{% url 'networks:service_provider_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'service-providers' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-first-aid text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">مقدمي الخدمة</span>
         </a>
+        {% endif %}
 
+        {% if perms.accounts.view_broker_dashboard %}
         <a href="{% url 'partner_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'partner' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-handshake text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">الشركاء والمزودين</span>
         </a>
+        {% endif %}
 
-        {% if user.role == 'BROKER_ADMIN' %}
+        {% if perms.accounts.manage_users or perms.policies.view_policy %}
         <div class="px-6 pt-4 pb-2">
             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest" x-show="sidebarOpen">إدارة النظام
             </p>
             <div class="h-px bg-slate-800 w-full mt-2" x-show="!sidebarOpen"></div>
         </div>
-
+        
+        {% if perms.accounts.manage_users %}
         <a href="{% url 'user_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if '/users/' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-users-three text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">إدارة المستخدمين</span>
         </a>
-
+        {% endif %}
+        
+        {% if perms.policies.view_policy %}
         <a href="{% url 'policies:benefit_type_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'benefit-types' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-list-checks text-xl"></i>
@@ -95,33 +115,44 @@
         {% endif %}
         {% endif %}
 
-        {% if user.is_hr %}
+        {% if perms.accounts.view_hr_dashboard or user.is_superuser %}
         <div class="px-6 pt-4 pb-2">
             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest" x-show="sidebarOpen">إدارة التأمين
                 والموظفين</p>
             <div class="h-px bg-slate-800 w-full mt-2" x-show="!sidebarOpen"></div>
         </div>
 
+        {% if perms.policies.view_policy %}
         <a href="{% url 'policies:policy_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'policy' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-file-text text-xl"></i>
-            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">وثائق التأمين</span>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">وثائق تأميني</span>
         </a>
+        {% endif %}
 
+        {% if perms.members.view_member %}
         <a href="{% url 'members:member_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'member' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-users text-xl"></i>
-            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">سجل الأعضاء</span>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">سجل المؤمن عليهم</span>
         </a>
+        {% endif %}
 
+        {% if perms.networks.view_network %}
         <a href="{% url 'networks:network_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'networks' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-tree-structure text-xl"></i>
-            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">الشبكة الطبية</span>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">شبكتي الطبية</span>
+        </a>
+        {% endif %}
+        
+        <a href="#" class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition">
+            <i class="ph-duotone ph-hand-coins text-xl"></i>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">المطالبات المالية</span>
         </a>
 
         <!-- HR Users Management (HR Admin Only) -->
-        {% if user.role == "HR_ADMIN" %}
+        {% if perms.accounts.manage_company_staff %}
         <a href="{% url 'hr_user_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if '/staff/' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-user-gear text-xl"></i>
@@ -129,7 +160,7 @@
         </a>
         {% endif %}
         {% endif %}
-
+        
     </nav>
 
     <!-- Sidebar Toggle (Desktop) -->

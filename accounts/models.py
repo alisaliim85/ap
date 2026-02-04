@@ -80,6 +80,10 @@ class User(AbstractUser):
     phone_number = models.CharField(_("Phone Number"), max_length=20, blank=True)
 
     def save(self, *args, **kwargs):
+        # إذا تم إنشاء المستخدم كـ superuser (مثلاً عبر سطر الأوامر)، نحدث دوره تلقائياً
+        if self.is_superuser:
+            self.role = self.Roles.SUPER_ADMIN
+
         # 1. السوبر أدمن (أنت فقط)
         if self.role == self.Roles.SUPER_ADMIN:
             self.is_superuser = True

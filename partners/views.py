@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from .models import Partner
 from .forms import PartnerForm
@@ -7,14 +7,11 @@ from .forms import PartnerForm
 from django.core.paginator import Paginator
 
 @login_required
+@permission_required('partners.view_partner', raise_exception=True)
 def partner_list(request):
     """
     عرض قائمة الشركاء والمزودين مع دعم الترقيم (Pagination)
     """
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
-
     partners_list = Partner.objects.all().order_by('-created_at')
 
     # منطق البحث (HTMX)
@@ -36,11 +33,8 @@ def partner_list(request):
     return render(request, 'partners/partner_list.html', {'partners': page_obj, 'page_obj': page_obj})
 
 @login_required
+@permission_required('partners.add_partner', raise_exception=True)
 def partner_create(request):
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
-
     if request.method == 'POST':
         form = PartnerForm(request.POST, request.FILES)
         if form.is_valid():
@@ -53,11 +47,9 @@ def partner_create(request):
     return render(request, 'partners/partner_form.html', {'form': form, 'title': 'إضافة شريك جديد'})
 
 @login_required
+@permission_required('partners.change_partner', raise_exception=True)
 def partner_update(request, pk):
     partner = get_object_or_404(Partner, pk=pk)
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
 
     if request.method == 'POST':
         form = PartnerForm(request.POST, request.FILES, instance=partner)
@@ -71,11 +63,9 @@ def partner_update(request, pk):
     return render(request, 'partners/partner_form.html', {'form': form, 'title': f'تعديل شريك: {partner.name_ar}', 'partner': partner})
 
 @login_required
+@permission_required('partners.delete_partner', raise_exception=True)
 def partner_delete(request, pk):
     partner = get_object_or_404(Partner, pk=pk)
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
     
     if request.method == 'POST':
         name = partner.name_ar
@@ -86,10 +76,8 @@ def partner_delete(request, pk):
     return render(request, 'partners/partner_confirm_delete.html', {'partner': partner})
 
 @login_required
+@permission_required('partners.view_partner', raise_exception=True)
 def partner_detail(request, pk):
     partner = get_object_or_404(Partner, pk=pk)
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
     
     return render(request, 'partners/partner_detail.html', {'partner': partner})

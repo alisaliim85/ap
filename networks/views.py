@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
@@ -9,13 +9,11 @@ from .forms import ServiceProviderForm, NetworkForm
 # --- إدارة مقدمي الخدمة (Hospitals/Clinics) ---
 
 @login_required
+@permission_required('networks.view_serviceprovider', raise_exception=True)
 def service_provider_list(request):
     """
     قائمة بجميع مقدمي الخدمة الطبية
     """
-    if not request.user.is_broker:
-        return redirect('dashboard')
-
     providers = ServiceProvider.objects.all().order_by('name_ar')
 
     # البحث
@@ -38,10 +36,8 @@ def service_provider_list(request):
     return render(request, 'networks/provider_list.html', {'providers': page_obj, 'page_obj': page_obj})
 
 @login_required
+@permission_required('networks.add_serviceprovider', raise_exception=True)
 def service_provider_create(request):
-    if not request.user.is_broker:
-        return redirect('dashboard')
-
     if request.method == 'POST':
         form = ServiceProviderForm(request.POST)
         if form.is_valid():
@@ -54,10 +50,9 @@ def service_provider_create(request):
     return render(request, 'networks/provider_form.html', {'form': form, 'title': 'إضافة مقدم خدمة جديد'})
 
 @login_required
+@permission_required('networks.change_serviceprovider', raise_exception=True)
 def service_provider_update(request, pk):
     provider = get_object_or_404(ServiceProvider, pk=pk)
-    if not request.user.is_broker:
-        return redirect('dashboard')
 
     if request.method == 'POST':
         form = ServiceProviderForm(request.POST, instance=provider)
@@ -71,6 +66,7 @@ def service_provider_update(request, pk):
     return render(request, 'networks/provider_form.html', {'form': form, 'title': f'تعديل مقدم الخدمة: {provider.name_ar}'})
 
 @login_required
+@permission_required('networks.delete_serviceprovider', raise_exception=True)
 def service_provider_delete(request, pk):
     provider = get_object_or_404(ServiceProvider, pk=pk)
     if request.method == 'POST':
@@ -83,23 +79,26 @@ def service_provider_delete(request, pk):
 # --- إدارة الشبكات الطبية (Networks) ---
 
 @login_required
+@permission_required('networks.view_network', raise_exception=True)
 def network_list(request):
     networks = Network.objects.all().select_related('provider').order_by('provider__name_ar', 'name_ar')
 
     # تصفية الصلاحيات
-    if request.user.is_hr:
+    if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
         # عرض الشبكات المرتبطة بسياسات الشركة فقط
-        networks = networks.filter(policy_classes__policy__client=request.user.related_client).distinct()
-    elif not request.user.is_broker:
-        return redirect('dashboard')
+        client = request.user.related_client
+
+        # التعديل هنا: البحث عن الشبكة في سياسات الشركة الحالية OR سياسات الشركة الأم
+        networks = networks.filter(
+            Q(policy_classes__policy__client=client) | 
+            Q(policy_classes__policy__client=client.parent) # الوصول للشركة القابضة
+        ).distinct()
         
     return render(request, 'networks/network_list.html', {'networks': networks})
 
 @login_required
+@permission_required('networks.add_network', raise_exception=True)
 def network_create(request):
-    if not request.user.is_broker:
-        return redirect('dashboard')
-
     if request.method == 'POST':
         form = NetworkForm(request.POST)
         if form.is_valid():
@@ -112,10 +111,9 @@ def network_create(request):
     return render(request, 'networks/network_form.html', {'form': form, 'title': 'إضافة شبكة جديدة'})
 
 @login_required
+@permission_required('networks.change_network', raise_exception=True)
 def network_update(request, pk):
     network = get_object_or_404(Network, pk=pk)
-    if not request.user.is_broker:
-        return redirect('dashboard')
 
     if request.method == 'POST':
         form = NetworkForm(request.POST, instance=network)
@@ -129,10 +127,9 @@ def network_update(request, pk):
     return render(request, 'networks/network_form.html', {'form': form, 'title': f'تعديل الشبكة: {network.name_ar}'})
 
 @login_required
+@permission_required('networks.delete_network', raise_exception=True)
 def network_delete(request, pk):
     network = get_object_or_404(Network, pk=pk)
-    if not request.user.is_broker:
-        return redirect('dashboard')
         
     if request.method == 'POST':
         name = network.name_ar
@@ -143,6 +140,7 @@ def network_delete(request, pk):
     return render(request, 'networks/network_confirm_delete.html', {'network': network})
 
 @login_required
+@permission_required('networks.view_network', raise_exception=True) # or specific 'manage_hospitals'
 def network_manage_hospitals(request, pk):
     """
     إدارة المستشفيات داخل الشبكة (إضافة/حذف)
@@ -150,16 +148,20 @@ def network_manage_hospitals(request, pk):
     network = get_object_or_404(Network, pk=pk)
     
     # التحقق من الصلاحيات
-    is_broker = request.user.is_broker
-    is_hr = request.user.is_hr
+    is_broker = request.user.has_perm('networks.change_network')
+    is_hr = request.user.has_perm('accounts.view_hr_dashboard') and not is_broker
     
     if is_hr:
-         # التأكد من أن الشبكة مرتبطة بسياسة تابعة لشركة الـ HR
-         has_access = network.policy_classes.filter(policy__client=request.user.related_client).exists()
-         if not has_access:
-             return redirect('networks:network_list')
-    elif not is_broker:
-        return redirect('dashboard')
+        client = request.user.related_client
+        # السماح بالوصول إذا كانت الشبكة تتبع للشركة أو لشركتها الأم
+        has_access = network.policy_classes.filter(
+            Q(policy__client=client) | 
+            Q(policy__client=client.parent)
+        ).exists()
+        
+        if not has_access:
+            messages.error(request, "ليس لديك صلاحية للوصول لهذه الشبكة")
+            return redirect('networks:network_list')
 
     # التعامل مع طلبات التبديل (HTMX) - للوسطاء فقط
     if request.method == 'POST' and request.headers.get('HX-Request') and is_broker:

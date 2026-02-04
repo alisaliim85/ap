@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from .forms import LoginForm, StaffUserForm, HRStaffForm, ProfileForm
@@ -12,12 +12,18 @@ def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
     
+
     # 2. إذا ضغط الزر (POST Request)
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
             login(request, user)
+            
+            # Redirect to 'next' if it exists, otherwise dashboard
+            next_url = request.GET.get('next') or request.POST.get('next')
+            if next_url:
+                return redirect(next_url)
             return redirect('dashboard')
         else:
             messages.error(request, "اسم المستخدم أو كلمة المرور غير صحيحة")
@@ -35,8 +41,12 @@ def logout_view(request):
 
 @login_required
 def dashboard(request):
-    # مسار لوحة تحكم HR
-    if request.user.is_hr:
+    # 1. مسار لوحة تحكم الوسيط (الافتراضي) + السوبر أدمن
+    if request.user.has_perm('accounts.view_broker_dashboard'):
+        return render(request, 'accounts/dashboard.html')
+
+    # 2. مسار لوحة تحكم HR
+    if request.user.has_perm('accounts.view_hr_dashboard'):
         client = request.user.related_client
         if not client:
             messages.error(request, "لم يتم ربط حسابك بشركة محددة، يرجى التواصل مع الدعم الفني")
@@ -66,18 +76,15 @@ def dashboard(request):
             'recent_requests': recent_requests
         }
         return render(request, 'accounts/dashboard_hr.html', context)
-
-    # مسار لوحة تحكم الوسيط (الافتراضي)
-    return render(request, 'accounts/dashboard.html')
+    
+    # إذا لم يكن لديه أي من الصلاحيتين
+    return render(request, 'accounts/dashboard_access_denied.html') # Or redirect to generic home
 
 # --- إدارة المستخدمين (للوسيط فقط) ---
 
 @login_required
+@permission_required('accounts.manage_users','accounts.view_broker_dashboard', raise_exception=True)
 def user_list(request):
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
-
     users_list = User.objects.all().order_by('-date_joined')
 
     # البحث
@@ -102,11 +109,8 @@ def user_list(request):
     return render(request, 'accounts/user_list.html', {'users': page_obj, 'page_obj': page_obj})
 
 @login_required
+@permission_required('accounts.manage_users','accounts.view_broker_dashboard', raise_exception=True)
 def user_create(request):
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
-
     if request.method == 'POST':
         form = StaffUserForm(request.POST)
         if form.is_valid():
@@ -119,11 +123,9 @@ def user_create(request):
     return render(request, 'accounts/user_form.html', {'form': form, 'title': 'إضافة مستخدم جديد'})
 
 @login_required
+@permission_required('accounts.manage_users','accounts.view_broker_dashboard', raise_exception=True)
 def user_update(request, pk):
     user_to_edit = get_object_or_404(User, pk=pk)
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
 
     if request.method == 'POST':
         form = StaffUserForm(request.POST, instance=user_to_edit)
@@ -137,11 +139,9 @@ def user_update(request, pk):
     return render(request, 'accounts/user_form.html', {'form': form, 'title': f'تعديل المستخدم: {user_to_edit.username}', 'user_to_edit': user_to_edit})
 
 @login_required
+@permission_required('accounts.manage_users','accounts.view_broker_dashboard', raise_exception=True)
 def user_delete(request, pk):
     user_to_delete = get_object_or_404(User, pk=pk)
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
 
     if request.method == 'POST':
         username = user_to_delete.username
@@ -155,11 +155,8 @@ def user_delete(request, pk):
 # --- إدارة موظفي الـ HR (للـ HR Admin) ---
 
 @login_required
+@permission_required('accounts.manage_company_staff', raise_exception=True)
 def hr_user_list(request):
-    if not request.user.is_hr:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
-
     client = request.user.related_client
     # عرض الموظفين التابعين لنفس الشركة فقط (باستثناء المستخدم الحالي لتجنب حذفه لنفسه بالخطأ)
     users_list = User.objects.filter(related_client=client).exclude(pk=request.user.pk).order_by('-date_joined')
@@ -185,10 +182,8 @@ def hr_user_list(request):
     return render(request, 'accounts/hr_user_list.html', {'users': page_obj, 'page_obj': page_obj})
 
 @login_required
+@permission_required('accounts.manage_company_staff', raise_exception=True)
 def hr_user_create(request):
-    if not request.user.is_hr:
-        return redirect('dashboard')
-    
     client = request.user.related_client
     if not client:
         messages.error(request, "حسابك غير مرتبط بشركة")
@@ -209,10 +204,8 @@ def hr_user_create(request):
     return render(request, 'accounts/hr_user_form.html', {'form': form, 'title': 'إضافة موظف جديد'})
 
 @login_required
+@permission_required('accounts.manage_company_staff', raise_exception=True)
 def hr_user_update(request, pk):
-    if not request.user.is_hr:
-        return redirect('dashboard')
-
     user_to_edit = get_object_or_404(User, pk=pk)
     
     # حماية: التأكد من أن الموظف يتبع لنفس شركة الـ HR Admin
@@ -232,10 +225,8 @@ def hr_user_update(request, pk):
     return render(request, 'accounts/hr_user_form.html', {'form': form, 'title': f'تعديل الموظف: {user_to_edit.username}'})
 
 @login_required
+@permission_required('accounts.manage_company_staff', raise_exception=True)
 def hr_user_delete(request, pk):
-    if not request.user.is_hr:
-        return redirect('dashboard')
-
     user_to_delete = get_object_or_404(User, pk=pk)
     
     # حماية

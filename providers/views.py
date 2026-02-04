@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from .models import Provider
 from .forms import ProviderForm
@@ -7,14 +7,11 @@ from .forms import ProviderForm
 from django.core.paginator import Paginator
 
 @login_required
+@permission_required('providers.view_provider', raise_exception=True)
 def provider_list(request):
     """
     عرض قائمة شركات التأمين مع دعم الترقيم (Pagination)
     """
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
-
     providers_list = Provider.objects.all().order_by('-created_at')
 
     # منطق البحث (HTMX)
@@ -34,11 +31,8 @@ def provider_list(request):
     return render(request, 'providers/provider_list.html', {'providers': page_obj, 'page_obj': page_obj})
 
 @login_required
+@permission_required('providers.add_provider', raise_exception=True)
 def provider_create(request):
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
-
     if request.method == 'POST':
         form = ProviderForm(request.POST, request.FILES)
         if form.is_valid():
@@ -51,11 +45,9 @@ def provider_create(request):
     return render(request, 'providers/provider_form.html', {'form': form, 'title': 'إضافة شركة تأمين جديدة'})
 
 @login_required
+@permission_required('providers.change_provider', raise_exception=True)
 def provider_update(request, pk):
     provider = get_object_or_404(Provider, pk=pk)
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
 
     if request.method == 'POST':
         form = ProviderForm(request.POST, request.FILES, instance=provider)
@@ -69,11 +61,9 @@ def provider_update(request, pk):
     return render(request, 'providers/provider_form.html', {'form': form, 'title': f'تعديل شركة: {provider.name_ar}', 'provider': provider})
 
 @login_required
+@permission_required('providers.delete_provider', raise_exception=True)
 def provider_delete(request, pk):
     provider = get_object_or_404(Provider, pk=pk)
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
     
     if request.method == 'POST':
         name = provider.name_ar
@@ -84,10 +74,8 @@ def provider_delete(request, pk):
     return render(request, 'providers/provider_confirm_delete.html', {'provider': provider})
 
 @login_required
+@permission_required('providers.view_provider', raise_exception=True)
 def provider_detail(request, pk):
     provider = get_object_or_404(Provider, pk=pk)
-    if not request.user.is_broker:
-        messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
-        return redirect('dashboard')
     
     return render(request, 'providers/provider_detail.html', {'provider': provider})
