@@ -13,7 +13,7 @@ def member_list(request):
     """
     عرض قائمة أعضاء التأمين
     """
-    members_list = Member.objects.all().select_related('client', 'policy_class', 'sponsor').order_by('-created_at')
+    members_list = Member.objects.all().select_related('client', 'policy_class__policy', 'policy_class__network', 'sponsor').order_by('-created_at')
 
     # تصفية الصلاحيات (HR)
     if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
@@ -59,7 +59,7 @@ def member_list(request):
 @login_required
 @permission_required('members.view_member', raise_exception=True)
 def member_detail(request, pk):
-    member = get_object_or_404(Member, pk=pk)
+    member = get_object_or_404(Member.objects.select_related('client', 'policy_class__policy', 'policy_class__network', 'sponsor'), pk=pk)
     
     # التحقق من الصلاحية
     if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
@@ -67,7 +67,7 @@ def member_detail(request, pk):
             messages.error(request, "لا يمكنك الوصول لبيانات هذا العضو")
             return redirect('members:member_list')
 
-    dependents = member.dependents.all()
+    dependents = member.dependents.select_related('policy_class').all()
     
     return render(request, 'members/member_detail.html', {
         'member': member,
@@ -159,5 +159,5 @@ def load_policy_classes(request):
     if client_obj.parent_id:
         query |= Q(policy__client_id=client_obj.parent_id, policy__master_policy__isnull=True)
     
-    policy_classes = PolicyClass.objects.filter(query).distinct()
+    policy_classes = PolicyClass.objects.filter(query).select_related('policy').distinct()
     return render(request, 'members/partials/policy_class_options.html', {'policy_classes': policy_classes})

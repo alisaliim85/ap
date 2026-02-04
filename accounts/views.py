@@ -68,7 +68,7 @@ def dashboard(request):
         }
         
         # آخر الطلبات (الأعضاء غير النشطين)
-        recent_requests = members.filter(is_active=False).select_related('policy_class').order_by('-created_at')[:5]
+        recent_requests = members.filter(is_active=False).select_related('policy_class__policy', 'policy_class__network').order_by('-created_at')[:5]
         
         context = {
             'client': client,
@@ -85,7 +85,7 @@ def dashboard(request):
 @login_required
 @permission_required('accounts.manage_users','accounts.view_broker_dashboard', raise_exception=True)
 def user_list(request):
-    users_list = User.objects.all().order_by('-date_joined')
+    users_list = User.objects.select_related('related_client').all().order_by('-date_joined')
 
     # البحث
     search_query = request.GET.get('search', '')

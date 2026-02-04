@@ -18,7 +18,7 @@ def policy_list(request):
     - الوسيط: يرى كل البوالص.
     - مدير HR: يرى فقط البوالص المسجلة باسم شركته (ولا يرى بوليصة الشركة الأم هنا).
     """
-    policies_list = Policy.objects.all().order_by('-created_at')
+    policies_list = Policy.objects.select_related('client', 'provider', 'master_policy').all().order_by('-created_at')
 
     # تصفية خاصة لمدير الموارد البشرية (HR)
     if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
@@ -55,7 +55,7 @@ def policy_detail(request, pk):
     - ✅ ميزة الوراثة: إذا كانت البوليصة تابعة (Subsidiary) ولا تملك فئات خاصة،
       يتم جلب وعرض فئات ومنافع البوليصة الأم تلقائياً.
     """
-    policy = get_object_or_404(Policy, pk=pk)
+    policy = get_object_or_404(Policy.objects.select_related('client', 'provider', 'master_policy'), pk=pk)
     user = request.user
     
     # 1. حماية الوصول: التأكد من أن المستخدم يملك حق رؤية هذه الوثيقة
@@ -67,7 +67,7 @@ def policy_detail(request, pk):
 
     # 2. منطق الوراثة (Inheritance Logic)
     # نحاول جلب الفئات الخاصة بهذه الوثيقة
-    classes = policy.effective_classes
+    classes = policy.effective_classes.select_related('network')
     
     inherited_data = False
     master_policy_ref = None
@@ -75,7 +75,7 @@ def policy_detail(request, pk):
     # إذا لم نجد فئات خاصة، وكانت هذه الوثيقة مرتبطة بوثيقة أم (Master Policy)
     # نقوم بعرض فئات الوثيقة الأم للمستخدم
     if not classes.exists() and policy.master_policy:
-        classes = policy.master_policy.effective_classes
+        classes = policy.master_policy.effective_classes.select_related('network')
         inherited_data = True
         master_policy_ref = policy.master_policy
 
@@ -84,6 +84,7 @@ def policy_detail(request, pk):
         'classes': classes,
         'inherited_data': inherited_data,        # متغير لإظهار تنبيه في HTML بأن هذه البيانات موروثة
         'master_policy_ref': master_policy_ref,  # مرجع للوثيقة الأم (للعرض فقط)
+        'sub_policies': policy.sub_policies.all() if not policy.is_subsidiary else None,
     }
     return render(request, 'policies/policy_detail.html', context)
 

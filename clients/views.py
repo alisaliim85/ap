@@ -15,7 +15,7 @@ def client_list(request):
     """
     عرض قائمة العملاء مع دعم البحث والترقيم (Pagination)
     """
-    clients_list = Client.objects.all().order_by('-created_at')
+    clients_list = Client.objects.select_related('parent').all().order_by('-created_at')
 
     # منطق البحث (HTMX)
     search_query = request.GET.get('search', '')
@@ -92,7 +92,12 @@ def client_detail(request, pk):
         )
         
         # 2. الوثيقة الرئيسية (Master Policy)
-        master_policy = Policy.objects.filter(client=client, master_policy__isnull=True).first()
+        master_policy = Policy.objects.filter(client=client, master_policy__isnull=True).select_related('provider').prefetch_related(
+            'classes',
+            'classes__network',
+            'classes__benefits',
+            'classes__benefits__benefit_type'
+        ).first()
         
         # 3. بيانات التعداد (الأعضاء التابعين للقابضة أو الشركات التابعة لها)
         all_members = Member.objects.filter(
@@ -129,7 +134,7 @@ def client_detail(request, pk):
     # --- ثانياً: حالة الشركة التابعة (Subsidiary) أو المستقلة ---
     else:
         # 1. جلب الوثيقة الخاصة بهذه الشركة
-        policy = Policy.objects.filter(client=client).first()
+        policy = Policy.objects.filter(client=client).select_related('master_policy').first()
         network = None
         
         if policy:
