@@ -1,10 +1,14 @@
 import uuid
 import datetime
 import os
-from django.db import models
+from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from encrypted_model_fields.fields import EncryptedTextField # لتشفير نص التعليقات (حماية إضافية)
 from django_fsm import FSMField, transition
+from django.utils.text import get_valid_filename
+from django.conf import settings
+
+
 
 # --- دالة مساعدة لتحديد مسار حفظ الملفات ---
 def claim_file_upload_path(instance, filename):
@@ -12,15 +16,15 @@ def claim_file_upload_path(instance, filename):
     تقوم هذه الدالة بإنشاء مسار ديناميكي للملفات.
     المسار سيكون: claims_docs/CLM-2024-0001/filename.pdf
     """
-    # instance here is ClaimAttachment
-    # نأتي برقم المطالبة من الجدول الأب
-    claim_ref = instance.claim.claim_reference
-    
-    # في حال (نادراً) تم رفع ملف قبل توليد الرقم، نضعه في مجلد مؤقت
-    if not claim_ref:
-        claim_ref = "unsorted"
-        
-    return os.path.join('claims', 'docs', claim_ref, filename)
+    claim_ref = instance.claim.claim_reference or "unsorted"
+
+    filename = get_valid_filename(filename)
+    _, ext = os.path.splitext(filename)
+
+    safe_filename = f"{uuid.uuid4().hex}{ext}"
+
+    return os.path.join('claims', 'docs', claim_ref, safe_filename)
+
 
 
 # --- 1. جدول العملات ---
@@ -106,14 +110,25 @@ class Claim(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.claim_reference:
-            year = datetime.date.today().year
-            last_claim = Claim.objects.filter(claim_reference__startswith=f"CLM-{year}").order_by('claim_reference').last()
+            with transaction.atomic():
+                year = datetime.date.today().year
+
+                last_claim = (
+                Claim.objects
+                .select_for_update()
+                .filter(claim_reference__startswith=f"CLM-{year}")
+                .order_by('-claim_reference')
+                .first()
+            )
+
             if last_claim:
                 last_id = int(last_claim.claim_reference.split('-')[-1])
                 new_id = last_id + 1
             else:
                 new_id = 1
+
             self.claim_reference = f"CLM-{year}-{new_id:05d}"
+
         super().save(*args, **kwargs)
 
     # ====================================================
@@ -130,6 +145,17 @@ class Claim(models.Model):
     # ====================================================
     # FSM Transitions (الانتقالات)
     # ====================================================
+    def log_status_change(self, user, from_status, to_status, action, reason=''):
+        ClaimStatusLog.objects.create(
+            claim=self,
+            from_status=from_status,
+            to_status=to_status,
+            action=action,
+            reason=reason,
+            user=user
+        )
+
+
 
     # 1. إرسال المطالبة (Submit) - سيناريو A: يوجد HR
     @transition(
@@ -137,11 +163,18 @@ class Claim(models.Model):
         source=[Status.DRAFT, Status.RETURNED_BY_HR], 
         target=Status.SUBMITTED_TO_HR,
         conditions=[needs_hr_review],
+        permission=lambda i, u: u.has_perm('claims.can_submit_claim'),
         custom={'label': _('Submit to HR')}
     )
-    def submit_to_hr(self):
+    def submit_to_hr(self, user):
         # يمكن هنا إرسال إيميل للـ HR
-        pass
+        self.log_status_change(
+            user=user,
+            from_status=self.status,
+            to_status=Status.SUBMITTED_TO_HR,
+            action='submit_to_hr',
+            reason='',
+        )
 
     # 1. إرسال المطالبة (Submit) - سيناريو B: تجاوز الـ HR مباشرة
     @transition(
@@ -149,84 +182,158 @@ class Claim(models.Model):
         source=[Status.DRAFT, Status.RETURNED_BY_HR, Status.RETURNED_BY_BROKER], 
         target=Status.SUBMITTED_TO_BROKER,
         conditions=[can_bypass_hr],
+        permission=lambda i, u: u.has_perm('claims.can_submit_claim'),
         custom={'label': _('Submit directly to Broker')}
     )
-    def submit_direct_to_broker(self):
+    def submit_direct_to_broker(self, user):
         # إشعار للوسيط مباشرة
-        pass
+        self.log_status_change(
+            user=user,
+            from_status=self.status,
+            to_status=Status.SUBMITTED_TO_BROKER,
+            action='submit_direct_to_broker',
+            reason='',
+        )
 
     # 2. إجراءات الـ HR
     @transition(
         field=status, 
         source=Status.SUBMITTED_TO_HR, 
         target=Status.SUBMITTED_TO_BROKER,
-        permission=lambda instance, user: user.is_hr or user.is_superuser,
+        permission=lambda i, u: u.has_perm('claims.can_approve_hr'),
         custom={'label': _('HR Approve')}
     )
-    def hr_approve(self):
-        pass
+    def hr_approve(self, user):
+        self.log_status_change(
+            user=user,
+            from_status=self.status,
+            to_status=Status.SUBMITTED_TO_BROKER,
+            action='hr_approve',
+            reason='',
+        )
 
     @transition(
         field=status, 
         source=Status.SUBMITTED_TO_HR, 
         target=Status.RETURNED_BY_HR,
-        permission=lambda instance, user: user.is_hr or user.is_superuser,
+        permission=lambda i, u: u.has_perm('claims.can_reject_hr'),
         custom={'label': _('HR Return')}
     )
-    def hr_return(self, reason):
+    def hr_return(self, user , reason):
         self.rejection_reason = reason
+        self.log_status_change(
+            user=user,
+            from_status=self.status,
+            to_status=Status.RETURNED_BY_HR,
+            action='hr_return',
+            reason=reason,
+        )
 
     # 3. إجراءات الوسيط (الاستلام والبدء)
     @transition(
         field=status, 
         source=Status.SUBMITTED_TO_BROKER, 
         target=Status.BROKER_PROCESSING,
+        permission=lambda i, u: u.has_perm('claims.can_process_broker'),
         custom={'label': _('Start Processing')}
     )
-    def broker_start_process(self):
-        pass
+    def broker_start_process(self, user):
+        self.log_status_change(
+            user=user,
+            from_status=self.status,
+            to_status=Status.BROKER_PROCESSING,
+            action='broker_start_process',
+            reason='',
+        )
 
     # 4. إعادة الوسيط للمطالبة (للنواقص)
     @transition(
         field=status, 
         source=Status.BROKER_PROCESSING, 
         target=Status.RETURNED_BY_BROKER,
+        permission=lambda i, u: u.has_perm('claims.can_process_broker'),
         custom={'label': _('Return to Member (Missing Docs)')}
     )
-    def broker_return(self, reason):
+    def broker_return(self, user, reason):
         self.rejection_reason = reason
+        self.log_status_change(
+            user=user,
+            from_status=self.status,
+            to_status=Status.RETURNED_BY_BROKER,
+            action='broker_return',
+            reason=reason,
+        )
 
     # 5. الإرسال لشركة التأمين
     @transition(
         field=status, 
         source=Status.BROKER_PROCESSING, 
         target=Status.SENT_TO_INSURANCE,
+        permission=lambda i, u: u.has_perm('claims.can_process_broker'),
         custom={'label': _('Send to Insurance')}
     )
-    def sent_to_insurance(self):
-        pass
+    def sent_to_insurance(self, user):
+        self.log_status_change(
+            user=user,
+            from_status=self.status,
+            to_status=Status.SENT_TO_INSURANCE,
+            action='sent_to_insurance',
+            reason='',
+        )
 
     # 6. ردود شركة التأمين
-    @transition(field=status, source=Status.SENT_TO_INSURANCE, target=Status.INSURANCE_QUERY)
-    def insurance_query(self):
-        pass
+    @transition(field=status, source=Status.SENT_TO_INSURANCE, target=Status.INSURANCE_QUERY, permission=lambda i, u: u.has_perm('claims.can_process_broker'))
+    def insurance_query(self, user):
+        self.log_status_change(
+            user=user,
+            from_status=self.status,
+            to_status=Status.INSURANCE_QUERY,
+            action='insurance_query',
+            reason='',
+        )
 
-    @transition(field=status, source=Status.INSURANCE_QUERY, target=Status.SENT_TO_INSURANCE)
-    def answer_insurance_query(self):
-        pass
+    @transition(field=status, source=Status.INSURANCE_QUERY, target=Status.SENT_TO_INSURANCE, permission=lambda i, u: u.has_perm('claims.can_process_broker'))
+    def answer_insurance_query(self, user):
+        self.log_status_change(
+            user=user,
+            from_status=self.status,
+            to_status=Status.SENT_TO_INSURANCE,
+            action='answer_insurance_query',
+            reason='',
+        )
 
-    @transition(field=status, source=Status.SENT_TO_INSURANCE, target=Status.APPROVED_BY_INSURANCE)
-    def insurance_approve(self, amount):
-        self.approved_amount_sar = amount
+    @transition(field=status, source=Status.SENT_TO_INSURANCE, target=Status.APPROVED_BY_INSURANCE, permission=lambda i, u: u.has_perm('claims.can_process_broker'))
+    def insurance_approve(self, user):
+        self.log_status_change(
+            user=user,
+            from_status=self.status,
+            to_status=Status.APPROVED_BY_INSURANCE,
+            action='insurance_approve',
+            reason='',
+        )
 
-    @transition(field=status, source=Status.SENT_TO_INSURANCE, target=Status.REJECTED_BY_INSURANCE)
-    def insurance_reject(self, reason):
+    @transition(field=status, source=Status.SENT_TO_INSURANCE, target=Status.REJECTED_BY_INSURANCE, permission=lambda i, u: u.has_perm('claims.can_process_broker'))
+    def insurance_reject(self, user, reason):
         self.rejection_reason = reason
+        self.log_status_change(
+            user=user,
+            from_status=self.status,
+            to_status=Status.REJECTED_BY_INSURANCE,
+            action='insurance_reject',
+            reason=reason,
+        )
 
     # 7. السداد النهائي
-    @transition(field=status, source=Status.APPROVED_BY_INSURANCE, target=Status.PAID)
-    def mark_as_paid(self):
-        pass
+    @transition(field=status, source=Status.APPROVED_BY_INSURANCE, target=Status.PAID, permission=lambda i, u: u.has_perm('claims.can_approve_payment'))
+    def mark_as_paid(self, user, amount):
+        self.approved_amount_sar = amount
+        self.log_status_change(
+            user=user,
+            from_status=self.status,
+            to_status=Status.PAID,
+            action='mark_as_paid',
+            reason='',
+        )
 
 
 # --- 3. المرفقات (مع المسار الجديد) ---
@@ -278,3 +385,33 @@ class ClaimComment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.author.username} on {self.claim.claim_reference}"
+
+
+class ClaimStatusLog(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    claim = models.ForeignKey(
+        Claim,
+        on_delete=models.CASCADE,
+        related_name='status_logs'
+    )
+
+    from_status = models.CharField(max_length=50)
+    to_status = models.CharField(max_length=50)
+
+    action = models.CharField(
+        max_length=50,
+        help_text="approve, reject, return, submit, pay..."
+    )
+
+    reason = models.TextField(blank=True)
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
