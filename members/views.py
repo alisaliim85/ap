@@ -161,3 +161,45 @@ def load_policy_classes(request):
     
     policy_classes = PolicyClass.objects.filter(query).select_related('policy').distinct()
     return render(request, 'members/partials/policy_class_options.html', {'policy_classes': policy_classes})
+
+@login_required
+@permission_required('accounts.view_member_dashboard', raise_exception=True)
+def my_dashboard(request):
+    try:
+        current_member = request.user.member_profile
+    except Member.DoesNotExist:
+        messages.error(request, "لا توجد بيانات عضو مسجلة لهذا المستخدم")
+        return render(request, 'members/my_dashboard.html', {'member': None})
+
+    # إحصائيات سريعة للوحة المعلومات
+    family_count = Member.objects.filter(sponsor=current_member).count()
+    
+    context = {
+        'member': current_member,
+        'family_count': family_count,
+    }
+    return render(request, 'members/my_dashboard.html', context)
+
+@login_required
+@permission_required('members.view_my_family_members', raise_exception=True)
+def my_family_members(request):
+    try:
+        current_member = request.user.member_profile
+    except Member.DoesNotExist:
+        # إذا كان هذا المستخدم ليس لديه ملف عضو (مثلاً مدير نظام)، نعيد قائمة فارغة
+        messages.error(request, "لا توجد بيانات عضو مسجلة لهذا المستخدم")
+        return render(request, 'members/my_family_members.html', {'members': []})
+    
+    # جلب العضو نفسه + التابعين له فقط (حيث هو الكفيل)
+    # The dependents should match the national_id for the user and sponsor on for the family
+    # Based on models, dependents are linked via 'sponsor' field.
+    members = Member.objects.filter(
+        Q(id=current_member.id) | Q(sponsor=current_member)
+    ).select_related(
+        'client',        
+        'policy_class__policy', # Fixed select_related path
+        'policy_class__network',
+        'sponsor'        
+    ).order_by('relation') # Put Principal first usually via logic, or order by relation type
+    
+    return render(request, 'members/my_family_members.html', {'members': members})

@@ -21,6 +21,24 @@
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">لوحة التحكم</span>
         </a>
 
+        {% if perms.accounts.view_member_dashboard %}
+        <div class="px-6 pt-4 pb-2">
+            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest" x-show="sidebarOpen">خدمات الأعضاء</p>
+            <div class="h-px bg-slate-800 w-full mt-2" x-show="!sidebarOpen"></div>
+        </div>
+
+        <a href="{% url 'members:member_dashboard' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'dashboard' in request.path and 'members' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
+            <i class="ph-duotone ph-squares-four text-xl"></i>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">لوحتي</span>
+        </a>
+        <a href="{% url 'members:my_family_members' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'my-family' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
+            <i class="ph-duotone ph-users-three text-xl"></i>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">عائلتي</span>
+        </a>
+        {% endif %}
+
 
         {% if perms.accounts.view_broker_dashboard or user.is_superuser %}
         <div class="px-6 pt-4 pb-2">

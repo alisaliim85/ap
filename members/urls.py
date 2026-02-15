@@ -16,4 +16,8 @@ urlpatterns = [
 
     # AJAX / HTMX
     path('ajax/load-policy-classes/', views.load_policy_classes, name='ajax_load_policy_classes'),
+
+    # Member Portal
+    path('dashboard/', views.my_dashboard, name='member_dashboard'),
+    path('my-family/', views.my_family_members, name='my_family_members'),
 ]

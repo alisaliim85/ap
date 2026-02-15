@@ -77,6 +77,11 @@ def dashboard(request):
         }
         return render(request, 'accounts/dashboard_hr.html', context)
     
+    # 3. مسار لوحة تحكم العضو
+    if request.user.role == 'MEMBER':
+
+        return redirect('members:member_dashboard')
+    
     # إذا لم يكن لديه أي من الصلاحيتين
     return render(request, 'accounts/dashboard_access_denied.html') # Or redirect to generic home
 

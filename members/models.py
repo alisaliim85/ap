@@ -89,6 +89,7 @@ class Member(models.Model):
             ("view_all_members", "Can view members of their company"),
             ("manage_members", "Can add/edit members"),
             ("bulk_upload_members", "Can perform bulk upload"),
+            ("view_my_family_members", "Can view their own family members"),
         ]
 
     def __str__(self):

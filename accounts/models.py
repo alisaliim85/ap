@@ -35,6 +35,7 @@ class User(AbstractUser):
             ("view_broker_dashboard", "Can view Broker Dashboard"),
             ("view_hr_dashboard", "Can view HR Dashboard"),
             ("view_partner_dashboard", "Can view Partner Dashboard"),
+            ("view_member_dashboard", "Can view Member Dashboard"),
             ("manage_users", "Can manage system users"),
         ]
 
@@ -119,10 +120,4 @@ class User(AbstractUser):
 
     @property
     def is_member(self):
-        # Members might not have a specific 'view' permission, or they are just the default.
-        # Strict check:
-        return self.role == self.Roles.MEMBER
-        # Or if we want to check lack of other perms? 
-        # For now, keeping role check for MEMBER is fine as it's the base, 
-        # or we could add a 'view_member_portal' perm if needed. 
-        # Let's stick to role check for member for now to avoid complexity if no perm exists for it.
+        return self.has_perm('accounts.view_member_dashboard')

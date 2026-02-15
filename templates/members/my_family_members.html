@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="w-full px-6 space-y-6">
+
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-black text-slate-800">أفراد عائلتي</h2>
+            <p class="text-slate-500 font-medium mt-1">قائمة التابعين المسجلين في وثيقة التأمين الخاصة بك</p>
+        </div>
+         <a href="{% url 'members:member_dashboard' %}" class="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl font-bold transition-colors flex items-center gap-2">
+            <i class="ph-bold ph-arrow-right"></i>
+            عودة للرئيسية
+        </a>
+    </div>
+
+    <!-- Family Members List -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        
+        <!-- Desktop Table -->
+        <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-right text-sm">
+                <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                    <tr>
+                        <th class="px-6 py-4">الاسم</th>
+                        <th class="px-6 py-4">العلاقة</th>
+                        <th class="px-6 py-4">الهوية / الإقامة</th>
+                        <th class="px-6 py-4">الفئة</th>
+                         <th class="px-6 py-4">بطاقة التأمين</th>
+                        <th class="px-6 py-4">الحالة</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for member in members %}
+                    <tr class="hover:bg-slate-50/80 transition-colors group">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs ring-2 ring-white">
+                                    {{ member.full_name|slice:":2" }}
+                                </div>
+                                <div class="font-bold text-slate-800">{{ member.full_name }}</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if member.relation == 'PRINCIPAL' %}
+                                <span class="px-2.5 py-1 bg-brand-50 text-brand-700 rounded-lg text-xs font-bold border border-brand-100">
+                                    الموظف (أنا)
+                                </span>
+                            {% else %}
+                                <span class="text-slate-600 font-medium">{{ member.get_relation_display }}</span>
+                            {% endif %}
+                        </td>
+                         <td class="px-6 py-4">
+                            <span class="font-mono text-slate-500">{{ member.national_id }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                             <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-bold border border-slate-200">
+                                {{ member.policy_class.name }}
+                            </span>
+                        </td>
+                         <td class="px-6 py-4">
+                            <span class="font-mono text-slate-500">{{ member.medical_card_number|default:"-" }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if member.is_active %}
+                                <span class="flex items-center gap-1.5 text-green-600 text-xs font-bold bg-green-50 px-2.5 py-1 rounded-full border border-green-100 w-fit">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> فعال
+                                </span>
+                            {% else %}
+                                <span class="flex items-center gap-1.5 text-slate-500 text-xs font-bold bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 w-fit">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> غير فعال
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                            <div class="flex flex-col items-center justify-center gap-2">
+                                <i class="ph-duotone ph-users-three text-4xl text-slate-300"></i>
+                                <span class="font-medium">لا يوجد أفراد عائلة مسجلين</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Cards -->
+        <div class="md:hidden bg-slate-50 p-4 space-y-4">
+            {% for member in members %}
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex items-center gap-3">
+                         <div class="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 font-bold text-xs">
+                             {{ member.full_name|slice:":2" }}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm">{{ member.full_name }}</h4>
+                             <p class="text-xs text-slate-400 mt-0.5 font-mono">{{ member.national_id }}</p>
+                        </div>
+                    </div>
+                    {% if member.relation == 'PRINCIPAL' %}
+                        <span class="px-2 py-0.5 bg-brand-50 text-brand-700 rounded text-[10px] font-bold border border-brand-100">أنا</span>
+                    {% else %}
+                        <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold border border-slate-200">{{ member.get_relation_display }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100">
+                    <div>
+                        <span class="text-[10px] text-slate-400 block mb-1">الفئة</span>
+                        <span class="text-xs font-bold text-slate-700">{{ member.policy_class.name }}</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-400 block mb-1">بطاقة التأمين</span>
+                        <span class="text-xs font-mono text-slate-600">{{ member.medical_card_number|default:"-" }}</span>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-8 text-slate-500">
+                 <div class="flex flex-col items-center justify-center gap-2">
+                    <i class="ph-duotone ph-users-three text-3xl text-slate-300"></i>
+                    <span class="font-medium text-sm">لا يوجد أفراد عائلة مسجلين</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
