@@ -20,7 +20,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Third Party Libraries
-    'encrypted_model_fields',
     'widget_tweaks',
     'django_htmx',
 
@@ -118,7 +117,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # 1. Custom User Model
 AUTH_USER_MODEL = 'accounts.User'
 
-# 2. Encryption Key (From .env)
+# Note: FIELD_ENCRYPTION_KEY is still needed because old migrations reference encrypted_model_fields
 FIELD_ENCRYPTION_KEY = env_config('FIELD_ENCRYPTION_KEY')
 
 # 3. Login Redirects

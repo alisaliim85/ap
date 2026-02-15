@@ -1,7 +1,7 @@
 import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from encrypted_model_fields.fields import EncryptedCharField, EncryptedTextField # للتشفير
+from django.core.validators import MinLengthValidator, MaxLengthValidator
 
 class Member(models.Model):
     class Gender(models.TextChoices):
@@ -32,14 +32,16 @@ class Member(models.Model):
         'accounts.User',
         on_delete=models.SET_NULL,
         null=True, blank=True,
-        related_name='member_profile'
+        related_name='member_profile',
+        db_index=True
     )
 
     # 3. الفئة التأمينية
     policy_class = models.ForeignKey(
         'policies.PolicyClass',
         on_delete=models.PROTECT,
-        related_name='members'
+        related_name='members',
+        db_index=True
     )
 
     # 4. الكفيل (رب الأسرة)
@@ -47,24 +49,25 @@ class Member(models.Model):
         'self',
         on_delete=models.CASCADE,
         null=True, blank=True,
-        related_name='dependents'
+        related_name='dependents',
+        db_index=True
     )
 
     # البيانات الشخصية
     full_name = models.CharField(_("Full Name"), max_length=255)
     
     # الهوية والعنوان (مشفرة)
-    national_id = EncryptedCharField(
+    national_id = models.CharField(
         _("National ID / Iqama"), 
-        max_length=20, 
-        unique=True
+        max_length=10, 
+        unique=True,
+        db_index=True,
+        validators=[MinLengthValidator(10), MaxLengthValidator(10)],
     )
     
-    # العنوان الوطني (تمت إضافته هنا ومشفر)
-    national_address = EncryptedTextField(
+    national_address = models.TextField(
         _("National Address"),
         blank=True,
-        help_text=_("Encrypted Address Details")
     )
     
     medical_card_number = models.CharField(_("Medical Card ID"), max_length=50, unique=True, null=True, blank=True)

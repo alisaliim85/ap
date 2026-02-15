@@ -2,7 +2,7 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
-from encrypted_model_fields.fields import EncryptedCharField
+
 
 class User(AbstractUser):
     """
@@ -71,11 +71,12 @@ class User(AbstractUser):
     )
 
     # بيانات حساسة مشفرة
-    national_id = EncryptedCharField(
+    national_id = models.CharField(
         _("National ID"), 
-        max_length=20, 
-        blank=True, 
-        help_text=_("Encrypted in Database")
+        max_length=10, 
+        blank=True,
+        unique=True,
+        db_index=True
     )
     
     phone_number = models.CharField(_("Phone Number"), max_length=20, blank=True)

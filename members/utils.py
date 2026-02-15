@@ -77,12 +77,8 @@ def process_bulk_upload(file, client):
     
     processed_nids = set() # To track duplicates inside the file
     
-    # PERFORMANCE FIX: Since national_id is encrypted and NOT searchable via .filter(),
-    # we fetch all members for this client and cross-client if needed, and check in memory.
-    # For now, let's fetch all relevant members to ensure we find duplicates across companies.
-    # NOTE: In a very large DB, this should be replaced with a hashed_id index field.
-    all_members = list(Member.objects.select_related('client', 'policy_class').all())
-    member_cache = {m.national_id: m for m in all_members}
+    # national_id is now a normal CharField, so we can query the DB directly
+    member_cache = {}
 
     # Validation loop
     for index, row in enumerate(rows, start=2):
@@ -121,8 +117,8 @@ def process_bulk_upload(file, client):
              continue
         processed_nids.add(nid)
 
-        # Check in-DB duplicate via cache
-        existing_member = member_cache.get(nid)
+        # Check in-DB duplicate via direct query (national_id is now a normal field)
+        existing_member = member_cache.get(nid) or Member.objects.select_related('client').filter(national_id=nid).first()
         if existing_member:
             # Check context
             if existing_member.client == client:
@@ -143,8 +139,8 @@ def process_bulk_upload(file, client):
                 results['failed'].append({'row': index, 'name': full_name, 'error': "Sponsor ID required for dependents"})
                 continue
                 
-            # Look for sponsor via cache
-            sponsor_obj = member_cache.get(sponsor_nid)
+            # Look for sponsor via cache or DB query
+            sponsor_obj = member_cache.get(sponsor_nid) or Member.objects.select_related('client', 'policy_class').filter(national_id=sponsor_nid, client=client).first()
             
             # Additional check: Sponsor must belong to the SAME client
             if not sponsor_obj or sponsor_obj.client != client:

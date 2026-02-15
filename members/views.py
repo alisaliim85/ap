@@ -27,7 +27,8 @@ def member_list(request):
     if search_query:
         members_list = members_list.filter(
             Q(full_name__icontains=search_query) |
-            Q(medical_card_number__icontains=search_query)
+            Q(medical_card_number__icontains=search_query) |
+            Q(national_id__icontains=search_query)
         )
     
     if client_filter:

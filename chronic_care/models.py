@@ -2,7 +2,7 @@ import uuid
 import datetime
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from encrypted_model_fields.fields import EncryptedCharField, EncryptedTextField # التشفير
+
 
 # --- 1. الثوابت والأمراض ---
 class ChronicDisease(models.Model):
@@ -123,9 +123,9 @@ class HomeVisit(models.Model):
     
     # تقرير الزيارة (مشفر)
     # ملاحظة: الطبيب يكتب هنا التشخيص العام
-    doctor_notes = EncryptedTextField(_("Doctor Clinical Notes"), blank=True)
-    vital_pressure = EncryptedCharField(max_length=20, blank=True)
-    vital_sugar = EncryptedCharField(max_length=20, blank=True)
+    doctor_notes = models.TextField(_("Doctor Clinical Notes"), blank=True)
+    vital_pressure = models.CharField(max_length=20, blank=True)
+    vital_sugar = models.CharField(max_length=20, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -159,7 +159,7 @@ class VisitPrescription(models.Model):
     dosage = models.CharField(max_length=100) # e.g. 500mg twice a day
     quantity = models.IntegerField(default=1)
     
-    instructions = EncryptedTextField(_("Instructions"), blank=True)
+    instructions = models.TextField(_("Instructions"), blank=True)
     
     is_dispensed = models.BooleanField(default=False)
     class Meta:
@@ -185,7 +185,7 @@ class VisitLabRequest(models.Model):
     result_file = models.FileField(upload_to='chronic/labs/%Y/%m/', null=True, blank=True)
     
     # قراءة النتيجة نصياً (مشفرة)
-    result_summary = EncryptedTextField(_("Result Summary"), blank=True)
+    result_summary = models.TextField(_("Result Summary"), blank=True)
     
     # توقيت ظهور النتيجة
     result_date = models.DateTimeField(null=True, blank=True)

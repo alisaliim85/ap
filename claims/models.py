@@ -3,7 +3,7 @@ import datetime
 import os
 from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
-from encrypted_model_fields.fields import EncryptedTextField # لتشفير نص التعليقات (حماية إضافية)
+
 from django_fsm import FSMField, transition
 from django.utils.text import get_valid_filename
 from django.conf import settings
@@ -365,7 +365,7 @@ class ClaimComment(models.Model):
     author = models.ForeignKey('accounts.User', on_delete=models.PROTECT)
     
     # محتوى التعليق (مشفر لأنه قد يحتوي معلومات طبية)
-    message = EncryptedTextField(_("Comment Message"))
+    message = models.TextField(_("Comment Message"))
     
     # نوع التعليق (هل يظهر للمستخدم أم لا؟)
     visibility = models.CharField(
