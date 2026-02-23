@@ -67,3 +67,9 @@ class Client(models.Model):
     @property
     def is_holding(self):
         return self.subsidiaries.exists()
+
+    def get_claim_setting(self, key, default=None):
+        """
+        Helper method to retrieve claim settings from the JSON configuration.
+        """
+        return self.services_config.get('claims', {}).get(key, default)

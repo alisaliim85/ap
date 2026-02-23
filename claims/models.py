@@ -171,7 +171,7 @@ class Claim(models.Model):
         self.log_status_change(
             user=user,
             from_status=self.status,
-            to_status=Status.SUBMITTED_TO_HR,
+            to_status=self.Status.SUBMITTED_TO_HR,
             action='submit_to_hr',
             reason='',
         )
@@ -190,7 +190,7 @@ class Claim(models.Model):
         self.log_status_change(
             user=user,
             from_status=self.status,
-            to_status=Status.SUBMITTED_TO_BROKER,
+            to_status=self.Status.SUBMITTED_TO_BROKER,
             action='submit_direct_to_broker',
             reason='',
         )
@@ -207,7 +207,7 @@ class Claim(models.Model):
         self.log_status_change(
             user=user,
             from_status=self.status,
-            to_status=Status.SUBMITTED_TO_BROKER,
+            to_status=self.Status.SUBMITTED_TO_BROKER,
             action='hr_approve',
             reason='',
         )
@@ -224,7 +224,7 @@ class Claim(models.Model):
         self.log_status_change(
             user=user,
             from_status=self.status,
-            to_status=Status.RETURNED_BY_HR,
+            to_status=self.Status.RETURNED_BY_HR,
             action='hr_return',
             reason=reason,
         )
@@ -241,7 +241,7 @@ class Claim(models.Model):
         self.log_status_change(
             user=user,
             from_status=self.status,
-            to_status=Status.BROKER_PROCESSING,
+            to_status=self.Status.BROKER_PROCESSING,
             action='broker_start_process',
             reason='',
         )
@@ -259,7 +259,7 @@ class Claim(models.Model):
         self.log_status_change(
             user=user,
             from_status=self.status,
-            to_status=Status.RETURNED_BY_BROKER,
+            to_status=self.Status.RETURNED_BY_BROKER,
             action='broker_return',
             reason=reason,
         )
@@ -276,7 +276,7 @@ class Claim(models.Model):
         self.log_status_change(
             user=user,
             from_status=self.status,
-            to_status=Status.SENT_TO_INSURANCE,
+            to_status=self.Status.SENT_TO_INSURANCE,
             action='sent_to_insurance',
             reason='',
         )
@@ -287,7 +287,7 @@ class Claim(models.Model):
         self.log_status_change(
             user=user,
             from_status=self.status,
-            to_status=Status.INSURANCE_QUERY,
+            to_status=self.Status.INSURANCE_QUERY,
             action='insurance_query',
             reason='',
         )
@@ -297,7 +297,7 @@ class Claim(models.Model):
         self.log_status_change(
             user=user,
             from_status=self.status,
-            to_status=Status.SENT_TO_INSURANCE,
+            to_status=self.Status.SENT_TO_INSURANCE,
             action='answer_insurance_query',
             reason='',
         )
@@ -307,7 +307,7 @@ class Claim(models.Model):
         self.log_status_change(
             user=user,
             from_status=self.status,
-            to_status=Status.APPROVED_BY_INSURANCE,
+            to_status=self.Status.APPROVED_BY_INSURANCE,
             action='insurance_approve',
             reason='',
         )
@@ -318,7 +318,7 @@ class Claim(models.Model):
         self.log_status_change(
             user=user,
             from_status=self.status,
-            to_status=Status.REJECTED_BY_INSURANCE,
+            to_status=self.Status.REJECTED_BY_INSURANCE,
             action='insurance_reject',
             reason=reason,
         )
@@ -330,7 +330,7 @@ class Claim(models.Model):
         self.log_status_change(
             user=user,
             from_status=self.status,
-            to_status=Status.PAID,
+            to_status=self.Status.PAID,
             action='mark_as_paid',
             reason='',
         )
