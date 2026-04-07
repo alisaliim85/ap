@@ -1,0 +1,486 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block header_title %}تفاصيل المطالبة {{ claim.claim_reference }}{% endblock %}
+
+{% block content %}
+{# ===== 1. رأس الصفحة ===== #}
+<div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+        <a href="{% url 'claims:claim_list' %}"
+            class="p-2 bg-white border border-slate-300 rounded-md hover:bg-slate-50 text-slate-600 transition" title="رجوع">
+            <i class="ph-bold ph-arrow-right text-lg"></i>
+        </a>
+        <div>
+            <h2 class="text-2xl font-extrabold text-slate-800 flex items-center gap-3">
+                <i class="ph-duotone ph-hand-coins text-brand-600"></i>
+                {{ claim.claim_reference }}
+            </h2>
+            <div class="flex items-center gap-2 mt-1">
+                {% include 'claims/partials/_status_badge.html' with status=claim.status %}
+                <span class="text-slate-400 text-sm">• أُنشئت {{ claim.created_at|date:"Y/m/d" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    {# ===== 2. العمود الأيسر: بيانات + إجراءات ===== #}
+    <div class="lg:col-span-2 space-y-6">
+
+        {# --- بطاقة البيانات الأساسية --- #}
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-info text-brand-600"></i>
+                    معلومات المطالبة
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                    <div class="flex flex-col">
+                        <span class="text-xs text-slate-400 font-bold uppercase mb-1">العضو</span>
+                        <span class="text-slate-800 font-medium">{{ claim.member }}</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs text-slate-400 font-bold uppercase mb-1">الشركة</span>
+                        <span class="text-slate-800 font-medium">{{ claim.member.client.name_ar|default:"—" }}</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs text-slate-400 font-bold uppercase mb-1">تاريخ الخدمة</span>
+                        <span class="text-slate-800 font-medium">{{ claim.service_date|date:"Y/m/d" }}</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs text-slate-400 font-bold uppercase mb-1">المبلغ</span>
+                        <span class="text-slate-800 font-bold text-lg">{{ claim.amount_original }} {{ claim.currency.code }}</span>
+                    </div>
+                    {% if claim.approved_amount_sar %}
+                    <div class="flex flex-col">
+                        <span class="text-xs text-slate-400 font-bold uppercase mb-1">المبلغ المعتمد (ر.س)</span>
+                        <span class="text-green-700 font-bold text-lg">{{ claim.approved_amount_sar }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="flex flex-col">
+                        <span class="text-xs text-slate-400 font-bold uppercase mb-1">نوع العلاج</span>
+                        <div class="flex items-center gap-2">
+                            {% if claim.is_in_patient %}
+                            <span class="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-xs font-bold border border-purple-100">تنويم</span>
+                            {% else %}
+                            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-bold border border-slate-200">عيادات خارجية</span>
+                            {% endif %}
+                            {% if claim.is_international %}
+                            <span class="px-2 py-0.5 bg-sky-50 text-sky-700 rounded text-xs font-bold border border-sky-100">علاج خارج المملكة</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if claim.rejection_reason %}
+                <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-md">
+                    <p class="text-sm font-bold text-red-800 flex items-center gap-1 mb-1">
+                        <i class="ph-duotone ph-warning-circle text-lg"></i>
+                        سبب الرفض / الإعادة
+                    </p>
+                    <p class="text-sm text-red-700">{{ claim.rejection_reason }}</p>
+                </div>
+                {% endif %}
+
+                {% if claim.admin_notes and user.is_broker or user.is_superuser %}
+                <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
+                    <p class="text-sm font-bold text-amber-800 flex items-center gap-1 mb-1">
+                        <i class="ph-duotone ph-note-pencil text-lg"></i>
+                        ملاحظات داخلية
+                    </p>
+                    <p class="text-sm text-amber-700">{{ claim.admin_notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# --- بطاقة الإجراءات (Role-Based Actions) --- #}
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-lightning text-brand-600"></i>
+                    الإجراءات المتاحة
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="flex flex-wrap gap-3">
+
+                    {# --- إجراءات العضو (Member) --- #}
+                    {% if user.role == 'MEMBER' %}
+                        {% if claim.status == 'DRAFT' or claim.status == 'RETURNED_BY_HR' or claim.status == 'RETURNED_BY_BROKER' %}
+                        <form method="post" action="{% url 'claims:submit_to_hr' claim.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-medium shadow-sm flex items-center gap-2 transition">
+                                <i class="ph-bold ph-paper-plane-tilt"></i>
+                                إرسال للموارد البشرية
+                            </button>
+                        </form>
+                        {% endif %}
+                    {% endif %}
+
+                    {# --- إجراءات HR --- #}
+                    {% if user.is_hr or user.is_superuser %}
+                        {% if claim.status == 'SUBMITTED_TO_HR' %}
+                        <form method="post" action="{% url 'claims:hr_approve_claim' claim.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium shadow-sm flex items-center gap-2 transition">
+                                <i class="ph-bold ph-check-circle"></i>
+                                موافقة HR
+                            </button>
+                        </form>
+
+                        <button onclick="document.getElementById('hr-return-modal').classList.remove('hidden')"
+                            class="px-4 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-md hover:bg-orange-100 font-medium flex items-center gap-2 transition">
+                            <i class="ph-bold ph-arrow-u-up-left"></i>
+                            إعادة للعضو
+                        </button>
+                        {% endif %}
+                    {% endif %}
+
+                    {# --- إجراءات الوسيط (Broker) --- #}
+                    {% if user.is_broker or user.is_superuser %}
+
+                        {% if claim.status == 'SUBMITTED_TO_BROKER' %}
+                        <form method="post" action="{% url 'claims:broker_start_processing' claim.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-medium shadow-sm flex items-center gap-2 transition">
+                                <i class="ph-bold ph-play"></i>
+                                بدء المعالجة
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        {% if claim.status == 'BROKER_PROCESSING' %}
+                        <form method="post" action="{% url 'claims:send_to_insurance' claim.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 font-medium shadow-sm flex items-center gap-2 transition">
+                                <i class="ph-bold ph-paper-plane-right"></i>
+                                إرسال لشركة التأمين
+                            </button>
+                        </form>
+
+                        <button onclick="document.getElementById('broker-return-modal').classList.remove('hidden')"
+                            class="px-4 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-md hover:bg-orange-100 font-medium flex items-center gap-2 transition">
+                            <i class="ph-bold ph-arrow-u-up-left"></i>
+                            إعادة للعضو (نواقص)
+                        </button>
+                        {% endif %}
+
+                        {% if claim.status == 'SENT_TO_INSURANCE' %}
+                        <form method="post" action="{% url 'claims:insurance_approve_claim' claim.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium shadow-sm flex items-center gap-2 transition">
+                                <i class="ph-bold ph-check-circle"></i>
+                                موافقة التأمين
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'claims:insurance_query_claim' claim.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-md hover:bg-yellow-100 font-medium flex items-center gap-2 transition">
+                                <i class="ph-bold ph-question"></i>
+                                استفسار من التأمين
+                            </button>
+                        </form>
+                        <button onclick="document.getElementById('insurance-reject-modal').classList.remove('hidden')"
+                            class="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-md hover:bg-red-100 font-medium flex items-center gap-2 transition">
+                            <i class="ph-bold ph-x-circle"></i>
+                            رفض التأمين
+                        </button>
+                        {% endif %}
+
+                        {% if claim.status == 'INSURANCE_QUERY' %}
+                        <form method="post" action="{% url 'claims:answer_insurance_query' claim.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-medium shadow-sm flex items-center gap-2 transition">
+                                <i class="ph-bold ph-chat-text"></i>
+                                الرد على الاستفسار
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        {% if claim.status == 'APPROVED_BY_INSURANCE' %}
+                        <button onclick="document.getElementById('payment-modal').classList.remove('hidden')"
+                            class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium shadow-sm flex items-center gap-2 transition">
+                            <i class="ph-bold ph-money"></i>
+                            تسجيل السداد
+                        </button>
+                        {% endif %}
+
+                    {% endif %}
+
+                    {# إذا لم يكن هناك إجراءات متاحة #}
+                    {% if claim.status == 'PAID' or claim.status == 'REJECTED_BY_INSURANCE' %}
+                    <div class="text-sm text-slate-500 flex items-center gap-2 py-2">
+                        <i class="ph-duotone ph-lock-simple text-lg"></i>
+                        لا توجد إجراءات متاحة — المطالبة في حالتها النهائية.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+
+        {# --- قسم المرفقات --- #}
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-paperclip text-brand-600"></i>
+                    المرفقات
+                    <span class="text-xs text-slate-400 font-normal">({{ claim.attachments.count }})</span>
+                </h3>
+            </div>
+            <div class="p-6">
+                {% if claim.attachments.all %}
+                <div class="space-y-2">
+                    {% for attachment in claim.attachments.all %}
+                    <a href="{{ attachment.file.url }}" target="_blank"
+                        class="flex items-center gap-3 p-3 bg-slate-50 rounded-md hover:bg-brand-50 border border-slate-200 hover:border-brand-200 transition group">
+                        <i class="ph-duotone ph-file text-xl text-slate-400 group-hover:text-brand-600"></i>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-slate-700 truncate">{{ attachment.description|default:attachment.file.name }}</p>
+                            <p class="text-xs text-slate-400">{{ attachment.uploaded_at|date:"Y/m/d H:i" }}</p>
+                        </div>
+                        <i class="ph-bold ph-download-simple text-slate-400 group-hover:text-brand-600"></i>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-slate-400 text-center py-4">لا توجد مرفقات.</p>
+                {% endif %}
+            </div>
+        </div>
+
+                {# --- قسم التعليقات --- #}
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-chat-circle-text text-brand-600"></i>
+                    التعليقات
+                    <span class="text-xs text-slate-400 font-normal">({{ comments|length }})</span>
+                </h3>
+            </div>
+            <div class="p-6">
+                {% if comments %}
+                <div class="space-y-4 mb-6">
+                    {% for comment in comments %}
+                    <div class="flex gap-3 relative">
+                        <div class="h-8 w-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-xs flex-shrink-0 border border-brand-200">
+                            {{ comment.author.username|truncatechars:2 }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-bold text-sm text-slate-800">{{ comment.author.get_full_name|default:comment.author.username }}</span>
+                                <span class="text-xs text-slate-400">{{ comment.created_at|date:"Y/m/d H:i" }}</span>
+                                
+                                {% if comment.visibility == 'HR_BROKER' %}
+                                <span class="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px] font-bold border border-amber-100" title="داخلي (HR والوسيط فقط)">داخلي (HR+Broker)</span>
+                                {% elif comment.visibility == 'BROKER_INSURANCE' %}
+                                <span class="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold border border-blue-100" title="داخلي (الوسيط والتأمين فقط)">داخلي (Broker+Ins)</span>
+                                {% elif comment.visibility == 'BROKER_ONLY' %}
+                                <span class="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-bold border border-purple-100" title="داخلي (الوسيط فقط)">سري (Broker)</span>
+                                {% endif %}
+
+                                {% if not comment.is_read and comment.author != user %}
+                                <span class="flex h-2 w-2 relative" title="غير مقروء">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                </span>
+                                {% elif comment.is_read and comment.author == user %}
+                                <i class="ph-bold ph-checks text-[10px] text-brand-500" title="مقروء"></i>
+                                {% endif %}
+
+                            </div>
+                            <p class="text-sm text-slate-600 leading-relaxed">{{ comment.message }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-slate-400 text-center py-4 mb-4">لا توجد تعليقات بعد.</p>
+                {% endif %}
+
+                {# نموذج إضافة تعليق #}
+                <div class="mt-4 pt-4 border-t border-slate-100">
+                    <form method="post" action="{% url 'claims:add_claim_comment' claim.pk %}" class="space-y-3">
+                        {% csrf_token %}
+                        {% if comment_form.visibility.is_hidden %}
+                            {{ comment_form.visibility }}
+                        {% else %}
+                            <div class="w-full md:w-1/2 lg:w-1/3">
+                                {{ comment_form.visibility }}
+                            </div>
+                        {% endif %}
+                        <div class="relative">
+                            {{ comment_form.message }}
+                            <div class="absolute left-2 bottom-3">
+                                <button type="submit" class="p-2 bg-brand-600 text-white rounded-full hover:bg-brand-700 shadow-sm flex items-center justify-center transition">
+                                    <i class="ph-bold ph-paper-plane-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {# ===== 3. العمود الأيمن: سجل المراحل (Timeline) ===== #}
+    <div class="space-y-6">
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-clock-countdown text-brand-600"></i>
+                    سجل المراحل
+                </h3>
+            </div>
+            <div class="p-6">
+                {% if claim.status_logs.all %}
+                <div class="relative">
+                    {# الخط العمودي #}
+                    <div class="absolute right-[11px] top-2 bottom-2 w-0.5 bg-slate-200"></div>
+
+                    <div class="space-y-6">
+                        {% for log in claim.status_logs.all %}
+                        <div class="relative flex gap-4">
+                            {# النقطة #}
+                            <div class="relative z-10 flex-shrink-0 w-6 h-6 rounded-full bg-brand-100 border-2 border-brand-500 flex items-center justify-center mt-0.5">
+                                <div class="w-2 h-2 rounded-full bg-brand-600"></div>
+                            </div>
+                            {# المحتوى #}
+                            <div class="flex-1 pb-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    {% include 'claims/partials/_status_badge.html' with status=log.to_status %}
+                                </div>
+                                <p class="text-xs text-slate-500 mt-1">
+                                    <i class="ph-duotone ph-user text-slate-400"></i>
+                                    {{ log.user.get_full_name|default:log.user.username }}
+                                </p>
+                                <p class="text-xs text-slate-400 mt-0.5">{{ log.created_at|date:"Y/m/d H:i" }}</p>
+                                {% if log.reason %}
+                                <p class="text-xs text-orange-600 mt-1 bg-orange-50 px-2 py-1 rounded border border-orange-100">
+                                    {{ log.reason }}
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-sm text-slate-400 text-center py-4">لم يتم تسجيل أي مراحل بعد.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{# ===== Modals for Actions Requiring Input ===== #}
+
+{# --- Modal: إعادة HR --- #}
+<div id="hr-return-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="font-bold text-slate-800">إعادة المطالبة للعضو</h3>
+            <button onclick="this.closest('#hr-return-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x text-xl"></i></button>
+        </div>
+        <form method="post" action="{% url 'claims:hr_return_claim' claim.pk %}">
+            {% csrf_token %}
+            <div class="p-6">
+                <label class="block text-sm font-medium text-slate-700 mb-1">سبب الإعادة <span class="text-red-500">*</span></label>
+                <textarea name="reason" rows="3" required
+                    class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition text-sm"
+                    placeholder="اذكر السبب أو المستندات المطلوبة..."></textarea>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3 justify-end">
+                <button type="button" onclick="this.closest('#hr-return-modal').classList.add('hidden')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 font-medium text-sm">إلغاء</button>
+                <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 font-medium text-sm">إعادة المطالبة</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# --- Modal: إعادة الوسيط --- #}
+<div id="broker-return-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="font-bold text-slate-800">إعادة المطالبة (نواقص)</h3>
+            <button onclick="this.closest('#broker-return-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x text-xl"></i></button>
+        </div>
+        <form method="post" action="{% url 'claims:broker_return_claim' claim.pk %}">
+            {% csrf_token %}
+            <div class="p-6">
+                <label class="block text-sm font-medium text-slate-700 mb-1">سبب الإعادة <span class="text-red-500">*</span></label>
+                <textarea name="reason" rows="3" required
+                    class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition text-sm"
+                    placeholder="المستندات الناقصة أو الملاحظات..."></textarea>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3 justify-end">
+                <button type="button" onclick="this.closest('#broker-return-modal').classList.add('hidden')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 font-medium text-sm">إلغاء</button>
+                <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 font-medium text-sm">إعادة المطالبة</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# --- Modal: رفض التأمين --- #}
+<div id="insurance-reject-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="font-bold text-slate-800">رفض شركة التأمين</h3>
+            <button onclick="this.closest('#insurance-reject-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x text-xl"></i></button>
+        </div>
+        <form method="post" action="{% url 'claims:insurance_reject_claim' claim.pk %}">
+            {% csrf_token %}
+            <div class="p-6">
+                <label class="block text-sm font-medium text-slate-700 mb-1">سبب الرفض <span class="text-red-500">*</span></label>
+                <textarea name="reason" rows="3" required
+                    class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition text-sm"
+                    placeholder="سبب الرفض من شركة التأمين..."></textarea>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3 justify-end">
+                <button type="button" onclick="this.closest('#insurance-reject-modal').classList.add('hidden')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 font-medium text-sm">إلغاء</button>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium text-sm">تأكيد الرفض</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# --- Modal: تسجيل السداد --- #}
+<div id="payment-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="font-bold text-slate-800">تسجيل السداد</h3>
+            <button onclick="this.closest('#payment-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x text-xl"></i></button>
+        </div>
+        <form method="post" action="{% url 'claims:mark_claim_as_paid' claim.pk %}">
+            {% csrf_token %}
+            <div class="p-6 space-y-4">
+                <div class="p-3 bg-slate-50 rounded-md border border-slate-200 text-sm">
+                    <span class="text-slate-500">المبلغ المطلوب:</span>
+                    <span class="font-bold text-slate-800 mr-2">{{ claim.amount_original }} {{ claim.currency.code }}</span>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">المبلغ المعتمد (ر.س) <span class="text-red-500">*</span></label>
+                    <input type="number" name="approved_amount_sar" step="0.01" required
+                        class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition text-sm"
+                        placeholder="0.00">
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3 justify-end">
+                <button type="button" onclick="this.closest('#payment-modal').classList.add('hidden')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 font-medium text-sm">إلغاء</button>
+                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium text-sm flex items-center gap-2">
+                    <i class="ph-bold ph-money"></i>
+                    تأكيد السداد
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

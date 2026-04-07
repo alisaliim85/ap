@@ -18,7 +18,7 @@
         <div class="p-6 border-b border-slate-200 bg-slate-50">
             <h3 class="font-bold text-slate-800 flex items-center gap-2">
                 <i class="ph-duotone ph-file-text text-brand-600 text-xl"></i>
-                بيانات البوليصة والتعاقد
+                بيانات الوثيقة والتعاقد
             </h3>
         </div>
 
@@ -28,7 +28,7 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-bold text-slate-700 mb-2">رقم البوليصة (أو مرجع العقد)</label>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">رقم الوثيقة (أو مرجع العقد)</label>
                         {{ form.policy_number }}
                     </div>
 
@@ -73,9 +73,9 @@
                             {{ form.is_active }}
                         </div>
                         <div class="text-sm">
-                            <label for="{{ form.is_active.id_for_label }}" class="font-bold text-slate-700">بوليصة
+                            <label for="{{ form.is_active.id_for_label }}" class="font-bold text-slate-700">وثيقة
                                 نشطة</label>
-                            <p class="text-slate-500 text-xs">تعطيل البوليصة سيمنع إصدار أي مطالبات جديدة عليها.</p>
+                            <p class="text-slate-500 text-xs">تعطيل الوثيقة سيمنع إصدار أي مطالبات جديدة عليها.</p>
                         </div>
                     </div>
                 </div>
@@ -85,7 +85,7 @@
                         class="px-6 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-bold transition">إلغاء</a>
                     <button type="submit"
                         class="px-8 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-bold shadow-lg shadow-brand-100 transition flex items-center gap-2">
-                        <i class="ph-bold ph-check"></i> حفظ بيانات البوليصة
+                        <i class="ph-bold ph-check"></i> حفظ بيانات الوثيقة
                     </button>
                 </div>
             </form>

@@ -3,7 +3,7 @@
     <table class="w-full text-right text-sm">
         <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
             <tr>
-                <th class="px-6 py-3">رقم البوليصة</th>
+                <th class="px-6 py-3">رقم الوثيقة</th>
                 <th class="px-6 py-3">العميل</th>
                 <th class="px-6 py-3">شركة التأمين</th>
                 <th class="px-6 py-3">الفترة</th>
@@ -118,7 +118,7 @@
     <div class="text-xs text-slate-500 font-medium order-2 sm:order-1">
         عرض <span class="font-bold text-slate-700">{{ page_obj.start_index }}</span> إلى <span
             class="font-bold text-slate-700">{{ page_obj.end_index }}</span> من أصل <span
-            class="font-bold text-slate-700">{{ page_obj.paginator.count }}</span> بوليصة
+            class="font-bold text-slate-700">{{ page_obj.paginator.count }}</span> وثيقة
     </div>
     <nav class="flex items-center gap-1 order-1 sm:order-2">
         {% if page_obj.has_previous %}

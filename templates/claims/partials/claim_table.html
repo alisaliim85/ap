@@ -1,0 +1,81 @@
+{# claims/partials/claim_table.html — Desktop Table + Mobile Cards #}
+
+{% if claims %}
+<!-- Desktop Table -->
+<div class="hidden md:block overflow-x-auto">
+    <table class="w-full text-right text-sm">
+        <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+            <tr>
+                <th class="px-6 py-3">رقم المطالبة</th>
+                <th class="px-6 py-3">العضو</th>
+                <th class="px-6 py-3">الشركة</th>
+                <th class="px-6 py-3">المبلغ</th>
+                <th class="px-6 py-3">تاريخ الخدمة</th>
+                <th class="px-6 py-3">الحالة</th>
+                <th class="px-6 py-3 w-16"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for claim in claims %}
+            <tr class="hover:bg-brand-50/30 group transition-colors">
+                <td class="px-6 py-4 font-mono font-medium text-slate-800">
+                    <a href="{% url 'claims:claim_detail' claim.pk %}" class="hover:text-brand-600 transition">
+                        {{ claim.claim_reference }}
+                    </a>
+                </td>
+                <td class="px-6 py-4 text-slate-700">{{ claim.member }}</td>
+                <td class="px-6 py-4 text-slate-500">{{ claim.member.client.name_ar|default:"—" }}</td>
+                <td class="px-6 py-4 font-medium text-slate-800">
+                    {{ claim.amount_original }} {{ claim.currency.code }}
+                </td>
+                <td class="px-6 py-4 text-slate-500">{{ claim.service_date|date:"Y/m/d" }}</td>
+                <td class="px-6 py-4">
+                    {% include 'claims/partials/_status_badge.html' with status=claim.status %}
+                </td>
+                <td class="px-6 py-4">
+                    <a href="{% url 'claims:claim_detail' claim.pk %}"
+                        class="p-1 hover:text-brand-600 opacity-0 group-hover:opacity-100 transition-opacity" title="عرض التفاصيل">
+                        <i class="ph-duotone ph-eye text-lg"></i>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Mobile Cards -->
+<div class="md:hidden p-4 space-y-4 bg-slate-50">
+    {% for claim in claims %}
+    <a href="{% url 'claims:claim_detail' claim.pk %}" class="block bg-white p-4 rounded-md shadow-sm border border-slate-200 hover:border-brand-300 transition">
+        <div class="flex justify-between items-start mb-3">
+            <div>
+                <h4 class="font-bold text-slate-800 font-mono text-sm">{{ claim.claim_reference }}</h4>
+                <p class="text-xs text-slate-500 mt-1">{{ claim.member }}</p>
+            </div>
+            {% include 'claims/partials/_status_badge.html' with status=claim.status %}
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-sm text-slate-600">
+            <div class="flex flex-col">
+                <span class="text-xs text-slate-400">المبلغ</span>
+                <span class="font-bold text-slate-800">{{ claim.amount_original }} {{ claim.currency.code }}</span>
+            </div>
+            <div class="flex flex-col">
+                <span class="text-xs text-slate-400">تاريخ الخدمة</span>
+                <span>{{ claim.service_date|date:"Y/m/d" }}</span>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="text-center py-16">
+    <div class="inline-flex items-center justify-center w-20 h-20 bg-slate-100 rounded-full mb-4">
+        <i class="ph-duotone ph-hand-coins text-4xl text-slate-400"></i>
+    </div>
+    <h4 class="text-slate-800 font-bold text-lg mb-1">لا توجد مطالبات</h4>
+    <p class="text-slate-500 text-sm">لم يتم العثور على أي مطالبات مالية في النظام حالياً.</p>
+</div>
+{% endif %}

@@ -8,7 +8,7 @@
     </div>
     <div class="flex items-center gap-3">
         <div class="relative group">
-            <input type="text" name="search" placeholder="رقم البوليصة أو اسم العميل..."
+            <input type="text" name="search" placeholder="رقم الوثيقة أو اسم العميل..."
                 class="w-64 pl-4 pr-10 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
                 hx-get="{% url 'policies:policy_list' %}" hx-trigger="keyup changed delay:500ms"
                 hx-target="#policy-table-container" hx-indicator=".search-spinner">
@@ -20,7 +20,7 @@
 
         <a href="{% url 'policies:policy_create' %}"
             class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-bold shadow-md shadow-brand-200 transition flex items-center gap-2 text-sm">
-            <i class="ph-bold ph-plus"></i> إضافة بوليصة جديدة
+            <i class="ph-bold ph-plus"></i> إضافة وثيقة جديدة
         </a>
     </div>
 </div>

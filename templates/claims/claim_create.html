@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+
+{% block header_title %}إضافة مطالبة جديدة{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6" x-data="claimForm()">
+
+    <!-- Header -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-extrabold text-slate-800 flex items-center gap-2">
+            <i class="ph-duotone ph-hand-coins text-brand-600"></i>
+            إنشاء مطالبة جديدة
+        </h2>
+        <p class="text-slate-500 text-sm mt-1">قم بتعبئة تفاصيل المطالبة والمرفقات</p>
+    </div>
+
+    <!-- Form -->
+    <form method="post" enctype="multipart/form-data" class="bg-white p-6 rounded-md border border-slate-200 shadow-sm space-y-8">
+        {% csrf_token %}
+        
+        <!-- Alerts -->
+        {% if form.errors %}
+        <div class="p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
+            <p class="font-bold mb-2">يرجى تصحيح الأخطاء الموضحة أدناه</p>
+        </div>
+        {% endif %}
+
+        <section>
+            <h3 class="text-xs font-bold text-slate-400 uppercase mb-4 border-b pb-2">تفاصيل المستفيد</h3>
+            <div class="space-y-4">
+                
+                {% if user.role == 'HR' or perms.accounts.view_hr_dashboard %}
+                <!-- HR View -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">بحث برقم الهوية للمستفيد <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <i class="ph-duotone ph-magnifying-glass absolute top-2.5 right-3 text-slate-400"></i>
+                        <input type="text" name="{{ form.national_id_search.html_name }}" 
+                               hx-get="{% url 'claims:search_member_by_nid' %}"
+                               hx-trigger="keyup changed delay:500ms"
+                               hx-target="#search-result"
+                               placeholder="أدخل رقم الهوية للبحث..."
+                               class="w-full pl-4 pr-10 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition {% if form.national_id_search.errors %}border-red-500{% endif %}">
+                    </div>
+                    {% if form.national_id_search.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.national_id_search.errors.0 }}</p>
+                    {% endif %}
+                    <div id="search-result"></div>
+                </div>
+                {% else %}
+                <!-- Member View -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">المستفيد <span class="text-red-500">*</span></label>
+                    <select name="{{ form.member.html_name }}" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 bg-white {% if form.member.errors %}border-red-500{% endif %}">
+                        <option value="">-- اختر المستفيد --</option>
+                        {% for choice in form.member.field.choices %}
+                            <option value="{{ choice.0 }}" {% if form.member.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.member.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.member.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section>
+            <h3 class="text-xs font-bold text-slate-400 uppercase mb-4 border-b pb-2">التفاصيل المالية والطبية</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Service Date -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">تاريخ الخدمة <span class="text-red-500">*</span></label>
+                    <input type="date" name="{{ form.service_date.html_name }}" value="{{ form.service_date.value|default_if_none:'' }}"
+                           class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-600 {% if form.service_date.errors %}border-red-500{% endif %}">
+                    {% if form.service_date.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.service_date.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Currency -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">العملة الأصلية <span class="text-red-500">*</span></label>
+                    <select name="{{ form.currency.html_name }}" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white {% if form.currency.errors %}border-red-500{% endif %}">
+                        {% for choice in form.currency.field.choices %}
+                            <option value="{{ choice.0 }}" {% if form.currency.value == choice.0 or choice.0 == 'SAR' and not form.currency.value %}selected{% endif %}>{{ choice.1 }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.currency.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.currency.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Amount -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">المبلغ <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <input type="number" step="0.01" name="{{ form.amount_original.html_name }}" value="{{ form.amount_original.value|default_if_none:'' }}"
+                               placeholder="مثال: 500.00"
+                               class="w-full pl-4 pr-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 {% if form.amount_original.errors %}border-red-500{% endif %}">
+                    </div>
+                    {% if form.amount_original.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.amount_original.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Toggles -->
+                <div class="space-y-4 pt-6">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" name="{{ form.is_in_patient.html_name }}" class="w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500" {% if form.is_in_patient.value %}checked{% endif %}>
+                        <span class="text-sm font-medium text-slate-700">تنويم (مريض داخلي)</span>
+                    </label>
+
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" name="{{ form.is_international.html_name }}" class="w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500" {% if form.is_international.value %}checked{% endif %}>
+                        <span class="text-sm font-medium text-slate-700">علاج خارج المملكة</span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- Attachment Upload (Advanced UX) -->
+        <section>
+            <h3 class="text-xs font-bold text-slate-400 uppercase mb-4 border-b pb-2">المرفقات <span class="text-red-500">*</span></h3>
+            
+            <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 hover:border-brand-400 transition cursor-pointer relative group {% if form.attachments.errors %}border-red-400 bg-red-50{% endif %}"
+                 @dragover.prevent="dragover = true" 
+                 @dragleave.prevent="dragover = false" 
+                 @drop.prevent="dropHandler($event)"
+                 :class="{ 'bg-brand-50 border-brand-400': dragover }">
+                
+                <input type="file" name="{{ form.attachments.html_name }}" multiple required id="file-upload"
+                       class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                       @change="handleFiles($event)">
+                
+                <i class="ph-duotone ph-files text-4xl text-brand-500 mb-3 group-hover:scale-110 transition-transform"></i>
+                <p class="text-slate-700 font-medium">اسحب الملفات هنا أو اضغط للاستعراض</p>
+                <p class="text-slate-400 text-sm mt-1">يجب إرفاق: الفواتير، التقرير الطبي، الوصفة الطبية</p>
+                
+                <!-- Preview selected files -->
+                <div class="mt-4 flex flex-col items-center gap-2 w-full max-w-md" x-show="files.length > 0" x-cloak>
+                    <template x-for="file in files" :key="file.name">
+                        <div class="w-full flex items-center justify-between p-2 bg-white rounded border border-slate-200">
+                            <span class="text-sm text-slate-600 truncate max-w-[80%]" x-text="file.name"></span>
+                            <i class="ph-fill ph-check-circle text-green-500"></i>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            {% if form.attachments.errors %}
+                <p class="text-red-500 text-sm mt-1">{{ form.attachments.errors.0 }}</p>
+            {% endif %}
+        </section>
+
+        <!-- Actions -->
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-200 mt-8">
+            <button type="submit" name="action" value="draft"
+                    class="px-5 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 font-medium flex items-center gap-2">
+                <i class="ph-duotone ph-floppy-disk"></i> حفظ كمسودة
+            </button>
+            <button type="submit" name="action" value="submit"
+                    class="px-5 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-medium shadow-sm flex items-center gap-2">
+                <i class="ph-bold ph-paper-plane-right"></i> تقديم المطالبة الآن
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('claimForm', () => ({
+        dragover: false,
+        files: [],
+        handleFiles(event) {
+            this.files = Array.from(event.target.files);
+        },
+        dropHandler(event) {
+            this.dragover = false;
+            let droppedFiles = event.dataTransfer.files;
+            document.getElementById('file-upload').files = droppedFiles;
+            this.files = Array.from(droppedFiles);
+        }
+    }))
+})
+</script>
+{% endblock %}

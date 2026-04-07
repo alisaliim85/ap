@@ -67,3 +67,11 @@ class Client(models.Model):
     @property
     def is_holding(self):
         return self.subsidiaries.exists()
+
+    def get_claim_setting(self, setting_name, default=False):
+        """
+        جلب إعداد محدد لقسم المطالبات من services_config.
+        """
+        if not self.services_config or 'claims' not in self.services_config:
+            return default
+        return self.services_config['claims'].get(setting_name, default)

@@ -18,6 +18,7 @@ urlpatterns = [
     path('policies/', include('policies.urls')),
     path('networks/', include('networks.urls')),
     path('members/', include('members.urls')),
+    path('claims/', include('claims.urls')),
 ]
 
 

@@ -37,6 +37,7 @@ class User(AbstractUser):
             ("view_partner_dashboard", "Can view Partner Dashboard"),
             ("view_member_dashboard", "Can view Member Dashboard"),
             ("manage_users", "Can manage system users"),
+            ("manage_company_staff", "Can Manage My Staff")
         ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -73,13 +74,14 @@ class User(AbstractUser):
     # بيانات حساسة مشفرة
     national_id = models.CharField(
         _("National ID"), 
-        max_length=10, 
+        max_length=10,
+        null=True, 
         blank=True,
         unique=True,
         db_index=True
     )
     
-    phone_number = models.CharField(_("Phone Number"), max_length=20, blank=True)
+    phone_number = models.CharField(_("Phone Number"), max_length=10, blank=True)
 
     def save(self, *args, **kwargs):
         # إذا تم إنشاء المستخدم كـ superuser (مثلاً عبر سطر الأوامر)، نحدث دوره تلقائياً
@@ -122,3 +124,18 @@ class User(AbstractUser):
     @property
     def is_member(self):
         return self.has_perm('accounts.view_member_dashboard')
+    @property
+    def is_broker_role(self):
+        return self.role in [self.Roles.BROKER_ADMIN, self.Roles.BROKER_STAFF]
+
+    @property
+    def is_hr_role(self):
+        return self.role in [self.Roles.HR_ADMIN, self.Roles.HR_STAFF]
+
+    @property
+    def is_partner_role(self):
+        return self.role in [self.Roles.PHARMACIST, self.Roles.CHRONIC_ADMIN, self.Roles.CHRONIC_STAFF]
+
+    @property
+    def is_member_role(self):
+        return self.role == self.Roles.MEMBER

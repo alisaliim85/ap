@@ -1,0 +1,63 @@
+{# claims/partials/_status_badge.html — Reusable status badge #}
+{# Usage: {% include 'claims/partials/_status_badge.html' with status=claim.status %} #}
+
+{% if status == 'DRAFT' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-bold border border-slate-200">
+    <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> مسودة
+</span>
+
+{% elif status == 'SUBMITTED_TO_HR' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold border border-blue-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> مرسلة للـ HR
+</span>
+
+{% elif status == 'RETURNED_BY_HR' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-bold border border-orange-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span> مُعادة من HR
+</span>
+
+{% elif status == 'SUBMITTED_TO_BROKER' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-xs font-bold border border-indigo-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span> مرسلة للوسيط
+</span>
+
+{% elif status == 'BROKER_PROCESSING' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-brand-50 text-brand-700 rounded text-xs font-bold border border-brand-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-brand-600"></span> قيد المعالجة
+</span>
+
+{% elif status == 'RETURNED_BY_BROKER' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 rounded text-xs font-bold border border-amber-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> مُعادة من الوسيط
+</span>
+
+{% elif status == 'SENT_TO_INSURANCE' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs font-bold border border-purple-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span> لدى التأمين
+</span>
+
+{% elif status == 'INSURANCE_QUERY' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-yellow-50 text-yellow-700 rounded text-xs font-bold border border-yellow-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span> استفسار تأمين
+</span>
+
+{% elif status == 'APPROVED_BY_INSURANCE' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded text-xs font-bold border border-emerald-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> موافق عليها
+</span>
+
+{% elif status == 'REJECTED_BY_INSURANCE' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 rounded text-xs font-bold border border-red-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> مرفوضة
+</span>
+
+{% elif status == 'PAID' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-bold border border-green-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> مدفوعة
+</span>
+
+{% else %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-500 rounded text-xs font-bold border border-slate-200">
+    {{ status }}
+</span>
+{% endif %}

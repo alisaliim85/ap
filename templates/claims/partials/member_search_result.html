@@ -1,0 +1,25 @@
+{% if member %}
+    <div class="mt-2 p-3 bg-brand-50 border border-brand-200 rounded-md flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold border border-brand-200">
+                <i class="ph-duotone ph-user text-xl"></i>
+            </div>
+            <div>
+                <p class="font-bold text-slate-800">{{ member.full_name }}</p>
+                <p class="text-xs text-slate-500">
+                    {% if member.relation == 'PRINCIPAL' %}
+                    موظف (المستفيد الرئيسي)
+                    {% else %}
+                    مرافق ({{ member.get_relation_display }})
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        <i class="ph-fill ph-check-circle text-brand-500 text-2xl"></i>
+    </div>
+{% elif q %}
+    <div class="mt-2 p-3 bg-red-50 border border-red-200 rounded-md flex items-center gap-3 text-red-600">
+        <i class="ph-duotone ph-warning-circle text-xl"></i>
+        <p class="text-sm font-medium">لم يتم العثور على مستفيد برقم الهوية "{{ q }}"</p>
+    </div>
+{% endif %}

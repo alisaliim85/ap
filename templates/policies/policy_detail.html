@@ -10,17 +10,15 @@
                     class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-brand-600 transition shadow-sm">
                     <i class="ph-bold ph-arrow-right"></i>
                 </a>
-                <h2 class="text-2xl font-black text-slate-800">تفاصيل البوليصة: {{ policy.policy_number }}</h2>
+                <h2 class="text-2xl font-black text-slate-800">تفاصيل الوثيقة: {{ policy.policy_number }}</h2>
             </div>
             {% if policy.is_subsidiary %}
             <p class="text-slate-500 text-sm mt-1 mr-11">
-                وثيقة تابعة لـ <a href="{% url 'policies:policy_detail' policy.master_policy.pk %}"
-                    class="text-brand-600 hover:underline font-bold">{{ policy.master_policy.policy_number }}</a>
+                وثيقة تابعة لـ <a href="{% url 'policies:policy_detail' policy.master_policy.pk %}"class="text-brand-600 hover:underline font-bold">{{ policy.master_policy.policy_number }}</a>
                 - {{ policy.client.name_ar }}
             </p>
             {% else %}
-            <p class="text-slate-500 text-sm mt-1 mr-11">بوليصة رئيسية لـ {{ policy.client.name_ar }} من خلال {{
-                policy.provider.name_ar }}</p>
+            <p class="text-slate-500 text-sm mt-1 mr-11">وثيقة رئيسية لـ {{ policy.client.name_ar }} من خلال {{policy.provider.name_ar }}</p>
             {% endif %}
         </div>
         <div class="flex gap-2">
@@ -46,7 +44,7 @@
                     <i class="ph-duotone ph-check-circle text-3xl"></i>
                 </div>
                 <span
-                    class="text-green-600 text-xs font-black uppercase tracking-widest bg-green-50 px-3 py-1 rounded-full border border-green-100">بوليصة
+                    class="text-green-600 text-xs font-black uppercase tracking-widest bg-green-50 px-3 py-1 rounded-full border border-green-100">وثيقة
                     نشطة</span>
                 {% else %}
                 <div
@@ -143,7 +141,7 @@
                     {% empty %}
                     <div class="sm:col-span-2 py-12 text-center text-slate-400">
                         <i class="ph-duotone ph-selection-plus text-5xl mb-2 opacity-30"></i>
-                        <p class="text-sm font-bold">لا يوجد فئات مضافة لهذه البوليصة حتى الآن</p>
+                        <p class="text-sm font-bold">لا يوجد فئات مضافة لهذه الوثيقة حتى الآن</p>
                     </div>
                     {% endfor %}
                 </div>

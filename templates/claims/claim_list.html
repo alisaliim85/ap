@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block header_title %}إدارة المطالبات المالية{% endblock %}
+
+{% block content %}
+<div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+        <h2 class="text-2xl font-extrabold text-slate-800 flex items-center gap-2">
+            <i class="ph-duotone ph-hand-coins text-brand-600"></i>
+            المطالبات المالية
+        </h2>
+        <p class="text-slate-500 text-sm mt-1">تتبع ومعالجة مطالبات التأمين الطبي</p>
+    </div>
+    {% if perms.claims.can_submit_claim %}
+    <a href="{% url 'claims:claim_create' %}"
+        class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-bold shadow-sm transition-all focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
+        <i class="ph-bold ph-plus"></i>
+        إنشاء مطالبة جديدة
+    </a>
+    {% endif %}
+</div>
+
+<div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+    <!-- Search / Filter Bar -->
+    <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-4 items-center">
+        <div class="relative flex-1 min-w-[300px]">
+            <i class="ph-duotone ph-magnifying-glass absolute top-1/2 right-3 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" name="search"
+                class="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all text-sm"
+                placeholder="ابحث برقم المطالبة أو اسم العضو..."
+                hx-get="{% url 'claims:claim_list' %}"
+                hx-trigger="keyup changed delay:500ms"
+                hx-target="#claims-table-container">
+        </div>
+        <div class="flex items-center gap-2">
+            <select name="status_filter"
+                class="px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                hx-get="{% url 'claims:claim_list' %}"
+                hx-trigger="change"
+                hx-target="#claims-table-container">
+                <option value="">كل الحالات</option>
+                <option value="DRAFT">مسودة</option>
+                <option value="SUBMITTED_TO_HR">مرسلة للـ HR</option>
+                <option value="SUBMITTED_TO_BROKER">مرسلة للوسيط</option>
+                <option value="BROKER_PROCESSING">قيد المعالجة</option>
+                <option value="SENT_TO_INSURANCE">مرسلة للتأمين</option>
+                <option value="APPROVED_BY_INSURANCE">موافق عليها</option>
+                <option value="REJECTED_BY_INSURANCE">مرفوضة</option>
+                <option value="PAID">مدفوعة</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Table Container -->
+    <div id="claims-table-container" class="min-h-[400px]">
+        {% include 'claims/partials/claim_table.html' %}
+    </div>
+</div>
+{% endblock %}
