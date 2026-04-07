@@ -30,17 +30,17 @@
         <a href="{% url 'members:member_dashboard' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'dashboard' in request.path and 'members' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-squares-four text-xl"></i>
-            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">لوحتي</span>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">لوحة معلوماتي</span>
         </a>
         <a href="{% url 'members:my_family_members' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'my-family' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-users-three text-xl"></i>
-            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">عائلتي</span>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">افراد العائلة</span>
         </a>
         <a href="{% url 'claims:claim_list' %}"
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'claims' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-hand-coins text-xl"></i>
-            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">مطالباتي</span>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">مطالباتي المالية</span>
         </a>
         {% endif %}
 
