@@ -26,14 +26,18 @@
             </div>
         </div>
         <div class="flex gap-2">
+            {% if perms.members.change_member %}
             <a href="{% url 'members:member_update' member.pk %}"
                 class="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 hover:text-brand-600 hover:border-brand-500 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2">
                 <i class="ph-duotone ph-pencil-simple text-brand-600 text-xl"></i> تعديل
             </a>
+            {% endif %}
+            {% if perms.members.delete_member %}    
             <a href="{% url 'members:member_delete' member.pk %}"
                 class="px-5 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold transition-all flex items-center gap-2">
                 <i class="ph-duotone ph-trash text-xl"></i> حذف
             </a>
+            {% endif %}
         </div>
     </div>
 

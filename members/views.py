@@ -6,18 +6,45 @@ from django.core.paginator import Paginator
 from .models import Member
 from .forms import MemberForm
 from clients.models import Client
+from accounts.models import User
+
+# ==========================================
+# دالة مساعدة: عزل البيانات للمشتركين (Data Isolation)
+# ==========================================
+def get_allowed_members(user):
+    """
+    تُرجع المشتركين المسموح للمستخدم رؤيتهم بناءً على دوره.
+    """
+    # 1. السوبر أدمن يرى كل المشتركين
+    if user.role == User.Roles.SUPER_ADMIN:
+        return Member.objects.all()
+        
+    # 2. الوسيط يرى مشتركي العملاء التابعين لشركته فقط
+    elif user.is_broker_role and user.related_broker:
+        return Member.objects.filter(client__broker=user.related_broker)
+        
+    # 3. مدير الموارد البشرية (HR) يرى مشتركي شركته فقط
+    elif user.is_hr_role and user.related_client:
+        return Member.objects.filter(client=user.related_client)
+        
+    # 4. العضو نفسه (يرى نفسه والتابعين له فقط)
+    elif user.is_member_role and hasattr(user, 'member_profile'):
+        return Member.objects.filter(
+            Q(id=user.member_profile.id) | Q(sponsor=user.member_profile)
+        )
+        
+    return Member.objects.none()
+
+# ==========================================
 
 @login_required
 @permission_required('members.view_member', raise_exception=True)
 def member_list(request):
     """
-    عرض قائمة أعضاء التأمين
+    عرض قائمة أعضاء التأمين - [تم تطبيق العزل]
     """
-    members_list = Member.objects.all().select_related('client', 'policy_class__policy', 'policy_class__network', 'sponsor').order_by('-created_at')
-
-    # تصفية الصلاحيات (HR)
-    if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
-         members_list = members_list.filter(client=request.user.related_client)
+    # استخدام الدالة المساعدة لضمان الأمان بدلاً من Member.objects.all()
+    members_list = get_allowed_members(request.user).select_related('client', 'policy_class__policy', 'policy_class__network', 'sponsor').order_by('-created_at')
 
     # البحث والفلاتر
     search_query = request.GET.get('search', '')
@@ -42,8 +69,13 @@ def member_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # للفلترة في القالب
-    clients = Client.objects.all() if request.user.has_perm('accounts.view_broker_dashboard') else []
+    # للفلترة في القالب (نجلب فقط العملاء المسموحين لهذا المستخدم بدلاً من كل العملاء)
+    if request.user.role == User.Roles.SUPER_ADMIN:
+        clients = Client.objects.all()
+    elif request.user.is_broker_role and request.user.related_broker:
+        clients = Client.objects.filter(broker=request.user.related_broker)
+    else:
+        clients = []
 
     context = {
         'members': page_obj,
@@ -60,14 +92,12 @@ def member_list(request):
 @login_required
 @permission_required('members.view_member', raise_exception=True)
 def member_detail(request, pk):
-    member = get_object_or_404(Member.objects.select_related('client', 'policy_class__policy', 'policy_class__network', 'sponsor'), pk=pk)
+    """
+    تفاصيل العضو - [محمية تلقائياً بدالة get_allowed_members]
+    """
+    # إذا حاول وسيط إدخال ID لمشترك لا يتبع له، سيعطيه 404
+    member = get_object_or_404(get_allowed_members(request.user).select_related('client', 'policy_class__policy', 'policy_class__network', 'sponsor'), pk=pk)
     
-    # التحقق من الصلاحية
-    if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
-        if member.client != request.user.related_client:
-            messages.error(request, "لا يمكنك الوصول لبيانات هذا العضو")
-            return redirect('members:member_list')
-
     dependents = member.dependents.select_related('policy_class').all()
     
     return render(request, 'members/member_detail.html', {
@@ -83,6 +113,7 @@ def member_create(request):
     relation_type = request.GET.get('relation', 'PRINCIPAL')
 
     if request.method == 'POST':
+        # نمرر الـ user ليتمكن الـ Form من فلترة القوائم (العملاء، الكفيل، الفئات)
         form = MemberForm(
             request.POST, 
             user=request.user,
@@ -110,12 +141,8 @@ def member_create(request):
 @login_required
 @permission_required('members.change_member', raise_exception=True)
 def member_update(request, pk):
-    member = get_object_or_404(Member, pk=pk)
+    member = get_object_or_404(get_allowed_members(request.user), pk=pk)
     
-    if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
-         if member.client != request.user.related_client:
-            return redirect('members:member_list')
-
     if request.method == 'POST':
         form = MemberForm(request.POST, instance=member, user=request.user)
         if form.is_valid():
@@ -134,11 +161,8 @@ def member_update(request, pk):
 @login_required
 @permission_required('members.delete_member', raise_exception=True)
 def member_delete(request, pk):
-    member = get_object_or_404(Member, pk=pk)
-    if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
-         if member.client != request.user.related_client:
-            return redirect('members:member_list')
-
+    member = get_object_or_404(get_allowed_members(request.user), pk=pk)
+    
     if request.method == 'POST':
         name = member.full_name
         member.delete()
@@ -146,12 +170,34 @@ def member_delete(request, pk):
         return redirect('members:member_list')
     
     return render(request, 'members/member_confirm_delete.html', {'member': member})
+
+
 @login_required
 def load_policy_classes(request):
+    """
+    جلب فئات الوثيقة للعميل المحدد عبر AJAX (HTMX)
+    تم إضافة حماية العزل لكي لا يطلب وسيط فئات عميل لا يخصه.
+    """
     client_id = request.GET.get('client_id')
     if not client_id:
         return render(request, 'members/partials/policy_class_options.html', {'policy_classes': []})
         
+    user = request.user
+    
+    # حماية أمنية (Security Check)
+    if user.role == User.Roles.SUPER_ADMIN:
+        has_access = True
+    elif user.is_broker_role and user.related_broker:
+        has_access = Client.objects.filter(id=client_id, broker=user.related_broker).exists()
+    elif user.is_hr_role and user.related_client:
+        has_access = (str(user.related_client.id) == str(client_id))
+    else:
+        has_access = False
+
+    if not has_access:
+        # إذا لم يكن لديه صلاحية، نرجع قائمة فارغة كنوع من الحماية
+        return render(request, 'members/partials/policy_class_options.html', {'policy_classes': []})
+
     from django.db.models import Q
     from policies.models import PolicyClass
     client_obj = get_object_or_404(Client, id=client_id)
@@ -163,16 +209,17 @@ def load_policy_classes(request):
     policy_classes = PolicyClass.objects.filter(query).select_related('policy').distinct()
     return render(request, 'members/partials/policy_class_options.html', {'policy_classes': policy_classes})
 
+
 @login_required
 @permission_required('accounts.view_member_dashboard', raise_exception=True)
 def my_dashboard(request):
+    """لوحة معلومات العضو (لا تحتاج تعديل جوهري لأنها مرتبطة حصراً بملف العضو المسجل)"""
     try:
         current_member = request.user.member_profile
     except Member.DoesNotExist:
         messages.error(request, "لا توجد بيانات عضو مسجلة لهذا المستخدم")
         return render(request, 'members/my_dashboard.html', {'member': None})
 
-    # إحصائيات سريعة للوحة المعلومات
     family_count = Member.objects.filter(sponsor=current_member).count()
     
     context = {
@@ -181,26 +228,24 @@ def my_dashboard(request):
     }
     return render(request, 'members/my_dashboard.html', context)
 
+
 @login_required
 @permission_required('members.view_my_family_members', raise_exception=True)
 def my_family_members(request):
+    """أفراد عائلة العضو (مقفلة تلقائياً على العضو الحالي)"""
     try:
         current_member = request.user.member_profile
     except Member.DoesNotExist:
-        # إذا كان هذا المستخدم ليس لديه ملف عضو (مثلاً مدير نظام)، نعيد قائمة فارغة
         messages.error(request, "لا توجد بيانات عضو مسجلة لهذا المستخدم")
         return render(request, 'members/my_family_members.html', {'members': []})
     
-    # جلب العضو نفسه + التابعين له فقط (حيث هو الكفيل)
-    # The dependents should match the national_id for the user and sponsor on for the family
-    # Based on models, dependents are linked via 'sponsor' field.
     members = Member.objects.filter(
         Q(id=current_member.id) | Q(sponsor=current_member)
     ).select_related(
         'client',        
-        'policy_class__policy', # Fixed select_related path
+        'policy_class__policy',
         'policy_class__network',
         'sponsor'        
-    ).order_by('relation') # Put Principal first usually via logic, or order by relation type
+    ).order_by('relation') 
     
     return render(request, 'members/my_family_members.html', {'members': members})

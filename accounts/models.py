@@ -27,7 +27,8 @@ class User(AbstractUser):
         
         # 4. عام
         VIEWER = 'VIEWER', _('Viewer / Auditor')
-
+        # 5. التامين
+        INSURANCE = 'INSURANCE', _('Insurance Provider')
         MEMBER = 'MEMBER', _('Member / Beneficiary')
 
     class Meta:
@@ -71,6 +72,16 @@ class User(AbstractUser):
         verbose_name=_("Related Partner (For Pharmacists/Doctors)")
     )
 
+    # 3. للوسطاء (يتبعون لشريك محدد)
+    related_broker = models.ForeignKey(
+        'brokers.Broker',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='users',
+        verbose_name=_("Related Broker (For Brokers)")
+    )
+
     # بيانات حساسة مشفرة
     national_id = models.CharField(
         _("National ID"), 
@@ -96,7 +107,7 @@ class User(AbstractUser):
         # 2. موظفو الوسيط (يدخلون الأدمن لكن ليسوا سوبر)
         elif self.role in [self.Roles.BROKER_ADMIN, self.Roles.BROKER_STAFF]:
             self.is_superuser = False # سحب الصلاحية المطلقة منهم
-            self.is_staff = True      # السماح بدخول لوحة التحكم
+            self.is_staff = False      # السماح بدخول لوحة التحكم
             
         # 3. باقي المستخدمين (لا يدخلون لوحة تحكم دجانغو الافتراضية)
         else:
@@ -139,3 +150,7 @@ class User(AbstractUser):
     @property
     def is_member_role(self):
         return self.role == self.Roles.MEMBER
+
+    @property
+    def is_insurance_role(self):
+        return self.role == self.Roles.INSURANCE

@@ -2,6 +2,7 @@ from django import forms
 from .models import Member
 from policies.models import PolicyClass
 from clients.models import Client
+from accounts.models import User
 
 class MemberForm(forms.ModelForm):
     class Meta:
@@ -38,25 +39,45 @@ class MemberForm(forms.ModelForm):
         self.fields['medical_card_number'].required = False
         self.fields['medical_card_number'].widget.attrs.pop('required', None)
 
-        # 1. صقل حقل العميل بناءً على الصلاحيات
-        post_client_id = self.data.get('client') if self.is_bound else None
+        # --- بداية قسم حماية البيانات وعزل الـ SaaS ---
         
+        # 1. إعداد قائمة العملاء بناءً على الصلاحيات فقط
+        if user:
+            if user.role == User.Roles.SUPER_ADMIN:
+                self.fields['client'].queryset = Client.objects.all()
+                self.fields['client'].label_from_instance = lambda obj: f"{obj.name_en} - (الوسيط: {obj.broker.name_ar if obj.broker else 'بدون وسيط'})"
+            elif user.is_broker_role and user.related_broker:
+                self.fields['client'].queryset = Client.objects.filter(broker=user.related_broker)
+            elif user.is_hr_role and user.related_client:
+                self.fields['client'].queryset = Client.objects.filter(id=user.related_client.id)
+            else:
+                self.fields['client'].queryset = Client.objects.none()
+        else:
+            self.fields['client'].queryset = Client.objects.none()
+
+        # 2. تحديد العميل المستهدف وإخفاء الحقل إذا لزم الأمر
+        post_client_id = self.data.get('client') if self.is_bound else None
         target_client_id = None
-        if user and user.is_hr:
+
+        if user and user.is_hr_role and user.related_client:
             target_client_id = user.related_client.id
             self.fields['client'].initial = target_client_id
             self.fields['client'].widget = forms.HiddenInput()
+            
         elif client_id or post_client_id:
             target_client_id = client_id or post_client_id
             if isinstance(target_client_id, list): 
                 target_client_id = target_client_id[0]
             self.fields['client'].initial = target_client_id
+            
             if client_id:
+                # إذا كان ممرراً في الرابط، نخفيه لعدم التغيير بالخطأ
                 self.fields['client'].widget = forms.HiddenInput()
         else:
-            self.fields['client'].queryset = Client.objects.all()
             target_client_id = self.instance.client_id if self.instance.pk else None
-            # إضافة HTMX لجلب الفئات عند اختيار الشركة (للوسيط)
+            
+        # إضافة HTMX لجلب الفئات (يضاف فقط إذا لم يكن الحقل مخفياً)
+        if not isinstance(self.fields['client'].widget, forms.HiddenInput):
             from django.urls import reverse_lazy
             self.fields['client'].widget.attrs.update({
                 'hx-get': reverse_lazy('members:ajax_load_policy_classes'),
@@ -65,18 +86,20 @@ class MemberForm(forms.ModelForm):
                 'hx-vals': 'js:{client_id: event.target.value}'
             })
 
-        # 2. فلترة الفئات المتاحة
+        # --- الفحص الأمني الحرج (Security Check) ---
+        # التأكد من أن العميل المستهدف يقع فعلاً ضمن قائمة العملاء المسموح للمستخدم رؤيتها
+        if target_client_id:
+            if not self.fields['client'].queryset.filter(id=target_client_id).exists():
+                # محاولة اختراق أو تلاعب بالرابط! إحباط العملية.
+                target_client_id = None
+
+        # 3. فلترة الفئات المتاحة والكفلاء (بناءً على العميل الموثوق به الآن)
         if target_client_id:
             from django.db.models import Q
             try:
-                # التحقق من أن القيمة ليست قائمة (في حال POST بجداول معينة)
                 cid = target_client_id
-                
-                # الفئات المتاحة هي:
-                # - الفئات المرتبطة ببوالص الشركة مباشرة
-                # - أو الفئات المرتبطة بالبوليصة الأم (إذا كانت الشركة تابعة)
                 query = Q(policy__client_id=cid)
-                # إذا كانت ID تأكد من وجود الشركة
+                
                 try:
                     client_obj = Client.objects.get(id=cid)
                     if client_obj.parent_id:
@@ -84,11 +107,7 @@ class MemberForm(forms.ModelForm):
                 except Client.DoesNotExist:
                     pass
                 
-                # إظهار الفئات النشطة فقط 
-                # (Active policies)
                 self.fields['policy_class'].queryset = PolicyClass.objects.filter(query).distinct()
-                
-                # فلترة الكفلاء (الموظفين في نفس الشركة)
                 self.fields['sponsor'].queryset = Member.objects.filter(
                     client_id=cid,
                     relation='PRINCIPAL'
@@ -97,14 +116,13 @@ class MemberForm(forms.ModelForm):
                 self.fields['policy_class'].queryset = PolicyClass.objects.none()
                 self.fields['sponsor'].queryset = Member.objects.none()
         else:
+            # إذا لم يتم اجتياز الفحص الأمني، تظل القوائم فارغة
             self.fields['policy_class'].queryset = PolicyClass.objects.none()
             self.fields['sponsor'].queryset = Member.objects.none()
 
-        # 3. إعدادات خاصة بالتابعين
-        # نعتبره تابعاً إذا كان نوع العلاقة ليس موظفاً، أو إذا كان الزر مضغوطاً من صفحة موظف
+        # 4. إعدادات خاصة بالتابعين
         is_dependent = (relation_type and relation_type != 'PRINCIPAL') or (self.instance.pk and self.instance.relation != 'PRINCIPAL')
         
-        # إذا كانت POST، قد تكون القيمة في الـ data
         if self.is_bound and not is_dependent:
              rel = self.data.get('relation')
              if rel and rel != 'PRINCIPAL':
@@ -113,7 +131,7 @@ class MemberForm(forms.ModelForm):
         if relation_type:
             self.fields['relation'].initial = relation_type
         
-        # إذا كان ثمة كفيل محدد (عند الضغط على إضافة تابع من صفحة الموظف)
+        # إذا كان ثمة كفيل محدد
         actual_sponsor_id = sponsor_id or (self.instance.sponsor_id if self.instance.pk else None)
         if actual_sponsor_id:
             try:
@@ -122,7 +140,6 @@ class MemberForm(forms.ModelForm):
                     self.fields['sponsor'].initial = sponsor
                     self.fields['policy_class'].initial = sponsor.policy_class
                     
-                    # توارث رقم الجوال إذا كان فرعياً ولم يتم إدخال رقم بعد
                     if not self.instance.pk:
                         self.fields['phone_number'].initial = sponsor.phone_number
             except (ValueError, TypeError):
@@ -140,7 +157,6 @@ class MemberForm(forms.ModelForm):
         policy_class = cleaned_data.get('policy_class')
         client = cleaned_data.get('client')
 
-        # استعادة القيم للحقول المخفية أو المعطلة
         if not client:
             client = self.fields['client'].initial or self.instance.client
             cleaned_data['client'] = client
@@ -151,7 +167,6 @@ class MemberForm(forms.ModelForm):
                 cleaned_data['sponsor'] = sponsor
             
             if not policy_class:
-                # محاولة جلب الفئة من الكفيل أولاً
                 if sponsor:
                     cleaned_data['policy_class'] = sponsor.policy_class
                 else:

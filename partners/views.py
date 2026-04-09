@@ -1,18 +1,45 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
+from django.core.paginator import Paginator
 from .models import Partner
 from .forms import PartnerForm
+from accounts.models import User
 
-from django.core.paginator import Paginator
+# ==========================================
+# دالة مساعدة: عزل البيانات للشركاء (Data Isolation)
+# ==========================================
+def get_allowed_partners(user):
+    """
+    تُرجع الشركاء المسموح للمستخدم رؤيتهم بناءً على دوره.
+    """
+    # 1. السوبر أدمن يرى كل الشركاء المسجلين في المنصة
+    if user.role == User.Roles.SUPER_ADMIN:
+        return Partner.objects.all()
+        
+    # 2. الوسيط يرى فقط الشركاء الذين يمتلك عقداً نشطاً معهم
+    elif user.is_broker_role and user.related_broker:
+        return Partner.objects.filter(
+            broker_contracts__broker=user.related_broker,
+            broker_contracts__is_active=True
+        ).distinct()
+        
+    # 3. موظفو الشريك (صيدلي، الخ) يرون ملف شركتهم فقط
+    elif user.is_partner_role and user.related_partner:
+        return Partner.objects.filter(id=user.related_partner.id)
+        
+    return Partner.objects.none()
+
+# ==========================================
 
 @login_required
 @permission_required('partners.view_partner', raise_exception=True)
 def partner_list(request):
     """
-    عرض قائمة الشركاء والمزودين مع دعم الترقيم (Pagination)
+    عرض قائمة الشركاء والمزودين مع دعم الترقيم (Pagination) - [تم تطبيق العزل]
     """
-    partners_list = Partner.objects.all().order_by('-created_at')
+    # جلب الشركاء المسموح بهم فقط
+    partners_list = get_allowed_partners(request.user).order_by('-created_at')
 
     # منطق البحث (HTMX)
     search_query = request.GET.get('search', '')
@@ -35,6 +62,9 @@ def partner_list(request):
 @login_required
 @permission_required('partners.add_partner', raise_exception=True)
 def partner_create(request):
+    """
+    إضافة شريك جديد (غالباً هذه الصلاحية تكون للسوبر أدمن فقط في نظام الـ Marketplace)
+    """
     if request.method == 'POST':
         form = PartnerForm(request.POST, request.FILES)
         if form.is_valid():
@@ -49,7 +79,10 @@ def partner_create(request):
 @login_required
 @permission_required('partners.change_partner', raise_exception=True)
 def partner_update(request, pk):
-    partner = get_object_or_404(Partner, pk=pk)
+    """
+    تعديل بيانات الشريك - [محمية]
+    """
+    partner = get_object_or_404(get_allowed_partners(request.user), pk=pk)
 
     if request.method == 'POST':
         form = PartnerForm(request.POST, request.FILES, instance=partner)
@@ -65,7 +98,10 @@ def partner_update(request, pk):
 @login_required
 @permission_required('partners.delete_partner', raise_exception=True)
 def partner_delete(request, pk):
-    partner = get_object_or_404(Partner, pk=pk)
+    """
+    حذف شريك - [محمية]
+    """
+    partner = get_object_or_404(get_allowed_partners(request.user), pk=pk)
     
     if request.method == 'POST':
         name = partner.name_ar
@@ -78,6 +114,9 @@ def partner_delete(request, pk):
 @login_required
 @permission_required('partners.view_partner', raise_exception=True)
 def partner_detail(request, pk):
-    partner = get_object_or_404(Partner, pk=pk)
+    """
+    تفاصيل الشريك - [محمية]
+    """
+    partner = get_object_or_404(get_allowed_partners(request.user), pk=pk)
     
     return render(request, 'partners/partner_detail.html', {'partner': partner})

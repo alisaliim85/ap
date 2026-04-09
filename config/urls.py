@@ -19,6 +19,7 @@ urlpatterns = [
     path('networks/', include('networks.urls')),
     path('members/', include('members.urls')),
     path('claims/', include('claims.urls')),
+    path('brokers/', include('brokers.urls')),
 ]
 
 

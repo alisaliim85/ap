@@ -83,21 +83,27 @@
                     <td class="px-6 py-4 text-left">
                         <div
                             class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                            {% if perms.members.view_member %}
                             <a href="{% url 'members:member_detail' m.pk %}"
                                 class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:border-brand-200 hover:shadow-lg hover:shadow-brand-500/10 transition-all"
                                 title="التفاصيل">
                                 <i class="ph-duotone ph-eye text-lg"></i>
                             </a>
+                            {% endif %}
+                            {% if perms.members.change_member %}
                             <a href="{% url 'members:member_update' m.pk %}"
                                 class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/10 transition-all"
                                 title="تعديل">
                                 <i class="ph-duotone ph-pencil-simple text-lg"></i>
                             </a>
+                            {% endif %}
+                            {% if perms.members.delete_member %}    
                             <a href="{% url 'members:member_delete' m.pk %}"
                                 class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-600 hover:border-red-200 hover:shadow-lg hover:shadow-red-500/10 transition-all"
                                 title="حذف">
                                 <i class="ph-duotone ph-trash text-lg"></i>
                             </a>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>

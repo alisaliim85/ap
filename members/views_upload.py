@@ -1,13 +1,13 @@
 from django.views import View
 from django.http import HttpResponse
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from .utils import generate_empty_template
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from .utils import generate_empty_template, process_bulk_upload
 import datetime
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.contrib import messages
 from .forms_upload import MemberUploadForm
-from .utils import process_bulk_upload
+from accounts.models import User
 
 class MemberDownloadTemplateView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
@@ -22,50 +22,36 @@ class MemberDownloadTemplateView(LoginRequiredMixin, View):
         return response
 
 
-
-class MemberBulkUploadView(LoginRequiredMixin, View):
+class MemberBulkUploadView(LoginRequiredMixin, PermissionRequiredMixin, View):
     template_name = 'members/bulk_upload.html'
+    permission_required = 'members.add_member' # إضافة حماية الصلاحيات (مهم جداً)
 
     def get(self, request, *args, **kwargs):
-        form = MemberUploadForm()
+        # نمرر المستخدم للـ Form لكي يفلتر قائمة العملاء (Dropdown)
+        form = MemberUploadForm(user=request.user)
         return render(request, self.template_name, {'form': form})
 
     def post(self, request, *args, **kwargs):
-        form = MemberUploadForm(request.POST, request.FILES)
+        # نمرر المستخدم أيضاً عند استقبال البيانات
+        form = MemberUploadForm(request.POST, request.FILES, user=request.user)
+        
         if form.is_valid():
-            # Get Current Client (Similar logic to MemberForm)
-            client = None
-            if request.user.is_hr:
-                client = request.user.related_client
-            else:
-                # If broker, we might need a way to specify client or context.
-                # For now, let's assume HR context or infer from user.
-                # Revisit if Broker is uploading (maybe select client in form?)
-                # If broker, the form should probably have a client field.
-                # But requirement mostly talks about "User HR".
-                pass
-            
-            # If Client is not resolving (e.g. Superuser without client), handle error
-            if not client and not request.user.is_superuser:
-                 # TODO: Handle Broker picking client
-                 pass
+            # العميل الآن يتم استخراجه بأمان من الـ Form نفسه بعد الفلترة والتحقق
+            client = form.cleaned_data.get('client')
+            file = form.cleaned_data.get('file')
 
-            # Assuming HR user for now as per "user HR can downlod" request
-            if not client and request.user.is_superuser:
-                 # Fallback for dev: maybe query param? or fail?
-                 # Let's fail gracefully if no client logic yet for superuser
-                 messages.error(request, "Superuser must act as client to upload (Not implemented yet).")
-                 return redirect('members:member_list')
+            if not client:
+                messages.error(request, "حدث خطأ: لم يتم تحديد الشركة المراد رفع البيانات لها.")
+                return render(request, self.template_name, {'form': form})
             
-            file = form.cleaned_data['file']
+            # معالجة الملف
             results = process_bulk_upload(file, client)
             
-            # Render page with results
+            # إعادة عرض الصفحة مع النتائج
             return render(request, self.template_name, {
-                'form': MemberUploadForm(), # New form for next upload
+                'form': MemberUploadForm(user=request.user), # فورم جديد لعملية رفع أخرى
                 'results': results,
                 'client': client
             })
             
         return render(request, self.template_name, {'form': form})
-

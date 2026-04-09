@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'partners',
     'chronic_care',
     'api',
+    'brokers',
 ]
 
 MIDDLEWARE = [

@@ -5,6 +5,28 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from .models import Policy, PolicyClass, ClassBenefit, BenefitType
 from .forms import PolicyForm, PolicyClassForm, ClassBenefitForm
+from accounts.models import User
+
+# ==========================================
+# دالة مساعدة: عزل البيانات للوسطاء والعملاء (Data Isolation)
+# ==========================================
+def get_allowed_policies(user):
+    """
+    تُرجع البوالص المسموح للمستخدم رؤيتها/إدارتها بناءً على دوره.
+    """
+    # 1. السوبر أدمن يرى كل البوالص
+    if user.role == User.Roles.SUPER_ADMIN:
+        return Policy.objects.all()
+        
+    # 2. الوسيط يرى بوالص العملاء التابعين لشركته فقط
+    elif user.is_broker_role and user.related_broker:
+        return Policy.objects.filter(client__broker=user.related_broker)
+        
+    # 3. مدير الموارد البشرية (HR) يرى بوالص شركته فقط
+    elif user.is_hr_role and user.related_client:
+        return Policy.objects.filter(client=user.related_client)
+        
+    return Policy.objects.none()
 
 # ==========================================
 # 1. إدارة البوالص (Policies Management)
@@ -14,18 +36,10 @@ from .forms import PolicyForm, PolicyClassForm, ClassBenefitForm
 @permission_required('policies.view_policy', raise_exception=True)
 def policy_list(request):
     """
-    قائمة البوالص:
-    - الوسيط: يرى كل البوالص.
-    - مدير HR: يرى فقط البوالص المسجلة باسم شركته (ولا يرى بوليصة الشركة الأم هنا).
+    قائمة البوالص - [تم تطبيق عزل الـ SaaS]
     """
-    policies_list = Policy.objects.select_related('client', 'provider', 'master_policy').all().order_by('-created_at')
-
-    # تصفية خاصة لمدير الموارد البشرية (HR)
-    if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
-        client = request.user.related_client
-        if client:
-            # ✅ عزل تام: يرى وثائقه الخاصة فقط
-            policies_list = policies_list.filter(client=client)
+    # استخدام الدالة المساعدة لجلب البوالص المصرح بها فقط
+    policies_list = get_allowed_policies(request.user).select_related('client', 'provider', 'master_policy').order_by('-created_at')
 
     # منطق البحث
     search_query = request.GET.get('search', '')
@@ -50,30 +64,18 @@ def policy_list(request):
 @permission_required('policies.view_policy', raise_exception=True)
 def policy_detail(request, pk):
     """
-    تفاصيل البوليصة:
-    - تعرض بيانات البوليصة.
-    - ✅ ميزة الوراثة: إذا كانت البوليصة تابعة (Subsidiary) ولا تملك فئات خاصة،
-      يتم جلب وعرض فئات ومنافع البوليصة الأم تلقائياً.
+    تفاصيل البوليصة - [محمية بالكامل ضد الاختراق بين الوسطاء]
     """
-    policy = get_object_or_404(Policy.objects.select_related('client', 'provider', 'master_policy'), pk=pk)
-    user = request.user
+    # بمجرد استخدام get_allowed_policies، نضمن أن الوسيط (أو الـ HR) لا يمكنه فتح بوليصة لا تخصه
+    # ولذلك تم الاستغناء عن شروط التحقق اليدوية السابقة!
+    policy = get_object_or_404(get_allowed_policies(request.user).select_related('client', 'provider', 'master_policy'), pk=pk)
     
-    # 1. حماية الوصول: التأكد من أن المستخدم يملك حق رؤية هذه الوثيقة
-    if user.has_perm('accounts.view_hr_dashboard') and not user.has_perm('accounts.view_broker_dashboard'):
-        client = user.related_client
-        if policy.client != client:
-             messages.error(request, "ليس لديك صلاحية الوصول لهذه الوثيقة")
-             return redirect('policies:policy_list')
-
-    # 2. منطق الوراثة (Inheritance Logic)
-    # نحاول جلب الفئات الخاصة بهذه الوثيقة
+    # منطق الوراثة (Inheritance Logic)
     classes = policy.effective_classes.select_related('network')
     
     inherited_data = False
     master_policy_ref = None
 
-    # إذا لم نجد فئات خاصة، وكانت هذه الوثيقة مرتبطة بوثيقة أم (Master Policy)
-    # نقوم بعرض فئات الوثيقة الأم للمستخدم
     if not classes.exists() and policy.master_policy:
         classes = policy.master_policy.effective_classes.select_related('network')
         inherited_data = True
@@ -82,8 +84,8 @@ def policy_detail(request, pk):
     context = {
         'policy': policy, 
         'classes': classes,
-        'inherited_data': inherited_data,        # متغير لإظهار تنبيه في HTML بأن هذه البيانات موروثة
-        'master_policy_ref': master_policy_ref,  # مرجع للوثيقة الأم (للعرض فقط)
+        'inherited_data': inherited_data,        
+        'master_policy_ref': master_policy_ref,  
         'sub_policies': policy.sub_policies.all() if not policy.is_subsidiary else None,
     }
     return render(request, 'policies/policy_detail.html', context)
@@ -93,35 +95,38 @@ def policy_detail(request, pk):
 @permission_required('policies.add_policy', raise_exception=True)
 def policy_create(request):
     if request.method == 'POST':
-        form = PolicyForm(request.POST, request.FILES)
+        # تمرير المستخدم للفورم لفلترة قائمة العملاء المنسدلة (سنعدل الـ Form لاحقاً)
+        form = PolicyForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             policy = form.save()
             messages.success(request, "تمت إضافة البوليصة بنجاح")
             return redirect('policies:policy_detail', pk=policy.pk)
     else:
-        form = PolicyForm()
+        form = PolicyForm(user=request.user)
     return render(request, 'policies/policy_form.html', {'form': form, 'title': 'إضافة بوليصة جديدة'})
 
 
 @login_required
 @permission_required('policies.change_policy', raise_exception=True)
 def policy_update(request, pk):
-    policy = get_object_or_404(Policy, pk=pk)
+    # التأكد أن الوسيط يعدل بوليصة تابعة له فقط
+    policy = get_object_or_404(get_allowed_policies(request.user), pk=pk)
+    
     if request.method == 'POST':
-        form = PolicyForm(request.POST, request.FILES, instance=policy)
+        form = PolicyForm(request.POST, request.FILES, instance=policy, user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, "تم تحديث بيانات البوليصة بنجاح")
             return redirect('policies:policy_detail', pk=policy.pk)
     else:
-        form = PolicyForm(instance=policy)
+        form = PolicyForm(instance=policy, user=request.user)
     return render(request, 'policies/policy_form.html', {'form': form, 'title': f'تعديل بوليصة: {policy.policy_number}', 'policy': policy})
 
 
 @login_required
 @permission_required('policies.delete_policy', raise_exception=True)
 def policy_delete(request, pk):
-    policy = get_object_or_404(Policy, pk=pk)
+    policy = get_object_or_404(get_allowed_policies(request.user), pk=pk)
     if request.method == 'POST':
         num = policy.policy_number
         policy.delete()
@@ -137,9 +142,11 @@ def policy_delete(request, pk):
 @login_required
 @permission_required('policies.change_policy', raise_exception=True)
 def policy_class_create(request, policy_pk):
-    policy = get_object_or_404(Policy, pk=policy_pk)
+    # حماية: التأكد أن البوليصة التي نضيف لها كلاس تابعة لوسيط المستخدم
+    policy = get_object_or_404(get_allowed_policies(request.user), pk=policy_pk)
+    
     if request.method == 'POST':
-        form = PolicyClassForm(request.POST)
+        form = PolicyClassForm(request.POST) # لا حاجة لتمرير user هنا ما لم يكن هناك قوائم منسدلة تحتاج فلترة
         if form.is_valid():
             policy_class = form.save(commit=False)
             policy_class.policy = policy
@@ -152,35 +159,37 @@ def policy_class_create(request, policy_pk):
 
 
 @login_required
-@permission_required('policies.view_policy', raise_exception=True) # ✅ السماح بالعرض (View)
+@permission_required('policies.view_policy', raise_exception=True)
 def class_benefit_manage(request, class_pk):
     """
-    صفحة عرض وإدارة المنافع.
-    - HR: يشاهد المنافع فقط (سواء كانت لشركته أو الموروثة من الأم).
-    - Broker: يشاهد ويعدل.
+    صفحة عرض وإدارة المنافع - [تم تطبيق حماية الـ SaaS]
     """
     policy_class = get_object_or_404(PolicyClass, pk=class_pk)
-    policy = policy_class.policy # الوثيقة التي تملك هذا الكلاس (قد تكون الأم)
+    policy = policy_class.policy
     user = request.user
 
-    # 1. التحقق من الصلاحية الهرمية (Hierarchical Check)
-    # يجب السماح للمستخدم بالدخول إذا كان الكلاس يتبع وثيقته، أو يتبع وثيقة الشركة الأم
-    if user.has_perm('accounts.view_hr_dashboard') and not user.has_perm('accounts.view_broker_dashboard'):
+    # 1. التحقق من الصلاحية (هل المستخدم وسيط يملك البوليصة؟ أو HR يتبع لشركتها؟)
+    if user.role == User.Roles.SUPER_ADMIN:
+        has_access = True
+    elif user.is_broker_role and user.related_broker:
+        has_access = (policy.client.broker == user.related_broker)
+    elif user.is_hr_role and user.related_client:
         client = user.related_client
-        
-        is_own_policy = (policy.client == client)
-        is_parent_policy = (client.parent and policy.client == client.parent)
-        
-        if not (is_own_policy or is_parent_policy):
-             messages.error(request, "لا تملك صلاحية عرض هذه المنافع")
-             return redirect('policies:policy_list')
+        has_access = (policy.client == client) or (client.parent and policy.client == client.parent)
+    else:
+        has_access = False
+
+    if not has_access:
+        messages.error(request, "لا تملك صلاحية عرض هذه المنافع")
+        return redirect('policies:policy_list')
 
     # 2. إعداد البيانات
     benefits = policy_class.benefits.all().select_related('benefit_type')
     benefit_types = BenefitType.objects.all()
-    is_broker = user.has_perm('policies.change_policy') # لتحديد ظهور أزرار التعديل
+    # يُسمح بالتعديل للسوبر أدمن وموظفي الوسيط فقط
+    is_broker = user.role == User.Roles.SUPER_ADMIN or user.is_broker_role 
 
-    # 3. معالجة الحفظ (POST Request) - للوسطاء فقط
+    # 3. معالجة الحفظ (POST Request)
     if request.method == 'POST':
         if not is_broker:
             messages.error(request, "عذراً، لديك صلاحية العرض فقط")
@@ -204,12 +213,13 @@ def class_benefit_manage(request, class_pk):
         'policy_class': policy_class,
         'benefits': benefits,
         'benefit_types': benefit_types,
-        'is_broker': is_broker, # متغير مهم للقالب
+        'is_broker': is_broker,
     })
 
 
 @login_required
 @permission_required('policies.view_policy', raise_exception=True)
 def benefit_type_list(request):
+    # قائمة أنواع المنافع عامة (Master Data)، لذا لا تتطلب فلترة بالوسيط
     types = BenefitType.objects.all()
     return render(request, 'policies/benefit_type_list.html', {'types': types})

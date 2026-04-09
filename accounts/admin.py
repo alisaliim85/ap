@@ -7,12 +7,12 @@ from django.contrib.auth.models import Permission
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     # الأعمدة التي تظهر في القائمة
-    list_display = ('username', 'first_name', 'last_name', 'role', 'get_link', 'is_active')
+    list_display = ('username', 'first_name', 'last_name', 'role', 'get_link', 'related_broker', 'is_active')
     list_filter = ('role', 'is_active', 'is_staff')
     
     # إضافة الحقول الجديدة إلى صفحة التعديل
     fieldsets = UserAdmin.fieldsets + (
-        ('AP PLUS Info', {'fields': ('role', 'related_client', 'related_partner', 'national_id', 'phone_number')}),
+        ('AP PLUS Info', {'fields': ('role', 'related_client', 'related_partner', 'national_id', 'phone_number', 'related_broker')}),
     )
     
     # دالة مساعدة لعرض الجهة التابع لها المستخدم
@@ -21,6 +21,8 @@ class CustomUserAdmin(UserAdmin):
             return f"Client: {obj.related_client.name_en}"
         elif obj.related_partner:
             return f"Partner: {obj.related_partner.name_en}"
+        elif obj.related_broker:
+            return f"Broker: {obj.related_broker.name_en}"
         return "-"
     get_link.short_description = "Affiliation"
 

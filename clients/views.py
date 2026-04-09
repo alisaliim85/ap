@@ -6,16 +6,30 @@ from .models import Client
 from .forms import ClientForm
 from policies.models import Policy
 from members.models import Member
-
+from accounts.models import User
 from django.core.paginator import Paginator
+from django.http import Http404
+
+# --- دالة مساعدة (Helper) لعزل البيانات (Data Isolation) ---
+def get_allowed_clients(user):
+    """
+    تُرجع فقط العملاء الذين يحق للمستخدم رؤيتهم بناءً على دوره وشركته
+    """
+    if user.role == User.Roles.SUPER_ADMIN:
+        return Client.objects.all()
+    elif user.is_broker_role and user.related_broker:
+        return Client.objects.filter(broker=user.related_broker)
+    return Client.objects.none()
+# -------------------------------------------------------------
 
 @login_required
 @permission_required('clients.view_client_dashboard', raise_exception=True)
 def client_list(request):
     """
-    عرض قائمة العملاء مع دعم البحث والترقيم (Pagination)
+    عرض قائمة العملاء مع دعم البحث والترقيم (Pagination) - [تم تطبيق العزل]
     """
-    clients_list = Client.objects.select_related('parent').all().order_by('-created_at')
+    # استخدام الدالة المساعدة بدلاً من Client.objects.all()
+    clients_list = get_allowed_clients(request.user).select_related('parent').order_by('-created_at')
 
     # منطق البحث (HTMX)
     search_query = request.GET.get('search', '')
@@ -33,40 +47,62 @@ def client_list(request):
 
     return render(request, 'clients/client_list.html', {'clients': page_obj, 'page_obj': page_obj})
 
+
 @login_required
 @permission_required('clients.manage_clients', raise_exception=True)
 def client_create(request):
+    """
+    إضافة عميل جديد - [تم التعديل لربط الوسيط تلقائياً]
+    """
     if request.method == 'POST':
         form = ClientForm(request.POST)
         if form.is_valid():
-            form.save()
+            # إيقاف الحفظ المؤقت لإضافة الوسيط
+            client = form.save(commit=False)
+            
+            # إذا كان المستخدم وسيطاً، نربط العميل بشركته التلقائية
+            if request.user.is_broker_role and request.user.related_broker:
+                client.broker = request.user.related_broker
+            
+            client.save()
             messages.success(request, "تمت إضافة الشركة بنجاح")
             return redirect('client_list')
     else:
-        form = ClientForm()
+        # سنحتاج لتمرير المستخدم للفورم لاحقاً لإخفاء حقل الوسيط
+        form = ClientForm(user=request.user) 
 
     return render(request, 'clients/client_form.html', {'form': form, 'title': 'إضافة شركة جديدة'})
+
 
 @login_required
 @permission_required('clients.manage_clients', raise_exception=True)
 def client_update(request, pk):
-    client = get_object_or_404(Client, pk=pk)
+    """
+    تعديل شركة - [تم تطبيق الحماية لمنع تعديل شركات وسطاء آخرين]
+    """
+    # جلب العميل من ضمن القائمة المسموحة فقط (إذا أدخل ID لا يخصه سيحصل على 404)
+    client = get_object_or_404(get_allowed_clients(request.user), pk=pk)
 
     if request.method == 'POST':
-        form = ClientForm(request.POST, instance=client)
+        form = ClientForm(request.POST, instance=client, user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, "تم تحديث بيانات الشركة بنجاح")
             return redirect('client_list')
     else:
-        form = ClientForm(instance=client)
+        form = ClientForm(instance=client, user=request.user)
 
     return render(request, 'clients/client_form.html', {'form': form, 'title': f'تعديل شركة: {client.name_ar}', 'client': client})
+
 
 @login_required
 @permission_required('clients.manage_clients', raise_exception=True)
 def client_delete(request, pk):
-    client = get_object_or_404(Client, pk=pk)
+    """
+    حذف شركة - [تم تطبيق الحماية]
+    """
+    # الحماية: التحقق من أن العميل يتبع لمستخدم الوسيط
+    client = get_object_or_404(get_allowed_clients(request.user), pk=pk)
     
     if request.method == 'POST':
         name = client.name_ar
@@ -76,14 +112,20 @@ def client_delete(request, pk):
     
     return render(request, 'clients/client_confirm_delete.html', {'client': client})
 
+
 @login_required
 @permission_required('clients.view_client_dashboard', raise_exception=True)
 def client_detail(request, pk):
-    client = get_object_or_404(Client, pk=pk)
+    """
+    تفاصيل العميل والداشبورد الخاص به - [تم تطبيق الحماية]
+    """
+    # الحماية: التأكد أن الوسيط لا يمكنه الدخول لداشبورد عميل تابع لوسيط آخر
+    client = get_object_or_404(get_allowed_clients(request.user), pk=pk)
     
-    # --- أولاً: حالة الشركة القابضة (Holding Company) ---
+    # --- باقي الكود ممتاز ولا يحتاج تعديل لأن العميل (client) أصبح مضموناً أنه يخص الوسيط ---
+    # وبالتالي أي بوالص أو أعضاء مرتبطين بهذا العميل هم بالتبعية يخصون هذا الوسيط.
+
     if client.is_holding:
-        # 1. إحصائيات الشركات التابعة
         subsidiaries = client.subsidiaries.all().annotate(
             total_employees=Count('members', filter=Q(members__relation='PRINCIPAL')),
             total_spouses=Count('members', filter=Q(members__relation='SPOUSE')),
@@ -91,7 +133,6 @@ def client_detail(request, pk):
             total_lives=Count('members')
         )
         
-        # 2. الوثيقة الرئيسية (Master Policy)
         master_policy = Policy.objects.filter(client=client, master_policy__isnull=True).select_related('provider').prefetch_related(
             'classes',
             'classes__network',
@@ -99,7 +140,6 @@ def client_detail(request, pk):
             'classes__benefits__benefit_type'
         ).first()
         
-        # 3. بيانات التعداد (الأعضاء التابعين للقابضة أو الشركات التابعة لها)
         all_members = Member.objects.filter(
             Q(client=client) | Q(client__parent=client)
         )
@@ -111,12 +151,10 @@ def client_detail(request, pk):
             'total': all_members.count()
         }
         
-        # 4. توزيع الفئات
         class_stats = all_members.values('policy_class__name').annotate(
             count=Count('id')
         ).order_by('-count')
 
-        # 5. الشبكة الطبية (من الوثيقة الرئيسية)
         network = None
         if master_policy and master_policy.classes.exists():
             network = master_policy.classes.first().network
@@ -131,25 +169,19 @@ def client_detail(request, pk):
         }
         return render(request, 'clients/client_detail_holding.html', context)
 
-    # --- ثانياً: حالة الشركة التابعة (Subsidiary) أو المستقلة ---
     else:
-        # 1. جلب الوثيقة الخاصة بهذه الشركة
         policy = Policy.objects.filter(client=client).select_related('master_policy').first()
         network = None
         
         if policy:
-            # محاولة جلب الشبكة من فئات الوثيقة الحالية
             first_class = policy.classes.first()
             if first_class and first_class.network:
                 network = first_class.network
-            
-            # إذا لم توجد شبكة، وكانت الوثيقة مرتبطة بوثيقة أم (Holding Master Policy)
             elif policy.master_policy:
                 master_class = policy.master_policy.classes.first()
                 if master_class:
                     network = master_class.network
 
-        # 2. إحصائيات الشركة الحالية فقط
         members = Member.objects.filter(client=client)
         census = {
             'employees': members.filter(relation='PRINCIPAL').count(),

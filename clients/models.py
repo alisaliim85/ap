@@ -32,6 +32,14 @@ class Client(models.Model):
     name_ar = models.CharField(_("Arabic Name"), max_length=255)
     name_en = models.CharField(_("English Name"), max_length=255)
     commercial_record = models.CharField(_("Commercial Record"), max_length=50, unique=True)
+    broker = models.ForeignKey(
+        'brokers.Broker',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='clients',
+        verbose_name=_("Broker")
+    )
     
     # تفاصيل الاتصال
     email = models.EmailField(_("Contact Email"), blank=True)
