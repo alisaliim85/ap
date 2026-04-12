@@ -20,6 +20,7 @@ urlpatterns = [
     path('members/', include('members.urls')),
     path('claims/', include('claims.urls')),
     path('brokers/', include('brokers.urls')),
+    path('service-requests/', include('service_requests.urls')),
 ]
 
 

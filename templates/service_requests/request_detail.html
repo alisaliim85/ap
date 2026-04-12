@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+
+{% block header_title %}تفاصيل الطلب {{ sreq.reference }}{% endblock %}
+
+{% block content %}
+{# ===== 1. رأس الصفحة ===== #}
+<div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+        <a href="{% url 'service_requests:request_list' %}"
+            class="p-2 bg-white border border-slate-300 rounded-md hover:bg-slate-50 text-slate-600 transition" title="رجوع">
+            <i class="ph-bold ph-arrow-right text-lg"></i>
+        </a>
+        <div>
+            <h2 class="text-2xl font-extrabold text-slate-800 flex items-center gap-3">
+                <i class="ph-duotone ph-paper-plane-tilt text-brand-600"></i>
+                {{ sreq.reference }}
+            </h2>
+            <div class="flex items-center gap-2 mt-1">
+                {% include 'service_requests/partials/_status_badge.html' with status=sreq.status %}
+                <span class="text-slate-400 text-sm">• أُنشئ {{ sreq.created_at|date:"Y/m/d" }}</span>
+                {% if sreq.submitted_on_behalf %}
+                <span class="px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-xs font-bold border border-amber-100">نيابة عن العضو</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-3">
+        {% if sreq.status == 'DRAFT' or sreq.status == 'RETURNED' %}
+        <a href="{% url 'service_requests:request_edit' sreq.pk %}"
+            class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 font-medium flex items-center gap-2 transition">
+            <i class="ph-bold ph-pencil-simple"></i>
+            تعديل الطلب
+        </a>
+        {% endif %}
+
+        {% if sreq.status == 'DRAFT' or user.is_superuser %}
+        <a href="{% url 'service_requests:request_delete' sreq.pk %}"
+            class="px-4 py-2 bg-red-50 border border-red-200 text-red-700 rounded-md hover:bg-red-100 font-medium flex items-center gap-2 transition">
+            <i class="ph-bold ph-trash"></i>
+            حذف
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    {# ===== 2. العمود الأيسر: بيانات + إجراءات ===== #}
+    <div class="lg:col-span-2 space-y-6">
+
+        {# --- بطاقة نوع الطلب والبيانات الأساسية --- #}
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone {{ sreq.request_type.icon }} text-brand-600"></i>
+                    {{ sreq.request_type.name_ar }}
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                    <div class="flex flex-col">
+                        <span class="text-xs text-slate-400 font-bold uppercase mb-1">العضو</span>
+                        <span class="text-slate-800 font-medium">{{ sreq.member.full_name }}</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs text-slate-400 font-bold uppercase mb-1">الشركة</span>
+                        <span class="text-slate-800 font-medium">{{ sreq.member.client.name_ar|default:"—" }}</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs text-slate-400 font-bold uppercase mb-1">مقدم الطلب</span>
+                        <span class="text-slate-800 font-medium">{{ sreq.submitted_by.get_full_name|default:sreq.submitted_by.username }}</span>
+                    </div>
+                    {% if sreq.submitted_at %}
+                    <div class="flex flex-col">
+                        <span class="text-xs text-slate-400 font-bold uppercase mb-1">تاريخ الإرسال</span>
+                        <span class="text-slate-800 font-medium">{{ sreq.submitted_at|date:"Y/m/d H:i" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {# الحقول الديناميكية #}
+                {% if fields_with_values %}
+                <div class="mt-6 pt-6 border-t border-slate-100">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase mb-4">تفاصيل الطلب</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                        {% for field in fields_with_values %}
+                        <div class="flex flex-col">
+                            <span class="text-xs text-slate-400 font-bold uppercase mb-1">{{ field.label }}</span>
+                            {% if field.type == 'checkbox' %}
+                                {% if field.value %}
+                                <span class="text-green-600 font-bold flex items-center gap-1">
+                                    <i class="ph-fill ph-check-circle"></i> نعم
+                                </span>
+                                {% else %}
+                                <span class="text-slate-500">لا</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-slate-800 font-medium">{{ field.value|default:"—" }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# ملاحظات الوسيط #}
+                {% if sreq.broker_note %}
+                <div class="mt-6 p-4 rounded-md {% if sreq.status == 'REJECTED' %}bg-red-50 border border-red-200{% elif sreq.status == 'RETURNED' %}bg-orange-50 border border-orange-200{% else %}bg-green-50 border border-green-200{% endif %}">
+                    <p class="text-sm font-bold flex items-center gap-1 mb-1
+                        {% if sreq.status == 'REJECTED' %}text-red-800{% elif sreq.status == 'RETURNED' %}text-orange-800{% else %}text-green-800{% endif %}">
+                        <i class="ph-duotone ph-note-pencil text-lg"></i>
+                        {% if sreq.status == 'REJECTED' %}سبب الرفض{% elif sreq.status == 'RETURNED' %}سبب الإعادة{% else %}ملاحظة الوسيط{% endif %}
+                    </p>
+                    <p class="text-sm {% if sreq.status == 'REJECTED' %}text-red-700{% elif sreq.status == 'RETURNED' %}text-orange-700{% else %}text-green-700{% endif %}">{{ sreq.broker_note }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# --- بطاقة الإجراءات (Role-Based Actions) --- #}
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-lightning text-brand-600"></i>
+                    الإجراءات المتاحة
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="flex flex-wrap gap-3">
+
+                    {# --- إجراءات العضو / HR (Submit Draft / Return) --- #}
+                    {% if user.is_member_role or user.is_hr_role or user.is_superuser %}
+                        {% if sreq.status == 'DRAFT' or sreq.status == 'RETURNED' %}
+                        <form method="post" action="{% url 'service_requests:submit_request' sreq.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-medium shadow-sm flex items-center gap-2 transition">
+                                <i class="ph-bold ph-paper-plane-tilt"></i>
+                                إرسال الطلب
+                            </button>
+                        </form>
+                        {% endif %}
+                    {% endif %}
+
+                    {# --- إجراءات الوسيط (Broker) --- #}
+                    {% if user.is_broker or user.is_superuser %}
+
+                        {% if sreq.status == 'SUBMITTED' %}
+                        <form method="post" action="{% url 'service_requests:broker_start_review' sreq.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-medium shadow-sm flex items-center gap-2 transition">
+                                <i class="ph-bold ph-play"></i>
+                                بدء المراجعة
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        {% if sreq.status == 'IN_REVIEW' %}
+                        <button onclick="document.getElementById('resolve-modal').classList.remove('hidden')"
+                            class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium shadow-sm flex items-center gap-2 transition">
+                            <i class="ph-bold ph-check-circle"></i>
+                            حل الطلب
+                        </button>
+
+                        <button onclick="document.getElementById('return-modal').classList.remove('hidden')"
+                            class="px-4 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-md hover:bg-orange-100 font-medium flex items-center gap-2 transition">
+                            <i class="ph-bold ph-arrow-u-up-left"></i>
+                            إعادة للعضو
+                        </button>
+
+                        <button onclick="document.getElementById('reject-modal').classList.remove('hidden')"
+                            class="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-md hover:bg-red-100 font-medium flex items-center gap-2 transition">
+                            <i class="ph-bold ph-x-circle"></i>
+                            رفض الطلب
+                        </button>
+                        {% endif %}
+
+                    {% endif %}
+
+                    {# المراحل النهائية #}
+                    {% if sreq.status == 'RESOLVED' or sreq.status == 'REJECTED' %}
+                    <div class="text-sm text-slate-500 flex items-center gap-2 py-2">
+                        <i class="ph-duotone ph-lock-simple text-lg"></i>
+                        لا توجد إجراءات متاحة — الطلب في حالته النهائية.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# --- قسم المرفقات --- #}
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-paperclip text-brand-600"></i>
+                    المرفقات
+                    <span class="text-xs text-slate-400 font-normal">({{ sreq.attachments.count }})</span>
+                </h3>
+            </div>
+            <div class="p-6">
+                {% if sreq.status == 'DRAFT' or sreq.status == 'RETURNED' %}
+                <!-- Upload Form -->
+                <form method="post" action="{% url 'service_requests:add_attachment' sreq.pk %}" enctype="multipart/form-data" class="mb-6 p-4 bg-slate-50 border border-dashed border-slate-300 rounded-md">
+                    {% csrf_token %}
+                    <label class="block text-sm font-medium text-slate-700 mb-2">إضافة مرفقات جديدة</label>
+                    <div class="flex items-center gap-4">
+                        <input type="file" name="attachments" multiple class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100">
+                        <button type="submit" class="px-3 py-1.5 bg-brand-600 text-white rounded text-sm hover:bg-brand-700 transition">رفع الملفات</button>
+                    </div>
+                </form>
+                {% endif %}
+
+                {% if sreq.attachments.all %}
+                <div class="space-y-2">
+                    {% for attachment in sreq.attachments.all %}
+                    <a href="{{ attachment.file.url }}" target="_blank"
+                        class="flex items-center gap-3 p-3 bg-slate-50 rounded-md hover:bg-brand-50 border border-slate-200 hover:border-brand-200 transition group">
+                        <i class="ph-duotone ph-file text-xl text-slate-400 group-hover:text-brand-600"></i>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-slate-700 truncate">{{ attachment.description|default:attachment.file.name }}</p>
+                            <p class="text-xs text-slate-400">{{ attachment.uploaded_at|date:"Y/m/d H:i" }}</p>
+                        </div>
+                        <i class="ph-bold ph-download-simple text-slate-400 group-hover:text-brand-600"></i>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-slate-400 text-center py-4">لا توجد مرفقات.</p>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    {# ===== 3. العمود الأيمن: سجل المراحل (Timeline) ===== #}
+    <div class="space-y-6">
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-clock-countdown text-brand-600"></i>
+                    سجل المراحل
+                </h3>
+            </div>
+            <div class="p-6">
+                {% if sreq.status_logs.all %}
+                <div class="relative">
+                    {# الخط العمودي #}
+                    <div class="absolute right-[11px] top-2 bottom-2 w-0.5 bg-slate-200"></div>
+
+                    <div class="space-y-6">
+                        {% for log in sreq.status_logs.all %}
+                        <div class="relative flex gap-4">
+                            {# النقطة #}
+                            <div class="relative z-10 flex-shrink-0 w-6 h-6 rounded-full bg-brand-100 border-2 border-brand-500 flex items-center justify-center mt-0.5">
+                                <div class="w-2 h-2 rounded-full bg-brand-600"></div>
+                            </div>
+                            {# المحتوى #}
+                            <div class="flex-1 pb-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    {% include 'service_requests/partials/_status_badge.html' with status=log.to_status %}
+                                </div>
+                                <p class="text-xs text-slate-500 mt-1">
+                                    <i class="ph-duotone ph-user text-slate-400"></i>
+                                    {{ log.user.get_full_name|default:log.user.username }}
+                                </p>
+                                <p class="text-xs text-slate-400 mt-0.5">{{ log.created_at|date:"Y/m/d H:i" }}</p>
+                                {% if log.note %}
+                                <p class="text-xs text-orange-600 mt-1 bg-orange-50 px-2 py-1 rounded border border-orange-100">
+                                    {{ log.note }}
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-sm text-slate-400 text-center py-4">لم يتم تسجيل أي مراحل بعد.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {# بطاقة معلومات سريعة #}
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-info text-brand-600"></i>
+                    معلومات الطلب
+                </h3>
+            </div>
+            <div class="p-6 space-y-3 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-slate-500">رقم الطلب</span>
+                    <span class="font-mono font-bold text-slate-800">{{ sreq.reference }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">نوع الطلب</span>
+                    <span class="font-medium text-slate-800">{{ sreq.request_type.name_ar }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">تاريخ الإنشاء</span>
+                    <span class="text-slate-800">{{ sreq.created_at|date:"Y/m/d H:i" }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">آخر تحديث</span>
+                    <span class="text-slate-800">{{ sreq.updated_at|date:"Y/m/d H:i" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{# ===== Modals for Broker Actions ===== #}
+
+{# --- Modal: حل الطلب --- #}
+<div id="resolve-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="font-bold text-slate-800">حل الطلب</h3>
+            <button onclick="this.closest('#resolve-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x text-xl"></i></button>
+        </div>
+        <form method="post" action="{% url 'service_requests:broker_resolve_request' sreq.pk %}">
+            {% csrf_token %}
+            <div class="p-6">
+                <label class="block text-sm font-medium text-slate-700 mb-1">ملاحظة الحل (اختياري)</label>
+                <textarea name="note" rows="3"
+                    class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition text-sm"
+                    placeholder="تفاصيل الحل أو الإجراء المتخذ..."></textarea>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3 justify-end">
+                <button type="button" onclick="this.closest('#resolve-modal').classList.add('hidden')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 font-medium text-sm">إلغاء</button>
+                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium text-sm flex items-center gap-2">
+                    <i class="ph-bold ph-check-circle"></i> تأكيد الحل
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# --- Modal: إعادة الطلب --- #}
+<div id="return-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="font-bold text-slate-800">إعادة الطلب للعضو</h3>
+            <button onclick="this.closest('#return-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x text-xl"></i></button>
+        </div>
+        <form method="post" action="{% url 'service_requests:broker_return_request' sreq.pk %}">
+            {% csrf_token %}
+            <div class="p-6">
+                <label class="block text-sm font-medium text-slate-700 mb-1">سبب الإعادة <span class="text-red-500">*</span></label>
+                <textarea name="note" rows="3" required
+                    class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition text-sm"
+                    placeholder="المعلومات أو المستندات المطلوبة..."></textarea>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3 justify-end">
+                <button type="button" onclick="this.closest('#return-modal').classList.add('hidden')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 font-medium text-sm">إلغاء</button>
+                <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 font-medium text-sm">إعادة الطلب</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# --- Modal: رفض الطلب --- #}
+<div id="reject-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="font-bold text-slate-800">رفض الطلب</h3>
+            <button onclick="this.closest('#reject-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x text-xl"></i></button>
+        </div>
+        <form method="post" action="{% url 'service_requests:broker_reject_request' sreq.pk %}">
+            {% csrf_token %}
+            <div class="p-6">
+                <label class="block text-sm font-medium text-slate-700 mb-1">سبب الرفض <span class="text-red-500">*</span></label>
+                <textarea name="note" rows="3" required
+                    class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition text-sm"
+                    placeholder="سبب رفض الطلب..."></textarea>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3 justify-end">
+                <button type="button" onclick="this.closest('#reject-modal').classList.add('hidden')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 font-medium text-sm">إلغاء</button>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium text-sm flex items-center gap-2">
+                    <i class="ph-bold ph-x-circle"></i> تأكيد الرفض
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

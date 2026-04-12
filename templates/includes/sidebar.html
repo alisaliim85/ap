@@ -47,6 +47,11 @@
             <i class="ph-duotone ph-hand-coins text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">مطالباتي المالية</span>
         </a>
+        <a href="{% url 'service_requests:request_list' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'service-requests' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
+            <i class="ph-duotone ph-paper-plane-tilt text-xl"></i>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">طلباتي</span>
+        </a>
         {% endif %}
 
 
@@ -94,6 +99,13 @@
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'claims' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-hand-coins text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">جميع المطالبات</span>
+        </a>
+        {% endif %}
+        {% if perms.accounts.view_broker_dashboard %}
+        <a href="{% url 'service_requests:request_list' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'service-requests' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
+            <i class="ph-duotone ph-paper-plane-tilt text-xl"></i>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">إدارة الطلبات</span>
         </a>
         {% endif %}
         {% if perms.accounts.view_broker_dashboard %}
@@ -180,6 +192,13 @@
             class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'claims' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
             <i class="ph-duotone ph-hand-coins text-xl"></i>
             <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">المطالبات المالية</span>
+        </a>
+        {% endif %}
+        {% if perms.accounts.view_hr_dashboard or user.is_superuser %}
+        <a href="{% url 'service_requests:request_list' %}"
+            class="flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group {% if 'service-requests' in request.path %}bg-slate-800/50 text-brand-400 border-r-2 border-brand-500{% endif %}">
+            <i class="ph-duotone ph-paper-plane-tilt text-xl"></i>
+            <span class="mr-3 whitespace-nowrap" x-show="sidebarOpen">الطلبات والاستفسارات</span>
         </a>
         {% endif %}
 

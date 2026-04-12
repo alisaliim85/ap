@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block header_title %}إدارة الطلبات{% endblock %}
+
+{% block content %}
+<div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+        <h2 class="text-2xl font-extrabold text-slate-800 flex items-center gap-2">
+            <i class="ph-duotone ph-paper-plane-tilt text-brand-600"></i>
+            الطلبات والاستفسارات
+        </h2>
+        <p class="text-slate-500 text-sm mt-1">تقديم ومتابعة طلبات الخدمة والاعتراضات</p>
+    </div>
+    <a href="{% url 'service_requests:request_create' %}"
+        class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-bold shadow-sm transition-all focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
+        <i class="ph-bold ph-plus"></i>
+        تقديم طلب جديد
+    </a>
+</div>
+
+<div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+    <!-- Search / Filter Bar -->
+    <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-4 items-center">
+        <div class="relative flex-1 min-w-[250px]">
+            <i class="ph-duotone ph-magnifying-glass absolute top-1/2 right-3 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" name="search"
+                class="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all text-sm"
+                placeholder="ابحث برقم الطلب أو اسم العضو..."
+                value="{{ search_query }}"
+                hx-get="{% url 'service_requests:request_list' %}"
+                hx-trigger="keyup changed delay:500ms"
+                hx-target="#requests-table-container"
+                hx-include="[name='status_filter'], [name='type_filter']">
+        </div>
+        <div class="flex items-center gap-2">
+            <select name="status_filter"
+                class="px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                hx-get="{% url 'service_requests:request_list' %}"
+                hx-trigger="change"
+                hx-target="#requests-table-container"
+                hx-include="[name='search'], [name='type_filter']">
+                <option value="">كل الحالات</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="type_filter"
+                class="px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                hx-get="{% url 'service_requests:request_list' %}"
+                hx-trigger="change"
+                hx-target="#requests-table-container"
+                hx-include="[name='search'], [name='status_filter']">
+                <option value="">كل الأنواع</option>
+                {% for rt in request_types %}
+                <option value="{{ rt.id }}" {% if current_type == rt.id|stringformat:"d" %}selected{% endif %}>{{ rt.name_ar }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Table Container -->
+    <div id="requests-table-container" class="min-h-[400px]">
+        {% include 'service_requests/partials/request_table.html' %}
+    </div>
+</div>
+{% endblock %}

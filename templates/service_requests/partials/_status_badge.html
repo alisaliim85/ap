@@ -1,0 +1,38 @@
+{# service_requests/partials/_status_badge.html — Reusable status badge #}
+{# Usage: {% include 'service_requests/partials/_status_badge.html' with status=sreq.status %} #}
+
+{% if status == 'DRAFT' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-bold border border-slate-200">
+    <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> مسودة
+</span>
+
+{% elif status == 'SUBMITTED' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold border border-blue-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> مُرسل
+</span>
+
+{% elif status == 'IN_REVIEW' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-brand-50 text-brand-700 rounded text-xs font-bold border border-brand-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-brand-600"></span> قيد المراجعة
+</span>
+
+{% elif status == 'RETURNED' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-bold border border-orange-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span> مُعاد
+</span>
+
+{% elif status == 'RESOLVED' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-bold border border-green-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> تم الحل
+</span>
+
+{% elif status == 'REJECTED' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 rounded text-xs font-bold border border-red-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> مرفوض
+</span>
+
+{% else %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-500 rounded text-xs font-bold border border-slate-200">
+    {{ status }}
+</span>
+{% endif %}

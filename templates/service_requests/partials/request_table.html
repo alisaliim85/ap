@@ -1,0 +1,103 @@
+{# service_requests/partials/request_table.html — Desktop Table + Mobile Cards #}
+
+{% if service_requests %}
+<!-- Desktop Table -->
+<div class="hidden md:block overflow-x-auto">
+    <table class="w-full text-right text-sm">
+        <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+            <tr>
+                <th class="px-6 py-3">رقم الطلب</th>
+                <th class="px-6 py-3">نوع الطلب</th>
+                <th class="px-6 py-3">العضو</th>
+                <th class="px-6 py-3">الشركة</th>
+                <th class="px-6 py-3">التاريخ</th>
+                <th class="px-6 py-3">الحالة</th>
+                <th class="px-6 py-3 w-16"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for sreq in service_requests %}
+            <tr class="hover:bg-brand-50/30 group transition-colors">
+                <td class="px-6 py-4 font-mono font-medium text-slate-800">
+                    <a href="{% url 'service_requests:request_detail' sreq.pk %}" class="hover:text-brand-600 transition">
+                        {{ sreq.reference }}
+                    </a>
+                </td>
+                <td class="px-6 py-4 text-slate-700">
+                    <span class="flex items-center gap-2">
+                        <i class="ph-duotone {{ sreq.request_type.icon }} text-brand-600"></i>
+                        {{ sreq.request_type.name_ar }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-slate-700">{{ sreq.member.full_name }}</td>
+                <td class="px-6 py-4 text-slate-500">{{ sreq.member.client.name_ar|default:"—" }}</td>
+                <td class="px-6 py-4 text-slate-500">{{ sreq.created_at|date:"Y/m/d" }}</td>
+                <td class="px-6 py-4">
+                    {% include 'service_requests/partials/_status_badge.html' with status=sreq.status %}
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                        <a href="{% url 'service_requests:request_detail' sreq.pk %}"
+                            class="p-1 text-slate-400 hover:text-brand-600 transition" title="عرض التفاصيل">
+                            <i class="ph-duotone ph-eye text-lg"></i>
+                        </a>
+                        
+                        {% if sreq.status == 'DRAFT' or sreq.status == 'RETURNED' %}
+                        <a href="{% url 'service_requests:request_edit' sreq.pk %}"
+                            class="p-1 text-slate-400 hover:text-amber-600 transition" title="تعديل">
+                            <i class="ph-duotone ph-pencil-simple text-lg"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if sreq.status == 'DRAFT' or user.is_superuser %}
+                        <a href="{% url 'service_requests:request_delete' sreq.pk %}"
+                           class="p-1 text-slate-400 hover:text-red-600 transition" title="حذف">
+                            <i class="ph-duotone ph-trash text-lg"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Mobile Cards -->
+<div class="md:hidden p-4 space-y-4 bg-slate-50">
+    {% for sreq in service_requests %}
+    <a href="{% url 'service_requests:request_detail' sreq.pk %}" class="block bg-white p-4 rounded-md shadow-sm border border-slate-200 hover:border-brand-300 transition">
+        <div class="flex justify-between items-start mb-3">
+            <div>
+                <h4 class="font-bold text-slate-800 font-mono text-sm">{{ sreq.reference }}</h4>
+                <p class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                    <i class="ph-duotone {{ sreq.request_type.icon }}"></i>
+                    {{ sreq.request_type.name_ar }}
+                </p>
+            </div>
+            {% include 'service_requests/partials/_status_badge.html' with status=sreq.status %}
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-sm text-slate-600">
+            <div class="flex flex-col">
+                <span class="text-xs text-slate-400">العضو</span>
+                <span class="font-medium text-slate-800">{{ sreq.member.full_name }}</span>
+            </div>
+            <div class="flex flex-col">
+                <span class="text-xs text-slate-400">التاريخ</span>
+                <span>{{ sreq.created_at|date:"Y/m/d" }}</span>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="text-center py-16">
+    <div class="inline-flex items-center justify-center w-20 h-20 bg-slate-100 rounded-full mb-4">
+        <i class="ph-duotone ph-paper-plane-tilt text-4xl text-slate-400"></i>
+    </div>
+    <h4 class="text-slate-800 font-bold text-lg mb-1">لا توجد طلبات</h4>
+    <p class="text-slate-500 text-sm">لم يتم العثور على أي طلبات خدمة حالياً.</p>
+</div>
+{% endif %}
