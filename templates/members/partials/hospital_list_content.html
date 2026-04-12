@@ -1,0 +1,180 @@
+{% load static %}
+
+<!-- Mobile Cards (Visible on mobile only) -->
+<div class="md:hidden space-y-4">
+    {% for hospital in page_obj %}
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
+        <!-- Accent Decoration -->
+        <div class="absolute top-0 left-0 w-16 h-16 bg-brand-50 rounded-br-full -ml-4 -mt-4 transition-transform group-hover:scale-110"></div>
+        
+        <div class="relative z-10">
+            <div class="flex justify-between items-start mb-3">
+                <div class="p-2.5 bg-brand-50 rounded-xl text-brand-600">
+                    {% if hospital.type == 'HOSPITAL' %}
+                        <i class="ph-duotone ph-hospital text-xl"></i>
+                    {% elif hospital.type == 'PHARMACY' %}
+                        <i class="ph-duotone ph-pill text-xl"></i>
+                    {% elif hospital.type == 'LAB' %}
+                        <i class="ph-duotone ph-test-tube text-xl"></i>
+                    {% else %}
+                        <i class="ph-duotone ph-first-aid text-xl"></i>
+                    {% endif %}
+                </div>
+                <span class="text-xs font-bold px-2 py-1 rounded bg-slate-100 text-slate-600 border border-slate-200 uppercase tracking-tighter">
+                    {{ hospital.get_type_display }}
+                </span>
+            </div>
+
+            <h3 class="text-slate-900 font-black text-lg">{{ hospital.name_ar }}</h3>
+            <p class="text-slate-500 font-bold text-sm mt-0.5 tracking-tight uppercase">{{ hospital.name_en }}</p>
+
+            <div class="mt-4 flex flex-col gap-2.5 border-t border-slate-50 pt-4">
+                <div class="flex items-center gap-2 text-sm">
+                    <i class="ph-duotone ph-map-pin text-brand-500"></i>
+                    <span class="text-slate-600">المدينة:</span>
+                    <span class="font-bold text-slate-800">{{ hospital.city }}</span>
+                </div>
+                {% if hospital.address %}
+                <div class="flex items-start gap-2 text-sm">
+                    <i class="ph-duotone ph-map-trifold text-brand-500 mt-0.5"></i>
+                    <span class="text-slate-600 leading-tight">{{ hospital.address }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if hospital.latitude and hospital.longitude %}
+            <div class="mt-5 flex gap-2">
+                <a href="https://www.google.com/maps?q={{ hospital.latitude }},{{ hospital.longitude }}" 
+                   target="_blank"
+                   class="flex-1 bg-brand-600 hover:bg-brand-700 text-white text-center py-2.5 rounded-xl text-sm font-bold shadow-sm shadow-brand-200 transition-all flex items-center justify-center gap-2">
+                    <i class="ph-bold ph-navigation-arrow"></i>
+                    الاتجاهات
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="bg-white rounded-3xl p-12 border-2 border-dashed border-slate-200 flex flex-col items-center text-center gap-4">
+        <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center">
+            <i class="ph-duotone ph-magnifying-glass text-4xl text-slate-300"></i>
+        </div>
+        <div>
+            <h3 class="font-black text-slate-800 mb-1">عذراً، لم نجد نتائج</h3>
+            <p class="text-slate-500 text-sm">جرب البحث بكلمات أخرى أو تغيير الفلتر</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Desktop Table (Visible on md and up) -->
+<div class="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <table class="w-full text-right">
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+                <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">مقدم الخدمة</th>
+                <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider text-center">النوع</th>
+                <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">المدينة</th>
+                <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">العنوان</th>
+                <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider w-20"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for hospital in page_obj %}
+            <tr class="hover:bg-slate-50/50 transition-colors group">
+                <td class="px-6 py-4">
+                    <div class="flex flex-col">
+                        <span class="font-black text-slate-800">{{ hospital.name_ar }}</span>
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">{{ hospital.name_en }}</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4 text-center">
+                    <span class="inline-flex px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter 
+                        {% if hospital.type == 'HOSPITAL' %}bg-brand-50 text-brand-700
+                        {% elif hospital.type == 'PHARMACY' %}bg-blue-50 text-blue-700
+                        {% else %}bg-slate-100 text-slate-600{% endif %}">
+                        {{ hospital.get_type_display }}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="text-sm font-bold text-slate-600">{{ hospital.city }}</span>
+                </td>
+                <td class="px-6 py-4">
+                    <p class="text-[13px] text-slate-500 line-clamp-1 max-w-xs">{{ hospital.address|default:"--" }}</p>
+                </td>
+                <td class="px-6 py-4 text-left">
+                    {% if hospital.latitude and hospital.longitude %}
+                    <a href="https://www.google.com/maps?q={{ hospital.latitude }},{{ hospital.longitude }}" 
+                       target="_blank"
+                       title="فتح في خرائط جوجل"
+                       class="inline-block p-2 text-slate-400 hover:text-brand-600 transition-colors">
+                        <i class="ph-duotone ph-map-trifold text-xl"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="px-6 py-16 text-center">
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center">
+                            <i class="ph-duotone ph-magnifying-glass text-3xl text-slate-300"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-black text-slate-800 mb-1">لم يتم العثور على نتائج</h3>
+                            <p class="text-slate-500 text-sm">حاول تعديل فلاتر البحث أعلاه</p>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav class="flex justify-center mt-8">
+    <ul class="flex items-center gap-1.5 p-1 bg-white border border-slate-200 rounded-2xl shadow-sm">
+        {% if page_obj.has_previous %}
+        <li>
+            <button hx-get="{% url 'members:my_hospitals' %}?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.city %}&city={{ request.GET.city }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}"
+                    hx-target="#hospitals-container"
+                    hx-push-url="false"
+                    class="p-2.5 rounded-xl hover:bg-slate-50 text-slate-400 transition-colors">
+                <i class="ph-bold ph-caret-right"></i>
+            </button>
+        </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li>
+                <span class="w-10 h-10 flex items-center justify-center font-black rounded-xl bg-brand-600 text-white shadow-sm shadow-brand-200">
+                    {{ num }}
+                </span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li>
+                <button hx-get="{% url 'members:my_hospitals' %}?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.city %}&city={{ request.GET.city }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}"
+                        hx-target="#hospitals-container"
+                        class="w-10 h-10 flex items-center justify-center font-bold text-slate-400 rounded-xl hover:bg-slate-50 transition-colors">
+                    {{ num }}
+                </button>
+            </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li>
+            <button hx-get="{% url 'members:my_hospitals' %}?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.city %}&city={{ request.GET.city }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}"
+                    hx-target="#hospitals-container"
+                    hx-push-url="false"
+                    class="p-2.5 rounded-xl hover:bg-slate-50 text-slate-400 transition-colors">
+                <i class="ph-bold ph-caret-left"></i>
+            </button>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}

@@ -20,4 +20,5 @@ urlpatterns = [
     # Member Portal
     path('dashboard/', views.my_dashboard, name='member_dashboard'),
     path('my-family/', views.my_family_members, name='my_family_members'),
+    path('my-hospitals/', views.my_hospitals, name='my_hospitals'),
 ]

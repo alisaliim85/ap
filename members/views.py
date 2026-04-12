@@ -7,6 +7,7 @@ from .models import Member
 from .forms import MemberForm
 from clients.models import Client
 from accounts.models import User
+from networks.models import ServiceProvider
 
 # ==========================================
 # دالة مساعدة: عزل البيانات للمشتركين (Data Isolation)
@@ -249,3 +250,58 @@ def my_family_members(request):
     ).order_by('relation') 
     
     return render(request, 'members/my_family_members.html', {'members': members})
+
+@login_required
+def my_hospitals(request):
+    """قائمة المستشفيات الخاصة بشبكة العضو (موبيل-فيرست)"""
+    try:
+        current_member = request.user.member_profile
+    except Member.DoesNotExist:
+        messages.error(request, "لا توجد بيانات عضو مسجلة لهذا المستخدم")
+        return redirect('members:member_dashboard')
+
+    policy_class = current_member.policy_class
+    network = policy_class.network if policy_class else None
+
+    if not network:
+        hospitals = ServiceProvider.objects.none()
+    else:
+        hospitals = network.hospitals.all()
+
+    # Filters prep
+    cities = hospitals.values_list('city', flat=True).distinct().order_by('city')
+    types_choices = ServiceProvider.ProviderTypes.choices
+
+    search_query = request.GET.get('search', '')
+    city_filter = request.GET.get('city', '')
+    type_filter = request.GET.get('type', '')
+
+    if search_query:
+        hospitals = hospitals.filter(
+            Q(name_ar__icontains=search_query) | 
+            Q(name_en__icontains=search_query) |
+            Q(city__icontains=search_query)
+        )
+    if city_filter:
+        hospitals = hospitals.filter(city=city_filter)
+    if type_filter:
+        hospitals = hospitals.filter(type=type_filter)
+
+    # Ordering for consistent pagination
+    hospitals = hospitals.order_by('name_ar')
+
+    paginator = Paginator(hospitals, 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'cities': cities,
+        'types_choices': types_choices,
+        'network': network
+    }
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'members/partials/hospital_list_content.html', context)
+
+    return render(request, 'members/my_hospitals.html', context)

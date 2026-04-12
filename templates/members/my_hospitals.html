@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}قائمة المستشفيات{% endblock %}
+
+{% block content %}
+<div class="w-full px-4 md:px-6 space-y-6 pb-10">
+
+    <!-- Page Header -->
+    <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-black text-slate-800">قائمة المستشفيات</h1>
+            {% if network %}
+            <p class="text-slate-500 font-medium mt-1 text-sm flex items-center gap-2">
+                <i class="ph-duotone ph-network text-brand-500"></i>
+                {{ network.name_ar }} — {{ network.provider.name_ar }}
+            </p>
+            {% else %}
+            <p class="text-slate-400 font-medium mt-1 text-sm">لا توجد شبكة طبية مرتبطة بفئتك</p>
+            {% endif %}
+        </div>
+        <a href="{% url 'members:member_dashboard' %}"
+           class="self-start sm:self-center flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-brand-600 transition-colors px-3 py-2 rounded-lg hover:bg-brand-50">
+            <i class="ph-bold ph-caret-right"></i>
+            العودة للوحة التحكم
+        </a>
+    </header>
+
+    <!-- Filter Bar -->
+    <section class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+        <div class="flex flex-col gap-3"
+             id="filter-form"
+             hx-get="{% url 'members:my_hospitals' %}"
+             hx-target="#hospitals-container"
+             hx-trigger="change from:select, keyup changed delay:400ms from:input[type=text]"
+             hx-include="#filter-form"
+             hx-push-url="false">
+
+            <!-- Search Row -->
+            <div class="relative">
+                <i class="ph-duotone ph-magnifying-glass absolute top-1/2 -translate-y-1/2 right-3 text-slate-400 text-lg pointer-events-none"></i>
+                <input
+                    type="text"
+                    name="search"
+                    value="{{ request.GET.search }}"
+                    placeholder="ابحث باسم المستشفى أو المدينة..."
+                    class="w-full pr-10 pl-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm transition bg-slate-50 focus:bg-white">
+            </div>
+
+            <!-- Dropdowns Row -->
+            <div class="grid grid-cols-2 gap-3">
+                <!-- City Filter -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">المدينة</label>
+                    <select name="city"
+                            class="w-full px-3 py-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm text-slate-700">
+                        <option value="">كل المدن</option>
+                        {% for city in cities %}
+                        <option value="{{ city }}" {% if request.GET.city == city %}selected{% endif %}>{{ city }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Type Filter -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">النوع</label>
+                    <select name="type"
+                            class="w-full px-3 py-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm text-slate-700">
+                        <option value="">كل الأنواع</option>
+                        {% for value, label in types_choices %}
+                        <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Results Summary -->
+    <div class="flex items-center justify-between text-sm text-slate-500" id="results-summary">
+        <span>
+            <span class="font-bold text-slate-700">{{ page_obj.paginator.count }}</span>
+            مقدم خدمة في شبكتك
+        </span>
+        {% if request.GET.search or request.GET.city or request.GET.type %}
+        <a href="{% url 'members:my_hospitals' %}"
+           class="text-brand-600 font-bold hover:underline flex items-center gap-1">
+            <i class="ph-bold ph-x-circle text-sm"></i>
+            مسح الفلاتر
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Hospitals Container (HTMX Target) -->
+    <div id="hospitals-container"
+         hx-indicator="#loading-indicator">
+
+        {% include 'members/partials/hospital_list_content.html' %}
+
+    </div>
+
+    <!-- Global Loading Indicator -->
+    <div id="loading-indicator" class="htmx-indicator fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 px-6 py-4 flex items-center gap-3">
+            <div class="w-5 h-5 border-[3px] border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+            <span class="text-sm font-bold text-slate-700">جاري البحث...</span>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: flex; }
+    .htmx-request.htmx-indicator { display: flex; }
+</style>
+{% endblock %}
