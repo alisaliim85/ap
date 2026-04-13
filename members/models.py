@@ -57,18 +57,9 @@ class Member(models.Model):
     full_name = models.CharField(_("Full Name"), max_length=255)
     
     # الهوية والعنوان (مشفرة)
-    national_id = models.CharField(
-        _("National ID / Iqama"), 
-        max_length=10, 
-        unique=True,
-        db_index=True,
-        validators=[MinLengthValidator(10), MaxLengthValidator(10)],
-    )
+    national_id = models.CharField(_("National ID / Iqama"),max_length=10,unique=True,db_index=True,validators=[MinLengthValidator(10), MaxLengthValidator(10)],)
     
-    national_address = models.TextField(
-        _("National Address"),
-        blank=True,
-    )
+    national_address = models.TextField(_("National Address"),blank=True,)
     
     medical_card_number = models.CharField(_("Medical Card ID"), max_length=50, unique=True, null=True, blank=True)
     

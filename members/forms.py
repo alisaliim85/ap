@@ -83,7 +83,8 @@ class MemberForm(forms.ModelForm):
                 'hx-get': reverse_lazy('members:ajax_load_policy_classes'),
                 'hx-target': '#id_policy_class',
                 'hx-trigger': 'change',
-                'hx-vals': 'js:{client_id: event.target.value}'
+                'hx-vals': 'js:{client_id: this.value}',
+                'class': self.fields['client'].widget.attrs.get('class', '') + ' focus:ring-2 focus:ring-brand-500'
             })
 
         # --- الفحص الأمني الحرج (Security Check) ---
@@ -119,6 +120,10 @@ class MemberForm(forms.ModelForm):
             # إذا لم يتم اجتياز الفحص الأمني، تظل القوائم فارغة
             self.fields['policy_class'].queryset = PolicyClass.objects.none()
             self.fields['sponsor'].queryset = Member.objects.none()
+            
+            # تحسين تجربة المستخدم: إضافة رسالة توضيحية في القائمة
+            self.fields['policy_class'].empty_label = "يرجى اختيار الشركة أولاً"
+            self.fields['sponsor'].empty_label = "يرجى اختيار الشركة أولاً"
 
         # 4. إعدادات خاصة بالتابعين
         is_dependent = (relation_type and relation_type != 'PRINCIPAL') or (self.instance.pk and self.instance.relation != 'PRINCIPAL')

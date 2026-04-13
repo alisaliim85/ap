@@ -43,6 +43,20 @@
                 <form method="post" enctype="multipart/form-data" class="space-y-4">
                     {% csrf_token %}
 
+                    {% if not form.client.is_hidden %}
+                    <div class="space-y-1">
+                        <label for="{{ form.client.id_for_label }}" class="block text-sm font-bold text-slate-700">
+                            {{ form.client.label }}
+                        </label>
+                        {{ form.client }}
+                        {% if form.client.errors %}
+                        <p class="text-xs text-red-600">{{ form.client.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                        {{ form.client }}
+                    {% endif %}
+
                     <div class="relative w-full">
                         <label for="id_file"
                             class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-brand-50 hover:border-brand-400 transition"
