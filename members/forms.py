@@ -125,18 +125,12 @@ class MemberForm(forms.ModelForm):
             self.fields['policy_class'].empty_label = "يرجى اختيار الشركة أولاً"
             self.fields['sponsor'].empty_label = "يرجى اختيار الشركة أولاً"
 
-        # 4. إعدادات خاصة بالتابعين
-        is_dependent = (relation_type and relation_type != 'PRINCIPAL') or (self.instance.pk and self.instance.relation != 'PRINCIPAL')
-        
-        if self.is_bound and not is_dependent:
-             rel = self.data.get('relation')
-             if rel and rel != 'PRINCIPAL':
-                 is_dependent = True
+        # 4. إعدادات الكفيل والتبعية
 
         if relation_type:
             self.fields['relation'].initial = relation_type
         
-        # إذا كان ثمة كفيل محدد
+        # إذا كان ثمة كفيل محدد (من الرابط أو من التعديل)
         actual_sponsor_id = sponsor_id or (self.instance.sponsor_id if self.instance.pk else None)
         if actual_sponsor_id:
             try:
@@ -150,7 +144,9 @@ class MemberForm(forms.ModelForm):
             except (ValueError, TypeError):
                 pass
 
-        if is_dependent:
+        # نعطل الحقول فقط إذا كان التابع يملك كفيل محدد مسبقاً لا ينبغي تغييره
+        is_fixed_dependent = bool(actual_sponsor_id)
+        if is_fixed_dependent:
             self.fields['sponsor'].disabled = True
             self.fields['policy_class'].disabled = True
 

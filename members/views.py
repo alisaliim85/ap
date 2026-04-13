@@ -176,7 +176,7 @@ def member_delete(request, pk):
 @login_required
 def load_policy_classes(request):
     """
-    جلب فئات الوثيقة للعميل المحدد عبر AJAX (HTMX)
+    جلب فئات الوثيقة والموظفين الأساسيين (كفلاء محتملين) للعميل المحدد عبر AJAX (HTMX)
     تم إضافة حماية العزل لكي لا يطلب وسيط فئات عميل لا يخصه.
     """
     client_id = request.GET.get('client_id')
@@ -201,14 +201,24 @@ def load_policy_classes(request):
 
     from django.db.models import Q
     from policies.models import PolicyClass
+    from .models import Member
+    
     client_obj = get_object_or_404(Client, id=client_id)
     
+    # 1. جلب فئات الوثيقة
     query = Q(policy__client_id=client_id)
     if client_obj.parent_id:
         query |= Q(policy__client_id=client_obj.parent_id, policy__master_policy__isnull=True)
     
     policy_classes = PolicyClass.objects.filter(query).select_related('policy').distinct()
-    return render(request, 'members/partials/policy_class_options.html', {'policy_classes': policy_classes})
+
+    # 2. جلب الموظفين الأساسيين (كفلاء محتملين)
+    sponsors = Member.objects.filter(client_id=client_id, relation='PRINCIPAL').only('id', 'full_name')
+
+    return render(request, 'members/partials/policy_class_options.html', {
+        'policy_classes': policy_classes,
+        'sponsors': sponsors
+    })
 
 
 @login_required
