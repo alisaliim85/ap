@@ -1,0 +1,62 @@
+# Copilot Instructions for AP PLUS
+
+- This is a Django 4.2 monolithic app with a custom `accounts.User` model and a hybrid UI: Django templates + `django-htmx` for partial updates, plus DRF for internal API access.
+- Key entrypoints:
+  - `manage.py` to run commands
+  - `config/settings.py` for env-driven config
+  - `config/urls.py` for global route composition
+  - `accounts/urls.py` for root auth and dashboard flows
+- App boundaries are explicit. Most domain logic lives in separate apps:
+  - `clients`, `providers`, `networks`, `policies`, `members`, `claims`, `partners`, `chronic_care`, `brokers`, `service_requests`, `api`
+- Do not assume a separate frontend app. UI work is inside `templates/` and app-specific template folders.
+- Environment requirements:
+  - Uses `python-decouple` and `.env` variables
+  - Required keys: `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `FIELD_ENCRYPTION_KEY`
+  - `FIELD_ENCRYPTION_KEY` is still needed because old migrations reference `django-encrypted-model-fields`.
+- Database is SQLite at `db.sqlite3` by default.
+- Recommended local workflow:
+  - Activate the virtualenv: `venv\Scripts\Activate.ps1`
+  - Install deps: `pip install -r requirements.txt`
+  - Apply migrations: `python manage.py migrate`
+  - Run server: `python manage.py runserver`
+- Authentication and API behavior:
+  - DRF uses `SessionAuthentication` and `BasicAuthentication`
+  - Default DRF permission is `IsAuthenticated`
+  - Default pagination is `PageNumberPagination` with `PAGE_SIZE = 10`
+- Important app conventions:
+  - All app URLs are registered in `config/urls.py`.
+  - Root path (`/`) is served by `accounts.login_view`.
+  - Use app-local view and URL patterns rather than centralized route generation.
+  - `config/settings.py` contains locale setup: `LANGUAGES` includes `en` and `ar` and `LocaleMiddleware` is enabled.
+- Sensitive-data handling: expect encrypted fields in user/member data and medical records, so preserve encryption semantics when changing models.
+- Model patterns (exemplified in `service_requests`):
+  - Use UUID primary keys for all new models (e.g., `id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)`)
+  - Auto-generate reference numbers with format like `REQ-2026-00001` using transaction.atomic() and select_for_update()
+  - Use JSONField for dynamic data storage (e.g., `data = models.JSONField(default=dict)`)
+  - Implement status transitions with audit logging (create RequestStatusLog on each change)
+  - Custom file upload paths that include reference numbers (e.g., `service_requests/docs/REQ-2026-00001/filename.pdf`)
+- View patterns (exemplified in `service_requests`):
+  - Implement data isolation functions like `get_allowed_requests(user)` that filter based on user roles
+  - Use HTMX for partial updates and search/filter functionality
+  - Support both full page loads and HTMX partials in the same view
+  - Handle role-based permissions (broker sees all, HR sees company only, member sees own/family)
+- URL patterns (exemplified in `service_requests`):
+  - Use app namespacing: `app_name = 'service_requests'`
+  - Include HTMX endpoints like `get-fields/<int:type_id>/` for dynamic content
+  - Separate broker action URLs (e.g., `start-review/`, `resolve/`, `reject/`)
+- Form patterns (exemplified in `service_requests`):
+  - Custom file input widgets for multiple uploads
+  - Dynamic form generation based on JSON schemas
+  - Validation functions for dynamic data
+- Admin patterns (exemplified in `service_requests`):
+  - Use inline admins for related models (RequestAttachmentInline, RequestStatusLogInline)
+  - Make audit fields readonly (created_at, updated_at, reference)
+  - Include status logs as non-editable inlines
+- Template patterns (exemplified in `service_requests`):
+  - Bootstrap 5 with RTL support and custom brand colors
+  - Phosphor icons (e.g., `ph-duotone ph-paper-plane-tilt`)
+  - HTMX attributes for dynamic updates (hx-get, hx-trigger, hx-target)
+  - Responsive design with flexbox and mobile-first approach
+- If you need to inspect business flow, check `PROJECT_DETAILS.md` for domain context and `DESIGN_SYSTEM_GUIDE.md` for UI conventions.
+
+Ask for clarification if a workflow is not obvious, especially around auth roles or the mixed template + HTMX UI pattern.

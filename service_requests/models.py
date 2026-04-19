@@ -27,8 +27,21 @@ class RequestType(models.Model):
     نوع الطلب (مثال: اعتراض على رفض، موافقة مسبقة، شكوى... إلخ).
     يحتوي على مخطط الحقول الديناميكية (fields_schema) بصيغة JSON.
     """
+    INTEGRATION_CHOICES = [
+        ('none', 'لا يوجد'),
+        ('chronic', 'إدارة الأمراض المزمنة'),
+        ('medication', 'إدارة الأدوية'),
+        ('devices', 'إدارة الأجهزة الطبية'),
+    ]
     name_ar = models.CharField(_("Name (AR)"), max_length=100)
     name_en = models.CharField(_("Name (EN)"), max_length=100, blank=True)
+    integration = models.CharField(
+        _("Integration"),
+        max_length=20,
+        choices=INTEGRATION_CHOICES,
+        default='none'
+    )
+
     description = models.TextField(_("Description"), blank=True)
     icon = models.CharField(
         _("Phosphor Icon Class"),
