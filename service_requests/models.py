@@ -82,6 +82,7 @@ class ServiceRequest(models.Model):
         RETURNED = 'RETURNED', _('Returned (Needs More Info)')
         RESOLVED = 'RESOLVED', _('Resolved')
         REJECTED = 'REJECTED', _('Rejected')
+        TRANSFERRED_TO_MEDICATIONS = 'TRANSFERRED_TO_MEDICATIONS', _('Transferred to Medications Dept')
 
     # المعرّفات
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -115,7 +116,7 @@ class ServiceRequest(models.Model):
     # الحالة
     status = models.CharField(
         _("Status"),
-        max_length=20,
+        max_length=50,
         choices=Status.choices,
         default=Status.DRAFT,
         db_index=True,

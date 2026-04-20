@@ -21,6 +21,7 @@ urlpatterns = [
     path('claims/', include('claims.urls')),
     path('brokers/', include('brokers.urls')),
     path('service-requests/', include('service_requests.urls')),
+    path('medications/', include('medications.urls')),
 ]
 
 
