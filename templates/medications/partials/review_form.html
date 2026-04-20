@@ -1,0 +1,79 @@
+{# medications/partials/review_form.html — Drawer content #}
+<div class="mb-4">
+    <h3 class="font-bold text-slate-800 mb-1">مراجعة دورة الصرف</h3>
+    <p class="text-sm text-slate-500">
+        دورة #{{ refill.cycle_number }} — {{ refill.scheduled_date|date:"Y/m/d" }}
+    </p>
+</div>
+
+{# بطاقة حالة الوثيقة #}
+{% if policy_status %}
+<div class="mb-4 p-3 rounded-md text-sm border
+    {% if policy_status.is_valid %}bg-green-50 border-green-200 text-green-800{% else %}bg-red-50 border-red-200 text-red-800{% endif %}">
+    <div class="flex items-center gap-2">
+        <i class="ph-duotone {% if policy_status.is_valid %}ph-check-circle text-green-600{% else %}ph-warning-circle text-red-600{% endif %} text-lg"></i>
+        <span class="font-medium">{{ policy_status.message }}</span>
+    </div>
+    {% if policy_status.expiry_date %}
+    <p class="mt-1 text-xs">انتهاء الوثيقة: {{ policy_status.expiry_date|date:"Y/m/d" }}</p>
+    {% endif %}
+</div>
+{% endif %}
+
+{# تفاصيل الدورة #}
+<div class="bg-slate-50 rounded-md border border-slate-200 p-4 mb-4 text-sm space-y-2">
+    <div class="flex justify-between">
+        <span class="text-slate-500">الصيدلية:</span>
+        <span class="font-medium">{{ refill.partner.name_ar|default:"—" }}</span>
+    </div>
+    <div class="flex justify-between">
+        <span class="text-slate-500">رقم المرجع:</span>
+        <span class="font-mono font-medium">{{ refill.medication_request.reference }}</span>
+    </div>
+    <div class="flex justify-between">
+        <span class="text-slate-500">الحالة الحالية:</span>
+        {% include 'medications/partials/_med_status_badge.html' with status=refill.status %}
+    </div>
+</div>
+
+{% if refill.status == 'PENDING' %}
+<form method="POST" action="{% url 'medications:review_refill' refill.pk %}"
+    hx-post="{% url 'medications:review_refill' refill.pk %}"
+    hx-target="#drawer-body"
+    hx-swap="innerHTML">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="action-input" value="">
+
+    <div class="mb-4">
+        <label class="block text-sm font-medium text-slate-700 mb-1">ملاحظات / سبب</label>
+        {{ form.notes }}
+    </div>
+
+    <div class="flex gap-3">
+        <button type="submit"
+            onclick="document.getElementById('action-input').value='approve'"
+            class="flex-1 bg-brand-600 text-white py-2 rounded-md font-bold hover:bg-brand-700 transition flex items-center justify-center gap-2">
+            <i class="ph-duotone ph-check-circle"></i>
+            موافقة
+        </button>
+        <button type="submit"
+            onclick="document.getElementById('action-input').value='cancel'"
+            class="flex-1 bg-red-600 text-white py-2 rounded-md font-bold hover:bg-red-700 transition flex items-center justify-center gap-2">
+            <i class="ph-duotone ph-x-circle"></i>
+            إلغاء الدورة
+        </button>
+    </div>
+    <button type="button" @click="drawerOpen = false"
+        class="w-full mt-2 bg-white border border-slate-300 text-slate-700 py-2 rounded-md font-medium hover:bg-slate-50">
+        إغلاق
+    </button>
+</form>
+{% else %}
+<div class="text-center text-slate-500 text-sm py-4">
+    <p>لا يمكن تغيير حالة هذه الدورة. الحالة الحالية: <strong>{{ refill.get_status_display }}</strong></p>
+</div>
+<button type="button" @click="drawerOpen = false"
+    class="w-full mt-2 bg-white border border-slate-300 text-slate-700 py-2 rounded-md font-medium hover:bg-slate-50">
+    إغلاق
+</button>
+{% endif %}

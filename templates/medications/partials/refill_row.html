@@ -1,0 +1,24 @@
+{# medications/partials/refill_row.html — Single refill table row (HTMX swap) #}
+<tr class="hover:bg-brand-50/30 group transition-colors" id="refill-row-{{ refill.pk }}">
+    <td class="px-5 py-4 text-slate-800 font-medium">#{{ refill.cycle_number }}</td>
+    <td class="px-5 py-4 text-slate-600">{{ refill.scheduled_date|date:"Y/m/d" }}</td>
+    <td class="px-5 py-4 text-slate-600">{{ refill.partner.name_ar|default:"—" }}</td>
+    <td class="px-5 py-4">
+        {% include 'medications/partials/_med_status_badge.html' with status=refill.status %}
+    </td>
+    <td class="px-5 py-4 text-slate-500 text-xs">{{ refill.actual_dispense_date|date:"Y/m/d H:i"|default:"—" }}</td>
+    <td class="px-5 py-4">
+        <div class="flex items-center gap-2">
+            {% if perms.medications.can_approve_refill and refill.status == 'PENDING' %}
+            <button
+                hx-get="{% url 'medications:review_refill' refill.pk %}"
+                hx-target="#drawer-body"
+                hx-swap="innerHTML"
+                @click="drawerOpen = true"
+                class="p-1 text-brand-500 hover:text-brand-700 transition" title="مراجعة">
+                <i class="ph-duotone ph-check-square text-lg"></i>
+            </button>
+            {% endif %}
+        </div>
+    </td>
+</tr>

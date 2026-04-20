@@ -1,0 +1,36 @@
+{# medications/partials/_med_status_badge.html #}
+{% if status == 'PROCESSING' %}
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+    <i class="ph-duotone ph-hourglass-medium text-xs"></i> قيد المعالجة
+</span>
+{% elif status == 'ACTIVE' %}
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-brand-50 text-brand-700 border border-brand-200">
+    <i class="ph-duotone ph-check-circle text-xs"></i> نشط
+</span>
+{% elif status == 'COMPLETED' %}
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+    <i class="ph-duotone ph-seal-check text-xs"></i> مكتمل
+</span>
+{% elif status == 'CANCELLED' %}
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-red-50 text-red-700 border border-red-200">
+    <i class="ph-duotone ph-x-circle text-xs"></i> ملغي
+</span>
+{% elif status == 'PENDING' %}
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-slate-50 text-slate-600 border border-slate-200">
+    <i class="ph-duotone ph-clock text-xs"></i> قيد الانتظار
+</span>
+{% elif status == 'APPROVED' %}
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
+    <i class="ph-duotone ph-check text-xs"></i> معتمد
+</span>
+{% elif status == 'OUT_FOR_DELIVERY' %}
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+    <i class="ph-duotone ph-truck text-xs"></i> في الطريق
+</span>
+{% elif status == 'DELIVERED' %}
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-green-50 text-green-700 border border-green-200">
+    <i class="ph-duotone ph-package-check text-xs"></i> تم التسليم
+</span>
+{% else %}
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">{{ status }}</span>
+{% endif %}

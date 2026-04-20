@@ -3,6 +3,7 @@
 {% block header_title %}تفاصيل الطلب {{ sreq.reference }}{% endblock %}
 
 {% block content %}
+<div x-data="{ drawerOpen: false }">
 {# ===== 1. رأس الصفحة ===== #}
 <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div class="flex items-center gap-4">
@@ -157,6 +158,19 @@
                         {% endif %}
 
                         {% if sreq.status == 'IN_REVIEW' %}
+
+                        {% if perms.medications.can_transfer_to_medications and sreq.request_type.integration == 'medication' and not sreq.medication_details %}
+                        <button
+                            hx-get="{% url 'medications:transfer_to_medications' sreq.pk %}"
+                            hx-target="#drawer-body"
+                            hx-swap="innerHTML"
+                            @click="drawerOpen = true"
+                            class="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 font-medium shadow-sm flex items-center gap-2 transition">
+                            <i class="ph-bold ph-arrows-merge"></i>
+                            نقل لوحدة الأدوية
+                        </button>
+                        {% endif %}
+
                         <button onclick="document.getElementById('resolve-modal').classList.remove('hidden')"
                             class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium shadow-sm flex items-center gap-2 transition">
                             <i class="ph-bold ph-check-circle"></i>
@@ -386,5 +400,28 @@
         </form>
     </div>
 </div>
+
+{# ===== درج النقل إلى وحدة الأدوية ===== #}
+<div class="fixed inset-0 z-50 overflow-hidden" x-show="drawerOpen" style="display:none;" x-transition.opacity>
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" @click="drawerOpen = false"></div>
+    <div class="absolute inset-y-0 left-0 max-w-lg w-full flex bg-white shadow-2xl"
+        x-show="drawerOpen"
+        x-transition:enter="transform transition ease-in-out duration-300"
+        x-transition:enter-start="-translate-x-full"
+        x-transition:enter-end="translate-x-0"
+        x-transition:leave="transform transition ease-in-out duration-300"
+        x-transition:leave-start="translate-x-0"
+        x-transition:leave-end="-translate-x-full">
+        <div class="w-full flex flex-col h-full">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h2 class="text-lg font-bold text-slate-800">نقل الطلب لوحدة الأدوية</h2>
+                <button @click="drawerOpen = false" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6" id="drawer-body"></div>
+        </div>
+    </div>
+</div>
+
+</div>{# end x-data #}
 
 {% endblock %}

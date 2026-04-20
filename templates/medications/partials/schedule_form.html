@@ -1,0 +1,63 @@
+{# medications/partials/schedule_form.html — Drawer content #}
+<div class="mb-4">
+    <h3 class="font-bold text-slate-800 mb-1">جدولة دورة الصرف</h3>
+    <p class="text-sm text-slate-500">
+        المرجع: <span class="font-mono font-medium">{{ medication_request.reference }}</span> —
+        الدورة القادمة: <span class="font-bold text-brand-700">#{{ next_cycle }}</span>
+        من أصل {{ max_cycles }}
+    </p>
+</div>
+
+{% if next_cycle > max_cycles %}
+<div class="p-4 bg-red-50 border border-red-200 rounded-md text-sm text-red-700 flex items-center gap-2 mb-4">
+    <i class="ph-duotone ph-warning text-lg"></i>
+    تم الوصول للحد الأقصى من الدورات ({{ max_cycles }}).
+</div>
+{% else %}
+
+{% if policy_status %}
+<div class="mb-4 p-3 rounded-md text-sm border
+    {% if policy_status.is_valid %}bg-green-50 border-green-200 text-green-800{% else %}bg-red-50 border-red-200 text-red-800{% endif %}">
+    <div class="flex items-center gap-2">
+        <i class="ph-duotone {% if policy_status.is_valid %}ph-check-circle text-green-600{% else %}ph-warning-circle text-red-600{% endif %} text-lg"></i>
+        <span class="font-medium">{{ policy_status.message }}</span>
+    </div>
+    {% if policy_status.expiry_date %}
+    <p class="mt-1 text-xs">انتهاء الوثيقة: {{ policy_status.expiry_date|date:"Y/m/d" }}
+        {% if policy_status.days_remaining %} ({{ policy_status.days_remaining }} يوم متبقٍ){% endif %}</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<form method="POST" action="{% url 'medications:schedule_refill' medication_request.pk %}"
+    hx-post="{% url 'medications:schedule_refill' medication_request.pk %}"
+    hx-target="#drawer-body"
+    hx-swap="innerHTML">
+    {% csrf_token %}
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">تاريخ الصرف المجدول <span class="text-red-500">*</span></label>
+            {{ form.scheduled_date }}
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">الصيدلية المسؤولة <span class="text-red-500">*</span></label>
+            {{ form.partner }}
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">ملاحظات</label>
+            {{ form.notes }}
+        </div>
+    </div>
+    <div class="mt-6 flex gap-3">
+        <button type="submit"
+            class="flex-1 bg-brand-600 text-white py-2 rounded-md font-bold hover:bg-brand-700 transition flex items-center justify-center gap-2">
+            <i class="ph-duotone ph-calendar-plus"></i>
+            جدولة الدورة #{{ next_cycle }}
+        </button>
+        <button type="button" @click="drawerOpen = false"
+            class="flex-1 bg-white border border-slate-300 text-slate-700 py-2 rounded-md font-medium hover:bg-slate-50">
+            إلغاء
+        </button>
+    </div>
+</form>
+{% endif %}

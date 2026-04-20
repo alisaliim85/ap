@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block header_title %}تفاصيل دورة الصرف{% endblock %}
+
+{% block content %}
+<div x-data="{ drawerOpen: false }">
+
+{# رأس الصفحة #}
+<div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+        <a href="{% url 'medications:pharmacy_refill_list' %}"
+            class="p-2 bg-white border border-slate-300 rounded-md hover:bg-slate-50 text-slate-600" title="رجوع">
+            <i class="ph-bold ph-arrow-right text-lg"></i>
+        </a>
+        <div>
+            <h2 class="text-2xl font-extrabold text-slate-800 flex items-center gap-2">
+                <i class="ph-duotone ph-pill text-brand-600"></i>
+                {{ refill.medication_request.reference }} — دورة #{{ refill.cycle_number }}
+            </h2>
+            <div class="flex items-center gap-2 mt-1">
+                {% include 'medications/partials/_med_status_badge.html' with status=refill.status %}
+                <span class="text-slate-400 text-sm">• صرف في {{ refill.scheduled_date|date:"Y/m/d" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    {# بيانات العضو والوثيقة #}
+    <div class="lg:col-span-2 space-y-6">
+        {% if policy_info %}
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-identification-card text-brand-600"></i>
+                    بيانات العضو والوثيقة
+                </h3>
+            </div>
+            <div class="p-6 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <span class="text-xs text-slate-400 uppercase font-bold">رقم الوثيقة</span>
+                    <p class="text-slate-800 mt-1 font-mono">{{ policy_info.policy_number }}</p>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 uppercase font-bold">شركة التأمين</span>
+                    <p class="text-slate-800 mt-1">{{ policy_info.insurance_company }}</p>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 uppercase font-bold">فئة التغطية</span>
+                    <p class="text-slate-800 mt-1">{{ policy_info.class_name|default:"—" }}</p>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 uppercase font-bold">رقم العضوية</span>
+                    <p class="text-slate-800 mt-1 font-mono">{{ policy_info.membership_number|default:"—" }}</p>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 uppercase font-bold">الصفة</span>
+                    <p class="text-slate-800 mt-1">{{ policy_info.relation|default:"—" }}</p>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 uppercase font-bold">صلاحية الوثيقة</span>
+                    <p class="mt-1 font-medium {{ policy_info.is_active|yesno:'text-green-700,text-red-700' }}">
+                        {{ policy_info.start_date|date:"Y/m/d" }} — {{ policy_info.end_date|date:"Y/m/d" }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# معلومات الدورة #}
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-arrows-clockwise text-brand-600"></i>
+                    تفاصيل الدورة
+                </h3>
+            </div>
+            <div class="p-6 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <span class="text-xs text-slate-400 uppercase font-bold">الصيدلية</span>
+                    <p class="text-slate-800 mt-1">{{ refill.partner.name_ar|default:"—" }}</p>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 uppercase font-bold">التاريخ المجدول</span>
+                    <p class="text-slate-800 mt-1">{{ refill.scheduled_date|date:"Y/m/d" }}</p>
+                </div>
+                {% if refill.actual_dispense_date %}
+                <div>
+                    <span class="text-xs text-slate-400 uppercase font-bold">تاريخ الصرف الفعلي</span>
+                    <p class="text-slate-800 mt-1">{{ refill.actual_dispense_date|date:"Y/m/d H:i" }}</p>
+                </div>
+                {% endif %}
+                {% if refill.approved_by %}
+                <div>
+                    <span class="text-xs text-slate-400 uppercase font-bold">اعتمد بواسطة</span>
+                    <p class="text-slate-800 mt-1">{{ refill.approved_by.get_full_name }}</p>
+                </div>
+                {% endif %}
+                {% if refill.notes %}
+                <div class="col-span-2">
+                    <span class="text-xs text-slate-400 uppercase font-bold">ملاحظات</span>
+                    <p class="text-slate-700 mt-1 p-3 bg-slate-50 rounded-md border border-slate-200">{{ refill.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# المرفقات #}
+        {% if attachments %}
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-paperclip text-brand-600"></i>
+                    المرفقات
+                </h3>
+            </div>
+            <ul class="divide-y divide-slate-100">
+                {% for att in attachments %}
+                <li class="px-6 py-3 flex items-center justify-between">
+                    <span class="text-sm text-slate-700 flex items-center gap-2">
+                        <i class="ph-duotone ph-file text-brand-500"></i>
+                        {{ att.description|default:att.file.name }}
+                    </span>
+                    <a href="{{ att.file.url }}" target="_blank"
+                        class="text-xs text-brand-600 hover:underline flex items-center gap-1">
+                        <i class="ph-bold ph-download-simple"></i> تحميل
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    {# العمود الجانبي: تحديث الحالة #}
+    <div class="space-y-6">
+        {% if allowed_transitions %}
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-5 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-arrow-circle-up text-brand-600"></i>
+                    تحديث الحالة
+                </h3>
+            </div>
+            <div class="p-5 space-y-3">
+                {% for transition in allowed_transitions %}
+                <form method="POST" action="{% url 'medications:update_refill_status' refill.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="new_status" value="{{ transition.status }}">
+                    <div class="mb-2">
+                        <label class="block text-xs font-medium text-slate-600 mb-1">سبب (اختياري)</label>
+                        <textarea name="reason" rows="2"
+                            class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                            placeholder="أدخل سبباً اختيارياً..."></textarea>
+                    </div>
+                    <button type="submit"
+                        class="w-full py-2 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition {{ transition.btn_class }}">
+                        <i class="ph-bold {{ transition.icon }}"></i>
+                        {{ transition.label }}
+                    </button>
+                </form>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-white rounded-md border border-slate-200 p-6 text-center text-slate-400">
+            <i class="ph-duotone ph-check-circle text-3xl mb-2"></i>
+            <p class="text-sm">لا توجد تحديثات متاحة للحالة الحالية</p>
+        </div>
+        {% endif %}
+
+        {# سجل الحالة #}
+        <div class="bg-white rounded-md border border-slate-200 overflow-hidden">
+            <div class="px-5 py-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph-duotone ph-clock-clockwise text-brand-600"></i>
+                    سجل الحالة
+                </h3>
+            </div>
+            <ul class="divide-y divide-slate-100 text-sm">
+                {% for log in status_logs %}
+                <li class="px-5 py-3">
+                    <div class="flex items-center justify-between mb-0.5">
+                        {% include 'medications/partials/_med_status_badge.html' with status=log.to_status %}
+                        <span class="text-xs text-slate-400">{{ log.created_at|date:"Y/m/d H:i" }}</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">{{ log.user.get_full_name|default:log.user.username }}{% if log.reason %} — {{ log.reason }}{% endif %}</p>
+                </li>
+                {% empty %}
+                <li class="px-5 py-4 text-slate-400 text-center text-xs">لا يوجد سجل بعد</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}

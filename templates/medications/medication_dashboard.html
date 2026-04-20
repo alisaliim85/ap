@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block header_title %}إدارة الأدوية{% endblock %}
+
+{% block content %}
+<div x-data="{ drawerOpen: false, drawerContent: '' }">
+
+{# ===== رأس الصفحة ===== #}
+<div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+        <h2 class="text-2xl font-extrabold text-slate-800 flex items-center gap-2">
+            <i class="ph-duotone ph-pill text-brand-600"></i>
+            لوحة إدارة الأدوية
+        </h2>
+        <p class="text-slate-500 text-sm mt-1">متابعة طلبات صرف الأدوية ودوراتها</p>
+    </div>
+</div>
+
+{# ===== بطاقات التنبيهات ===== #}
+{% if expiring_prescriptions %}
+<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-start gap-3">
+    <i class="ph-duotone ph-warning-circle text-red-500 text-2xl mt-0.5 shrink-0"></i>
+    <div>
+        <p class="font-bold text-red-800">وصفات طبية على وشك الانتهاء (خلال 10 أيام)</p>
+        <ul class="mt-1 space-y-1">
+            {% for mr in expiring_prescriptions %}
+            <li class="text-sm text-red-700">
+                <a href="{% url 'medications:medication_detail' mr.pk %}" class="hover:underline font-mono font-medium">{{ mr.reference }}</a>
+                — تنتهي في {{ mr.prescription_expiry_date|date:"Y/m/d" }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+{% if upcoming_refills %}
+<div class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-md flex items-start gap-3">
+    <i class="ph-duotone ph-clock text-amber-500 text-2xl mt-0.5 shrink-0"></i>
+    <div>
+        <p class="font-bold text-amber-800">دورات صرف قادمة (خلال 7 أيام)</p>
+        <ul class="mt-1 space-y-1">
+            {% for refill in upcoming_refills %}
+            <li class="text-sm text-amber-700">
+                <span class="font-mono font-medium">{{ refill.medication_request.reference }}</span>
+                — دورة #{{ refill.cycle_number }} في {{ refill.scheduled_date|date:"Y/m/d" }}
+                <span class="text-xs bg-amber-100 px-2 py-0.5 rounded border border-amber-200">{{ refill.get_status_display }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+{# ===== الجدول الرئيسي ===== #}
+<div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+    <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-4 items-center">
+        <div class="relative flex-1 min-w-[220px]">
+            <i class="ph-duotone ph-magnifying-glass absolute top-1/2 right-3 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" name="q" value="{{ search }}"
+                class="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+                placeholder="ابحث برقم المرجع..."
+                hx-get="{% url 'medications:medication_dashboard' %}"
+                hx-trigger="keyup changed delay:400ms"
+                hx-target="#medication-table"
+                hx-include="[name='status']">
+        </div>
+        <select name="status"
+            class="px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            hx-get="{% url 'medications:medication_dashboard' %}"
+            hx-trigger="change"
+            hx-target="#medication-table"
+            hx-include="[name='q']">
+            <option value="">كل الحالات</option>
+            {% for val, label in status_choices %}
+            <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div id="medication-table" class="min-h-[300px]">
+        {% include 'medications/partials/medication_table.html' %}
+    </div>
+</div>
+
+{# ===== درج الإجراءات (يُحمَّل بـ HTMX) ===== #}
+<div class="fixed inset-0 z-50 overflow-hidden" x-show="drawerOpen" style="display:none;" x-transition.opacity>
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" @click="drawerOpen = false"></div>
+    <div class="absolute inset-y-0 left-0 max-w-lg w-full flex bg-white shadow-2xl"
+        x-show="drawerOpen"
+        x-transition:enter="transform transition ease-in-out duration-300"
+        x-transition:enter-start="-translate-x-full"
+        x-transition:enter-end="translate-x-0"
+        x-transition:leave="transform transition ease-in-out duration-300"
+        x-transition:leave-start="translate-x-0"
+        x-transition:leave-end="-translate-x-full">
+        <div class="w-full flex flex-col h-full" id="drawer-content-area">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h2 class="text-lg font-bold text-slate-800">الإجراء</h2>
+                <button @click="drawerOpen = false" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6" id="drawer-body">
+                {# محتوى الدرج يُحمَّل هنا بـ HTMX #}
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{# medications/partials/transfer_form.html — Drawer content #}
+<form method="POST" action="{% url 'medications:transfer_to_medications' service_request.pk %}"
+    hx-post="{% url 'medications:transfer_to_medications' service_request.pk %}"
+    hx-target="#drawer-body"
+    hx-swap="innerHTML">
+    {% csrf_token %}
+
+    <div class="mb-6 p-4 bg-brand-50 border border-brand-200 rounded-md text-sm text-brand-800">
+        <p class="font-bold mb-1">طلب الخدمة: <span class="font-mono">{{ service_request.reference }}</span></p>
+        <p>العضو: <span class="font-medium">{{ service_request.member.full_name }}</span></p>
+        <p>نوع الطلب: <span class="font-medium">{{ service_request.request_type.name_ar }}</span></p>
+    </div>
+
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">تاريخ الوصفة الطبية <span class="text-red-500">*</span></label>
+            {{ form.prescription_date }}
+            {% if form.prescription_date.errors %}<p class="text-red-500 text-xs mt-1">{{ form.prescription_date.errors.0 }}</p>{% endif %}
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">صلاحية الوصفة (شهر)</label>
+                {{ form.prescription_validity_months }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">فترة الصرف (شهر) <span class="text-red-500">*</span></label>
+                {{ form.interval_months }}
+                {% if form.interval_months.errors %}<p class="text-red-500 text-xs mt-1">{{ form.interval_months.errors.0 }}</p>{% endif %}
+            </div>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">المدة الإجمالية (شهر) <span class="text-red-500">*</span></label>
+            {{ form.total_duration_months }}
+            {% if form.total_duration_months.errors %}<p class="text-red-500 text-xs mt-1">{{ form.total_duration_months.errors.0 }}</p>{% endif %}
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">عنوان التسليم</label>
+            {{ form.delivery_address }}
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">ملاحظة الوسيط</label>
+            {{ form.broker_note }}
+        </div>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="mt-6 flex gap-3">
+        <button type="submit"
+            class="flex-1 bg-brand-600 text-white py-2 rounded-md font-bold hover:bg-brand-700 transition flex items-center justify-center gap-2">
+            <i class="ph-duotone ph-arrows-merge"></i>
+            نقل إلى وحدة الأدوية
+        </button>
+        <button type="button" @click="drawerOpen = false"
+            class="flex-1 bg-white border border-slate-300 text-slate-700 py-2 rounded-md font-medium hover:bg-slate-50">
+            إلغاء
+        </button>
+    </div>
+</form>
