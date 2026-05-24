@@ -2,6 +2,8 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from .models import User
 from clients.models import Client
+from brokers.models import Broker
+from partners.models import Partner
 
 class LoginForm(AuthenticationForm):
     username = forms.CharField(widget=forms.TextInput(attrs={
@@ -26,7 +28,11 @@ class StaffUserForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email', 'role', 'related_client', 'phone_number', 'is_active']
+        fields = [
+            'username', 'first_name', 'last_name', 'email', 'role',
+            'related_broker', 'related_client', 'related_partner',
+            'phone_number', 'is_active',
+        ]
         widgets = {
             'username': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500',
@@ -47,7 +53,13 @@ class StaffUserForm(forms.ModelForm):
             'role': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'
             }),
+            'related_broker': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'
+            }),
             'related_client': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'
+            }),
+            'related_partner': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'
             }),
             'phone_number': forms.TextInput(attrs={
@@ -61,12 +73,16 @@ class StaffUserForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # تخصيص قائمة الشركات
+        if 'related_broker' in self.fields:
+            self.fields['related_broker'].required = False
+            self.fields['related_broker'].empty_label = "— لا يتبع وسيطاً —"
         if 'related_client' in self.fields:
             self.fields['related_client'].required = False
-            self.fields['related_client'].empty_label = "لا يتبع لشركة (خاص بموظفي الوسيط)"
-        
-        # إذا كان تعديلاً، كلمة المرور ليست إلزامية
+            self.fields['related_client'].empty_label = "— لا يتبع شركة —"
+        if 'related_partner' in self.fields:
+            self.fields['related_partner'].required = False
+            self.fields['related_partner'].empty_label = "— لا يتبع شريكاً —"
+
         if self.instance.pk:
             self.fields['password'].help_text = "اتركه فارغاً إذا كنت لا ترغب في تغيير كلمة المرور"
         else:
@@ -80,6 +96,20 @@ class StaffUserForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+
+class BrokerStaffForm(StaffUserForm):
+    """
+    نموذج لمدراء الوسيط — ينشئ BROKER_STAFF فقط.
+    الدور والوسيط يُعيَّنان تلقائياً من المستخدم المنشئ.
+    """
+    class Meta(StaffUserForm.Meta):
+        fields = ['username', 'first_name', 'last_name', 'email', 'phone_number', 'is_active']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for f in ['role', 'related_broker', 'related_client', 'related_partner']:
+            self.fields.pop(f, None)
+
 
 class HRStaffForm(StaffUserForm):
     """

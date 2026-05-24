@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.db import transaction
@@ -134,6 +134,7 @@ def add_claim_comment(request, pk):
 # ==========================================
 
 @login_required
+@permission_required('claims.can_submit_claim', raise_exception=True)
 @require_POST
 def submit_claim_to_hr(request, pk):
     claim = get_object_or_404(get_allowed_claims(request.user), pk=pk)
@@ -148,6 +149,7 @@ def submit_claim_to_hr(request, pk):
     return redirect('claims:claim_detail', pk=pk)
 
 @login_required
+@permission_required('claims.can_reject_hr', raise_exception=True)
 @require_POST
 def hr_return_claim(request, pk):
     claim = get_object_or_404(get_allowed_claims(request.user), pk=pk)
@@ -168,6 +170,7 @@ def hr_return_claim(request, pk):
 
 
 @login_required
+@permission_required('claims.can_approve_hr', raise_exception=True)
 @require_POST
 def hr_approve_claim(request, pk):
     claim = get_object_or_404(get_allowed_claims(request.user), pk=pk)
@@ -181,6 +184,7 @@ def hr_approve_claim(request, pk):
     return redirect('claims:claim_detail', pk=pk)
 
 @login_required
+@permission_required('claims.can_process_broker', raise_exception=True)
 @require_POST
 def broker_start_processing(request, pk):
     claim = get_object_or_404(get_allowed_claims(request.user), pk=pk)
@@ -194,6 +198,7 @@ def broker_start_processing(request, pk):
     return redirect('claims:claim_detail', pk=pk)
 
 @login_required
+@permission_required('claims.can_process_broker', raise_exception=True)
 @require_POST
 def broker_return_claim(request, pk):
     claim = get_object_or_404(get_allowed_claims(request.user), pk=pk)
@@ -212,6 +217,7 @@ def broker_return_claim(request, pk):
     return redirect('claims:claim_detail', pk=pk)
 
 @login_required
+@permission_required('claims.can_process_broker', raise_exception=True)
 @require_POST
 def send_to_insurance(request, pk):
     claim = get_object_or_404(get_allowed_claims(request.user), pk=pk)
@@ -225,6 +231,7 @@ def send_to_insurance(request, pk):
     return redirect('claims:claim_detail', pk=pk)
 
 @login_required
+@permission_required('claims.can_process_insurance', raise_exception=True)
 @require_POST
 def insurance_query_claim(request, pk):
     claim = get_object_or_404(get_allowed_claims(request.user), pk=pk)
@@ -238,6 +245,7 @@ def insurance_query_claim(request, pk):
     return redirect('claims:claim_detail', pk=pk)
 
 @login_required
+@permission_required('claims.can_process_broker', raise_exception=True)
 @require_POST
 def answer_insurance_query(request, pk):
     claim = get_object_or_404(get_allowed_claims(request.user), pk=pk)
@@ -251,6 +259,7 @@ def answer_insurance_query(request, pk):
     return redirect('claims:claim_detail', pk=pk)
 
 @login_required
+@permission_required('claims.can_process_insurance', raise_exception=True)
 @require_POST
 def insurance_approve_claim(request, pk):
     claim = get_object_or_404(get_allowed_claims(request.user), pk=pk)
@@ -264,6 +273,7 @@ def insurance_approve_claim(request, pk):
     return redirect('claims:claim_detail', pk=pk)
 
 @login_required
+@permission_required('claims.can_process_insurance', raise_exception=True)
 @require_POST
 def insurance_reject_claim(request, pk):
     claim = get_object_or_404(get_allowed_claims(request.user), pk=pk)
@@ -283,6 +293,7 @@ def insurance_reject_claim(request, pk):
 
 
 @login_required
+@permission_required('claims.can_approve_payment', raise_exception=True)
 @require_POST
 def mark_claim_as_paid(request, pk):
     claim = get_object_or_404(get_allowed_claims(request.user), pk=pk)
@@ -306,10 +317,8 @@ def mark_claim_as_paid(request, pk):
     return redirect('claims:claim_detail', pk=pk)
 
 @login_required
+@permission_required('claims.can_submit_claim', raise_exception=True)
 def claim_create(request):
-    if not request.user.has_perm('claims.can_submit_claim'):
-        messages.error(request, "لا تملك الصلاحية لإضافة مطالبة.")
-        return redirect('claims:claim_list')
 
     if request.method == 'POST':
         form = ClaimCreateForm(request.POST, request.FILES, user=request.user)
@@ -344,6 +353,7 @@ def claim_create(request):
     return render(request, 'claims/claim_create.html', {'form': form})
 
 @login_required
+@permission_required('claims.can_submit_claim', raise_exception=True)
 def search_member_by_nid(request):
     """
     بحث عن مشترك باستخدام رقم الهوية.

@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.db import transaction
@@ -26,7 +26,7 @@ def get_allowed_requests(user):
     if user.role == User.Roles.SUPER_ADMIN:
         return base_qs
 
-    # 2. الوسيط يرى طلبات الشركات التابعة له
+    # 2. الوسيط يرى طلبات الشركات التابعة له (بدون مسودات وبدون طلبات HR)
     elif user.is_broker_role and user.related_broker:
         return base_qs.filter(member__client__broker=user.related_broker)
 
@@ -51,9 +51,11 @@ def request_list(request):
     user = request.user
     requests_qs = get_allowed_requests(user)
 
-    # الوسيط لا يرى المسودات
+    # الوسيط لا يرى المسودات ولا طلبات HR_REVIEW (لم تصله بعد)
     if user.is_broker_role:
-        requests_qs = requests_qs.exclude(status=ServiceRequest.Status.DRAFT)
+        requests_qs = requests_qs.exclude(
+            status__in=[ServiceRequest.Status.DRAFT, ServiceRequest.Status.HR_REVIEW]
+        )
 
     # فلترة بالحالة
     status_filter = request.GET.get('status', '')
@@ -116,14 +118,24 @@ def request_detail(request, pk):
             'value': data.get(field.get('name', ''), ''),
         })
 
+    # هل أحال HR الطلب للوسيط بالفعل؟ (الطلب في SUBMITTED ولكن بعد hr_forward)
+    last_log = sreq.status_logs.first()  # مرتّب بـ -created_at
+    hr_already_forwarded = (
+        sreq.status == ServiceRequest.Status.SUBMITTED
+        and last_log is not None
+        and last_log.action == 'hr_forward'
+    )
+
     context = {
         'sreq': sreq,
         'fields_with_values': fields_with_values,
+        'hr_already_forwarded': hr_already_forwarded,
     }
     return render(request, 'service_requests/request_detail.html', context)
 
 
 @login_required
+@permission_required('service_requests.can_submit_service_request', raise_exception=True)
 def request_edit(request, pk):
     sreq = get_object_or_404(get_allowed_requests(request.user), pk=pk)
     
@@ -185,6 +197,7 @@ def request_edit(request, pk):
 
 
 @login_required
+@permission_required('service_requests.can_submit_service_request', raise_exception=True)
 def request_delete(request, pk):
     sreq = get_object_or_404(get_allowed_requests(request.user), pk=pk)
     
@@ -221,6 +234,7 @@ def add_attachment(request, pk):
 # إنشاء طلب جديد
 # ==========================================
 @login_required
+@permission_required('service_requests.can_submit_service_request', raise_exception=True)
 def request_create(request):
     user = request.user
     request_types = RequestType.objects.filter(is_active=True).order_by('display_order')
@@ -354,6 +368,7 @@ def search_member_by_nid(request):
 # إرسال الطلب (Member / HR)
 # ==========================================
 @login_required
+@permission_required('service_requests.can_submit_service_request', raise_exception=True)
 @require_POST
 def submit_request(request, pk):
     sreq = get_object_or_404(get_allowed_requests(request.user), pk=pk)
@@ -370,6 +385,7 @@ def submit_request(request, pk):
 # إجراءات الوسيط (Broker Actions)
 # ==========================================
 @login_required
+@permission_required('service_requests.can_process_service_request', raise_exception=True)
 @require_POST
 def broker_start_review(request, pk):
     sreq = get_object_or_404(get_allowed_requests(request.user), pk=pk)
@@ -383,6 +399,7 @@ def broker_start_review(request, pk):
 
 
 @login_required
+@permission_required('service_requests.can_process_service_request', raise_exception=True)
 @require_POST
 def broker_return_request(request, pk):
     sreq = get_object_or_404(get_allowed_requests(request.user), pk=pk)
@@ -401,6 +418,7 @@ def broker_return_request(request, pk):
 
 
 @login_required
+@permission_required('service_requests.can_process_service_request', raise_exception=True)
 @require_POST
 def broker_resolve_request(request, pk):
     sreq = get_object_or_404(get_allowed_requests(request.user), pk=pk)
@@ -416,6 +434,7 @@ def broker_resolve_request(request, pk):
 
 
 @login_required
+@permission_required('service_requests.can_process_service_request', raise_exception=True)
 @require_POST
 def broker_reject_request(request, pk):
     sreq = get_object_or_404(get_allowed_requests(request.user), pk=pk)
@@ -428,6 +447,74 @@ def broker_reject_request(request, pk):
         with transaction.atomic():
             sreq.reject(user=request.user, note=note)
         messages.error(request, "تم رفض الطلب.")
+    except ValueError as e:
+        messages.error(request, str(e))
+    return redirect('service_requests:request_detail', pk=pk)
+
+
+# ==========================================
+# إجراءات الموارد البشرية (HR Actions)
+# ==========================================
+@login_required
+@permission_required('service_requests.can_process_hr_request', raise_exception=True)
+@require_POST
+def hr_start_review(request, pk):
+    sreq = get_object_or_404(get_allowed_requests(request.user), pk=pk)
+    try:
+        with transaction.atomic():
+            sreq.hr_start_review(user=request.user)
+        messages.success(request, "تم بدء مراجعة HR للطلب.")
+    except ValueError as e:
+        messages.error(request, str(e))
+    return redirect('service_requests:request_detail', pk=pk)
+
+
+@login_required
+@permission_required('service_requests.can_process_hr_request', raise_exception=True)
+@require_POST
+def hr_return_request(request, pk):
+    sreq = get_object_or_404(get_allowed_requests(request.user), pk=pk)
+    note = request.POST.get('note', '').strip()
+    if not note:
+        messages.error(request, "يجب كتابة سبب لإعادة الطلب.")
+        return redirect('service_requests:request_detail', pk=pk)
+    try:
+        with transaction.atomic():
+            sreq.hr_return_request(user=request.user, note=note)
+        messages.success(request, "تم إعادة الطلب للمُقدِّم.")
+    except ValueError as e:
+        messages.error(request, str(e))
+    return redirect('service_requests:request_detail', pk=pk)
+
+
+@login_required
+@permission_required('service_requests.can_process_hr_request', raise_exception=True)
+@require_POST
+def hr_reject_request(request, pk):
+    sreq = get_object_or_404(get_allowed_requests(request.user), pk=pk)
+    note = request.POST.get('note', '').strip()
+    if not note:
+        messages.error(request, "يجب كتابة سبب لرفض الطلب.")
+        return redirect('service_requests:request_detail', pk=pk)
+    try:
+        with transaction.atomic():
+            sreq.hr_reject_request(user=request.user, note=note)
+        messages.error(request, "تم رفض الطلب من قِبَل HR.")
+    except ValueError as e:
+        messages.error(request, str(e))
+    return redirect('service_requests:request_detail', pk=pk)
+
+
+@login_required
+@permission_required('service_requests.can_process_hr_request', raise_exception=True)
+@require_POST
+def hr_forward_to_broker(request, pk):
+    sreq = get_object_or_404(get_allowed_requests(request.user), pk=pk)
+    note = request.POST.get('note', '').strip()
+    try:
+        with transaction.atomic():
+            sreq.hr_forward_to_broker(user=request.user, note=note)
+        messages.success(request, "تم إحالة الطلب إلى الوسيط.")
     except ValueError as e:
         messages.error(request, str(e))
     return redirect('service_requests:request_detail', pk=pk)

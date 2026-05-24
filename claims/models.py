@@ -100,6 +100,7 @@ class Claim(models.Model):
             ("can_approve_hr", "Can approve claim as HR"),
             ("can_reject_hr", "Can return/reject claim as HR"),
             ("can_process_broker", "Can process claim as Broker"),
+            ("can_process_insurance", "Can process claim as Insurance Provider"),
             ("can_approve_payment", "Can mark claim as Paid"),
             ("can_view_all_claims", "Can view all claims"),
             ("view_sensitive_medical_data", "Can view sensitive medical attachments"),

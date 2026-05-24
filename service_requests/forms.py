@@ -72,10 +72,24 @@ class ServiceRequestCreateForm(forms.Form):
                 except Exception:
                     self.fields['member'].queryset = Member.objects.none()
 
-            # 2. HR / Broker / Super Admin — بحث برقم الهوية
+            # 2. HR / Broker / Super Admin — بحث برقم الهوية + حقل مخفي
             else:
                 self.fields['member'].required = False
                 self.fields['member'].widget = forms.HiddenInput()
+                # تحديد queryset بنطاق صلاحيات المستخدم:
+                # هذا يضمن أن Django يقبل الـ UUID المُرسَل فقط إن كان ضمن النطاق المسموح،
+                # ويمنع أي تلاعب بالـ POST لاختيار عضو خارج الصلاحية.
+                if self.user.role == User.Roles.SUPER_ADMIN:
+                    self.fields['member'].queryset = Member.objects.all()
+                elif self.user.is_broker_role and self.user.related_broker:
+                    self.fields['member'].queryset = Member.objects.filter(
+                        client__broker=self.user.related_broker
+                    )
+                elif self.user.is_hr_role and self.user.related_client:
+                    self.fields['member'].queryset = Member.objects.filter(
+                        client=self.user.related_client
+                    )
+                # else: يبقى none() — لا يملك هذا الدور صلاحية التقديم أصلاً
 
     def clean(self):
         cleaned_data = super().clean()

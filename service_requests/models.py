@@ -78,6 +78,7 @@ class ServiceRequest(models.Model):
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', _('Draft')
         SUBMITTED = 'SUBMITTED', _('Submitted')
+        HR_REVIEW = 'HR_REVIEW', _('HR Review')
         IN_REVIEW = 'IN_REVIEW', _('In Review')
         RETURNED = 'RETURNED', _('Returned (Needs More Info)')
         RESOLVED = 'RESOLVED', _('Resolved')
@@ -129,8 +130,9 @@ class ServiceRequest(models.Model):
         help_text=_("Stores the dynamic field values as key-value pairs")
     )
 
-    # ملاحظات الوسيط
+    # ملاحظات الوسيط وملاحظات الموارد البشرية
     broker_note = models.TextField(_("Broker Note / Resolution"), blank=True)
+    hr_note = models.TextField(_("HR Note"), blank=True)
 
     # التواريخ
     created_at = models.DateTimeField(auto_now_add=True)
@@ -144,6 +146,7 @@ class ServiceRequest(models.Model):
         permissions = [
             ("can_submit_service_request", "Can submit new service request"),
             ("can_process_service_request", "Can process/resolve service request as Broker"),
+            ("can_process_hr_request", "Can review/forward service requests as HR"),
         ]
 
     def __str__(self):
@@ -182,24 +185,75 @@ class ServiceRequest(models.Model):
         )
 
     def submit(self, user):
-        """DRAFT / RETURNED → SUBMITTED"""
+        """DRAFT / RETURNED → SUBMITTED (or HR_REVIEW if client requires it)"""
         if self.status not in [self.Status.DRAFT, self.Status.RETURNED]:
             raise ValueError(_("Cannot submit from current status."))
         old = self.status
-        self.status = self.Status.SUBMITTED
         from django.utils import timezone
         self.submitted_at = timezone.now()
-        self.save()
-        self.log_status_change(user, old, self.Status.SUBMITTED, 'submit')
+
+        # إذا كانت الشركة تتطلب مراجعة HR، يذهب الطلب لـ HR أولاً
+        client = getattr(self.member, 'client', None)
+        if client and getattr(client, 'require_hr_review', False):
+            self.status = self.Status.HR_REVIEW
+            self.save()
+            self.log_status_change(user, old, self.Status.HR_REVIEW, 'submit')
+        else:
+            self.status = self.Status.SUBMITTED
+            self.save()
+            self.log_status_change(user, old, self.Status.SUBMITTED, 'submit')
 
     def start_review(self, user):
-        """SUBMITTED → IN_REVIEW"""
+        """SUBMITTED → IN_REVIEW (Broker)"""
         if self.status != self.Status.SUBMITTED:
             raise ValueError(_("Cannot start review from current status."))
         old = self.status
         self.status = self.Status.IN_REVIEW
         self.save()
         self.log_status_change(user, old, self.Status.IN_REVIEW, 'start_review')
+
+    # ====================================================
+    # HR Transition Methods
+    # ====================================================
+    def hr_start_review(self, user):
+        """SUBMITTED → HR_REVIEW (HR starts reviewing before broker)"""
+        if self.status != self.Status.SUBMITTED:
+            raise ValueError(_("Cannot start HR review from current status."))
+        old = self.status
+        self.status = self.Status.HR_REVIEW
+        self.save()
+        self.log_status_change(user, old, self.Status.HR_REVIEW, 'hr_start_review')
+
+    def hr_return_request(self, user, note=''):
+        """HR_REVIEW → RETURNED"""
+        if self.status != self.Status.HR_REVIEW:
+            raise ValueError(_("Cannot return from current status."))
+        old = self.status
+        self.status = self.Status.RETURNED
+        self.hr_note = note
+        self.save()
+        self.log_status_change(user, old, self.Status.RETURNED, 'hr_return', note)
+
+    def hr_reject_request(self, user, note=''):
+        """HR_REVIEW → REJECTED"""
+        if self.status != self.Status.HR_REVIEW:
+            raise ValueError(_("Cannot reject from current status."))
+        old = self.status
+        self.status = self.Status.REJECTED
+        self.hr_note = note
+        self.save()
+        self.log_status_change(user, old, self.Status.REJECTED, 'hr_reject', note)
+
+    def hr_forward_to_broker(self, user, note=''):
+        """HR_REVIEW → SUBMITTED (forward to broker for processing)"""
+        if self.status != self.Status.HR_REVIEW:
+            raise ValueError(_("Cannot forward from current status."))
+        old = self.status
+        self.status = self.Status.SUBMITTED
+        if note:
+            self.hr_note = note
+        self.save()
+        self.log_status_change(user, old, self.Status.SUBMITTED, 'hr_forward', note)
 
     def return_request(self, user, note=''):
         """IN_REVIEW → RETURNED"""

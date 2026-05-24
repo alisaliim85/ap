@@ -23,10 +23,13 @@
         </div>
 
         <div class="p-8">
-            <form method="post" class="space-y-6">
+            <form method="post" class="space-y-6"
+                x-data="{ role: '{{ form.instance.role|default:'' }}' }">
                 {% csrf_token %}
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <!-- اسم المستخدم -->
                     <div class="md:col-span-2">
                         <label class="block text-sm font-bold text-slate-700 mb-2">اسم المستخدم (للدخول)</label>
                         {{ form.username }}
@@ -35,63 +38,110 @@
                         {% endif %}
                     </div>
 
+                    <!-- الاسم -->
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">الاسم الأول</label>
                         {{ form.first_name }}
+                        {% if form.first_name.errors %}<p class="text-red-500 text-xs mt-1">{{ form.first_name.errors.0 }}</p>{% endif %}
                     </div>
-
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">اسم العائلة</label>
                         {{ form.last_name }}
+                        {% if form.last_name.errors %}<p class="text-red-500 text-xs mt-1">{{ form.last_name.errors.0 }}</p>{% endif %}
                     </div>
 
+                    <!-- البريد ورقم الهاتف -->
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">البريد الإلكتروني</label>
                         {{ form.email }}
+                        {% if form.email.errors %}<p class="text-red-500 text-xs mt-1">{{ form.email.errors.0 }}</p>{% endif %}
                     </div>
-
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">رقم الهاتف</label>
                         {{ form.phone_number }}
                     </div>
+                </div>
 
-                    <div class="pt-4 md:col-span-2 border-t border-slate-100">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-sm font-bold text-slate-700 mb-2">الدور (الصلاحية)</label>
-                                {{ form.role }}
-                            </div>
+                <!-- ─── الدور والجهة ─── -->
+                <div class="pt-4 border-t border-slate-100 space-y-4">
+                    <h4 class="text-sm font-black text-slate-600 uppercase tracking-widest">الدور والجهة التابع لها</h4>
 
-                            <div>
-                                <label class="block text-sm font-bold text-slate-700 mb-2">الجهة التابع لها</label>
-                                {{ form.related_client }}
-                                <p class="text-[10px] text-slate-400 mt-1">يُشترط اختيار شركة في حال اختيار دور HR.</p>
-                            </div>
-                        </div>
+                    <!-- الدور -->
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">الدور (الصلاحية)</label>
+                        <select name="{{ form.role.html_name }}" id="{{ form.role.id_for_label }}"
+                            x-model="role"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            {% for value, label in form.role.field.choices %}
+                            <option value="{{ value }}" {% if form.role.value == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.role.errors %}<p class="text-red-500 text-xs mt-1">{{ form.role.errors.0 }}</p>{% endif %}
                     </div>
 
-                    <div class="md:col-span-2 pt-4 border-t border-slate-100">
-                        <label class="block text-sm font-bold text-slate-700 mb-2">كلمة المرور</label>
-                        {{ form.password }}
-                        {% if form.password.help_text %}
-                        <p class="text-[10px] text-slate-400 mt-2">{{ form.password.help_text }}</p>
-                        {% endif %}
+                    <!-- الوسيط — يظهر لـ BROKER_ADMIN و BROKER_STAFF -->
+                    <div x-show="role === 'BROKER_ADMIN' || role === 'BROKER_STAFF'" x-cloak>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">
+                            <i class="ph-duotone ph-briefcase text-brand-500"></i> شركة الوساطة
+                        </label>
+                        {{ form.related_broker }}
+                        <p class="text-[10px] text-slate-400 mt-1">مطلوب لأدوار فريق الوسيط.</p>
+                        {% if form.related_broker.errors %}<p class="text-red-500 text-xs mt-1">{{ form.related_broker.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <!-- الشركة العميلة — يظهر لـ HR_ADMIN و HR_STAFF و MEMBER -->
+                    <div x-show="role === 'HR_ADMIN' || role === 'HR_STAFF' || role === 'MEMBER'" x-cloak>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">
+                            <i class="ph-duotone ph-buildings text-brand-500"></i> الشركة العميلة
+                        </label>
+                        {{ form.related_client }}
+                        <p class="text-[10px] text-slate-400 mt-1">مطلوب لأدوار HR والأعضاء.</p>
+                        {% if form.related_client.errors %}<p class="text-red-500 text-xs mt-1">{{ form.related_client.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <!-- الشريك — يظهر لـ PHARMACIST و CHRONIC_ADMIN و CHRONIC_STAFF -->
+                    <div x-show="role === 'PHARMACIST' || role === 'CHRONIC_ADMIN' || role === 'CHRONIC_STAFF'" x-cloak>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">
+                            <i class="ph-duotone ph-handshake text-brand-500"></i> الشريك / المزوّد
+                        </label>
+                        {{ form.related_partner }}
+                        <p class="text-[10px] text-slate-400 mt-1">مطلوب لفريق الشركاء والصيادلة.</p>
+                        {% if form.related_partner.errors %}<p class="text-red-500 text-xs mt-1">{{ form.related_partner.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <!-- تنبيه للأدوار التي لا تحتاج ربط -->
+                    <div x-show="role === 'SUPER_ADMIN' || role === 'VIEWER' || role === 'INSURANCE' || role === ''" x-cloak>
+                        <div class="flex items-center gap-2 text-slate-400 text-sm bg-slate-50 rounded-lg px-4 py-3 border border-slate-200">
+                            <i class="ph-duotone ph-info text-lg"></i>
+                            <span>هذا الدور لا يحتاج ربطاً بجهة معينة.</span>
+                        </div>
                     </div>
                 </div>
 
+                <!-- ─── كلمة المرور ─── -->
+                <div class="pt-4 border-t border-slate-100">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">كلمة المرور</label>
+                    {{ form.password }}
+                    {% if form.password.help_text %}
+                    <p class="text-[10px] text-slate-400 mt-2">{{ form.password.help_text }}</p>
+                    {% endif %}
+                    {% if form.password.errors %}<p class="text-red-500 text-xs mt-1">{{ form.password.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- ─── تفعيل الحساب ─── -->
                 <div class="pt-4 border-t border-slate-100">
                     <div class="flex items-center gap-3">
                         <div class="flex items-center h-5">
                             {{ form.is_active }}
                         </div>
                         <div class="text-sm">
-                            <label for="{{ form.is_active.id_for_label }}" class="font-bold text-slate-700">تمكين
-                                الحساب</label>
+                            <label for="{{ form.is_active.id_for_label }}" class="font-bold text-slate-700">تمكين الحساب</label>
                             <p class="text-slate-500 text-xs">تعطيل الحساب سيمنع المستخدم من تسجيل الدخول فوراً.</p>
                         </div>
                     </div>
                 </div>
 
+                <!-- ─── أزرار الحفظ ─── -->
                 <div class="pt-6 border-t border-slate-200 flex justify-end gap-3">
                     <a href="{% url 'user_list' %}"
                         class="px-6 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-bold transition">

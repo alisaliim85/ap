@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
 from django.db.models import Q
-from .forms import LoginForm, StaffUserForm, HRStaffForm, ProfileForm
+from .forms import LoginForm, StaffUserForm, BrokerStaffForm, HRStaffForm, ProfileForm
 from .models import User
 
 def login_view(request):
@@ -88,9 +88,11 @@ def dashboard(request):
 # --- إدارة المستخدمين (للوسيط فقط) ---
 
 @login_required
-@permission_required('accounts.manage_users','accounts.view_broker_dashboard', raise_exception=True)
+@permission_required('accounts.manage_users', raise_exception=True)
 def user_list(request):
-    users_list = User.objects.select_related('related_client').all().order_by('-date_joined')
+    users_list = User.objects.select_related(
+        'related_client', 'related_broker', 'related_partner'
+    ).all().order_by('-date_joined')
 
     # البحث
     search_query = request.GET.get('search', '')
@@ -114,7 +116,7 @@ def user_list(request):
     return render(request, 'accounts/user_list.html', {'users': page_obj, 'page_obj': page_obj})
 
 @login_required
-@permission_required('accounts.manage_users','accounts.view_broker_dashboard', raise_exception=True)
+@permission_required('accounts.manage_users', raise_exception=True)
 def user_create(request):
     if request.method == 'POST':
         form = StaffUserForm(request.POST)
@@ -128,7 +130,7 @@ def user_create(request):
     return render(request, 'accounts/user_form.html', {'form': form, 'title': 'إضافة مستخدم جديد'})
 
 @login_required
-@permission_required('accounts.manage_users','accounts.view_broker_dashboard', raise_exception=True)
+@permission_required('accounts.manage_users', raise_exception=True)
 def user_update(request, pk):
     user_to_edit = get_object_or_404(User, pk=pk)
 
@@ -144,7 +146,7 @@ def user_update(request, pk):
     return render(request, 'accounts/user_form.html', {'form': form, 'title': f'تعديل المستخدم: {user_to_edit.username}', 'user_to_edit': user_to_edit})
 
 @login_required
-@permission_required('accounts.manage_users','accounts.view_broker_dashboard', raise_exception=True)
+@permission_required('accounts.manage_users', raise_exception=True)
 def user_delete(request, pk):
     user_to_delete = get_object_or_404(User, pk=pk)
 
@@ -245,6 +247,102 @@ def hr_user_delete(request, pk):
         return redirect('hr_user_list')
     
     return render(request, 'accounts/hr_user_confirm_delete.html', {'user_to_delete': user_to_delete})
+
+
+# --- إدارة موظفي الوسيط (للـ Broker Admin) ---
+
+@login_required
+@permission_required('accounts.manage_broker_staff', raise_exception=True)
+def broker_user_list(request):
+    broker = request.user.related_broker
+    users_list = User.objects.filter(
+        related_broker=broker,
+        role=User.Roles.BROKER_STAFF,
+    ).exclude(pk=request.user.pk).order_by('-date_joined')
+
+    search_query = request.GET.get('search', '')
+    if search_query:
+        users_list = users_list.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+
+    paginator = Paginator(users_list, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'accounts/partials/broker_user_table.html', {'users': page_obj, 'page_obj': page_obj})
+
+    return render(request, 'accounts/broker_user_list.html', {'users': page_obj, 'page_obj': page_obj})
+
+
+@login_required
+@permission_required('accounts.manage_broker_staff', raise_exception=True)
+def broker_user_create(request):
+    broker = request.user.related_broker
+    if not broker:
+        messages.error(request, "حسابك غير مرتبط بشركة وسيط.")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = BrokerStaffForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.role = User.Roles.BROKER_STAFF
+            user.related_broker = broker
+            user.save()
+            messages.success(request, "تم إضافة الموظف بنجاح.")
+            return redirect('broker_user_list')
+    else:
+        form = BrokerStaffForm()
+
+    return render(request, 'accounts/broker_user_form.html', {'form': form, 'title': 'إضافة موظف جديد'})
+
+
+@login_required
+@permission_required('accounts.manage_broker_staff', raise_exception=True)
+def broker_user_update(request, pk):
+    user_to_edit = get_object_or_404(User, pk=pk, role=User.Roles.BROKER_STAFF)
+
+    # حماية: لا يستطيع تعديل موظف من وسيط آخر
+    if user_to_edit.related_broker != request.user.related_broker:
+        messages.error(request, "ليس لديك صلاحية لتعديل هذا المستخدم.")
+        return redirect('broker_user_list')
+
+    if request.method == 'POST':
+        form = BrokerStaffForm(request.POST, instance=user_to_edit)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "تم تحديث بيانات الموظف بنجاح.")
+            return redirect('broker_user_list')
+    else:
+        form = BrokerStaffForm(instance=user_to_edit)
+
+    return render(request, 'accounts/broker_user_form.html', {
+        'form': form,
+        'title': f'تعديل الموظف: {user_to_edit.get_full_name() or user_to_edit.username}',
+    })
+
+
+@login_required
+@permission_required('accounts.manage_broker_staff', raise_exception=True)
+def broker_user_delete(request, pk):
+    user_to_delete = get_object_or_404(User, pk=pk, role=User.Roles.BROKER_STAFF)
+
+    # حماية: لا يستطيع حذف موظف من وسيط آخر
+    if user_to_delete.related_broker != request.user.related_broker:
+        messages.error(request, "ليس لديك صلاحية لحذف هذا المستخدم.")
+        return redirect('broker_user_list')
+
+    if request.method == 'POST':
+        username = user_to_delete.username
+        user_to_delete.delete()
+        messages.success(request, f"تم حذف الموظف {username} بنجاح.")
+        return redirect('broker_user_list')
+
+    return render(request, 'accounts/broker_user_confirm_delete.html', {'user_to_delete': user_to_delete})
 
 
 # --- الملف الشخصي ---

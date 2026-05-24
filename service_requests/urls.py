@@ -32,4 +32,12 @@ urlpatterns = [
     path('<uuid:pk>/return/', views.broker_return_request, name='broker_return_request'),
     path('<uuid:pk>/resolve/', views.broker_resolve_request, name='broker_resolve_request'),
     path('<uuid:pk>/reject/', views.broker_reject_request, name='broker_reject_request'),
+
+    # ==========================================
+    # 4. إجراءات الموارد البشرية (HR Actions)
+    # ==========================================
+    path('<uuid:pk>/hr-start-review/', views.hr_start_review, name='hr_start_review'),
+    path('<uuid:pk>/hr-return/', views.hr_return_request, name='hr_return_request'),
+    path('<uuid:pk>/hr-reject/', views.hr_reject_request, name='hr_reject_request'),
+    path('<uuid:pk>/hr-forward/', views.hr_forward_to_broker, name='hr_forward_to_broker'),
 ]

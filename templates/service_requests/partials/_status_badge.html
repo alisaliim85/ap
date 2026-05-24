@@ -11,6 +11,11 @@
     <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> مُرسل
 </span>
 
+{% elif status == 'HR_REVIEW' %}
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs font-bold border border-purple-100">
+    <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span> مراجعة HR
+</span>
+
 {% elif status == 'IN_REVIEW' %}
 <span class="inline-flex items-center gap-1 px-2 py-1 bg-brand-50 text-brand-700 rounded text-xs font-bold border border-brand-100">
     <span class="w-1.5 h-1.5 rounded-full bg-brand-600"></span> قيد المراجعة

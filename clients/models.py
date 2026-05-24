@@ -52,6 +52,12 @@ class Client(models.Model):
         help_text=_("JSON configuration for various services (e.g., claims workflow settings).")
     )
     
+    require_hr_review = models.BooleanField(
+        _("Require HR Review for Service Requests"),
+        default=False,
+        help_text=_("If enabled, service requests submitted by members will be reviewed by HR before being forwarded to the broker.")
+    )
+
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

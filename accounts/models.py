@@ -38,6 +38,7 @@ class User(AbstractUser):
             ("view_partner_dashboard", "Can view Partner Dashboard"),
             ("view_member_dashboard", "Can view Member Dashboard"),
             ("manage_users", "Can manage system users"),
+            ("manage_broker_staff", "Can manage broker staff"),
             ("manage_company_staff", "Can Manage My Staff")
         ]
 
