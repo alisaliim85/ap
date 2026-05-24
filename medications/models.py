@@ -84,6 +84,16 @@ class MedicationRequest(models.Model):
         db_index=True,
     )
 
+    # الصيدلية المخصصة لهذه الوصفة (تُختار من الوسيط عند التحويل)
+    pharmacy = models.ForeignKey(
+        'partners.Partner',
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='medication_requests',
+        verbose_name=_("Assigned Pharmacy"),
+        limit_choices_to={'partner_type': 'PHARMACY_CHAIN', 'is_active': True},
+    )
+
     broker_note = models.TextField(_("Broker Note"), blank=True)
 
     # Audit

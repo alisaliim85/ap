@@ -1,6 +1,7 @@
 """
 Medications app — full view implementation.
 """
+import math
 import shutil
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, permission_required
@@ -12,6 +13,7 @@ from django.core.files.base import ContentFile
 
 from service_requests.models import ServiceRequest, RequestAttachment
 from .models import MedicationRequest, MedicationRefill, MedicationAttachment
+from .models import _add_months
 from .forms import MedicationTransferForm, ScheduleRefillForm, RefillReviewForm
 from .utils import (
     check_policy_active_on_date,
@@ -42,7 +44,8 @@ def medication_dashboard(request):
         qs = qs.filter(status=status_filter)
 
     upcoming_refills = get_upcoming_refills(days=7)
-    expiring_prescriptions = get_expiring_prescriptions(days=10)
+    expiring_prescriptions = get_expiring_prescriptions(days=30)
+    expiring_pks = {mr.pk for mr in expiring_prescriptions}
 
     context = {
         'medication_requests': qs,
@@ -51,6 +54,7 @@ def medication_dashboard(request):
         'status_filter': status_filter,
         'upcoming_refills': upcoming_refills,
         'expiring_prescriptions': expiring_prescriptions,
+        'expiring_pks': expiring_pks,
     }
 
     if request.headers.get('HX-Request'):
@@ -80,10 +84,63 @@ def transfer_to_medications(request, service_request_id):
 
     if request.method == 'POST' and form.is_valid():
         cd = form.cleaned_data
+
+        # -----------------------------------------------------------------------
+        # التحقق من تغطية الوثيقة التأمينية لجميع دورات الصرف
+        # -----------------------------------------------------------------------
+        member = sr.member
+        total_cycles = math.ceil(cd['total_duration_months'] / cd['interval_months'])
+
+        first_cycle_date = cd['prescription_date']
+        last_cycle_date  = _add_months(first_cycle_date, (total_cycles - 1) * cd['interval_months'])
+
+        first_check = check_policy_active_on_date(member, first_cycle_date)
+        if not first_check['is_valid']:
+            # الدورة الأولى خارج تغطية الوثيقة — رفض كامل
+            expiry_str = (
+                first_check['expiry_date'].strftime('%Y-%m-%d')
+                if first_check['expiry_date'] else 'غير محددة'
+            )
+            form.add_error(
+                None,
+                f"لا يمكن إنشاء الوصفة: {first_check['message']} "
+                f"(انتهاء الوثيقة: {expiry_str}). "
+                "يرجى مراجعة تاريخ الوصفة أو التواصل مع الشركة لتجديد الوثيقة."
+            )
+        else:
+            last_check = check_policy_active_on_date(member, last_cycle_date)
+            if not last_check['is_valid']:
+                # بعض الدورات تتجاوز نهاية الوثيقة — احسب كم دورة مغطاة
+                covered = sum(
+                    1 for n in range(1, total_cycles + 1)
+                    if check_policy_active_on_date(
+                        member,
+                        _add_months(first_cycle_date, (n - 1) * cd['interval_months'])
+                    )['is_valid']
+                )
+                expiry_str = last_check['expiry_date'].strftime('%Y-%m-%d')
+                max_months = covered * cd['interval_months']
+                form.add_error(
+                    None,
+                    f"الوثيقة التأمينية تنتهي في {expiry_str}. "
+                    f"الجدول يتطلب {total_cycles} دورة ({first_cycle_date} ← {last_cycle_date})، "
+                    f"لكن {total_cycles - covered} دورة تقع بعد انتهاء الوثيقة. "
+                    f"يُرجى تعديل حقل 'المدة الإجمالية' إلى {max_months} شهراً كحد أقصى "
+                    f"({covered} دورة مغطاة فقط)."
+                )
+
+        # إذا وُجدت أخطاء في التحقق من الوثيقة — أعد النموذج بالرسائل
+        if form.errors:
+            context = {'form': form, 'service_request': sr}
+            if request.headers.get('HX-Request'):
+                return render(request, 'medications/partials/transfer_form.html', context)
+            return render(request, 'medications/partials/transfer_form.html', context)
+
         address_snapshot = {'address': cd.get('delivery_address', '')}
 
         med_req = MedicationRequest.objects.create(
             service_request=sr,
+            pharmacy=cd['pharmacy'],
             prescription_date=cd['prescription_date'],
             prescription_validity_months=cd['prescription_validity_months'],
             interval_months=cd['interval_months'],
@@ -91,6 +148,8 @@ def transfer_to_medications(request, service_request_id):
             delivery_address_snapshot=address_snapshot,
             broker_note=cd.get('broker_note', ''),
             created_by=request.user,
+            # تفعيل تلقائي — الصيدلية اختيرت والوصفة جاهزة
+            status=MedicationRequest.Status.ACTIVE,
         )
 
         # Copy attachments from the service request
@@ -110,23 +169,44 @@ def transfer_to_medications(request, service_request_id):
             except Exception:
                 pass  # If file copy fails, skip gracefully
 
-        # Update service request status
-        try:
-            sr.change_status(
-                new_status=ServiceRequest.Status.TRANSFERRED_TO_MEDICATIONS,
-                user=request.user,
-                action='transfer_to_medications',
-                note='تم نقل الطلب إلى وحدة الأدوية.',
-            )
-        except Exception:
-            sr.status = ServiceRequest.Status.TRANSFERRED_TO_MEDICATIONS
-            sr.save(update_fields=['status'])
+        # -----------------------------------------------------------------------
+        # جدولة تلقائية لكل دورات الصرف بناءً على الوصفة
+        # Cycle N scheduled_date = prescription_date + (N-1) × interval_months
+        # -----------------------------------------------------------------------
+        total_cycles = math.ceil(
+            cd['total_duration_months'] / cd['interval_months']
+        )
+        bulk_refills = []
+        for n in range(1, total_cycles + 1):
+            scheduled = _add_months(cd['prescription_date'], (n - 1) * cd['interval_months'])
+            bulk_refills.append(MedicationRefill(
+                medication_request=med_req,
+                cycle_number=n,
+                scheduled_date=scheduled,
+                partner=cd['pharmacy'],      # الصيدلية المخصصة من الوصفة
+                scheduled_by=request.user,
+                status=MedicationRefill.RefillStatus.PENDING,
+            ))
+        MedicationRefill.objects.bulk_create(bulk_refills)
 
-        messages.success(request, f'تم نقل الطلب بنجاح. المرجع: {med_req.reference}')
+        # تحديث حالة طلب الخدمة مع تسجيل أثر التدقيق
+        old_status = sr.status
+        sr.status = ServiceRequest.Status.TRANSFERRED_TO_MEDICATIONS
+        sr.save(update_fields=['status', 'updated_at'])
+        sr.log_status_change(
+            user=request.user,
+            from_status=old_status,
+            to_status=ServiceRequest.Status.TRANSFERRED_TO_MEDICATIONS,
+            action='transfer_to_medications',
+            note=f'تم نقل الطلب إلى وحدة الأدوية — الصيدلية: {med_req.pharmacy}',
+        )
+
+        messages.success(request, f'تم نقل الطلب وتفعيله بنجاح. المرجع: {med_req.reference}')
 
         if request.headers.get('HX-Request'):
+            from django.urls import reverse
             response = HttpResponse(status=204)
-            response['HX-Redirect'] = med_req.get_absolute_url() if hasattr(med_req, 'get_absolute_url') else '/'
+            response['HX-Redirect'] = reverse('medications:medication_detail', kwargs={'medication_request_id': med_req.pk})
             return response
         return redirect('medications:medication_detail', medication_request_id=med_req.pk)
 
@@ -143,7 +223,10 @@ def transfer_to_medications(request, service_request_id):
 @permission_required('medications.can_schedule_refill', raise_exception=True)
 def schedule_refill(request, medication_request_id):
     med_req = get_object_or_404(MedicationRequest, pk=medication_request_id)
-    form = ScheduleRefillForm(request.POST or None)
+
+    # الصيدلية الافتراضية من الوصفة — يمكن للوسيط تغييرها
+    initial_data = {'partner': med_req.pharmacy} if med_req.pharmacy else {}
+    form = ScheduleRefillForm(request.POST or None, initial=initial_data)
 
     # Compute next cycle number
     existing_cycles = med_req.refills.values_list('cycle_number', flat=True)
@@ -253,13 +336,23 @@ def medication_detail(request, medication_request_id):
     comments = med_req.comments.select_related('author').order_by('created_at')
     status_logs = med_req.status_logs.select_related('user').order_by('-created_at')
 
+    # معلومات الوثيقة التأمينية — للتحذيرات المبكرة
+    import datetime
+    policy_info = None
+    try:
+        member = med_req.service_request.member
+        policy_info = check_policy_active_on_date(member, datetime.date.today())
+    except Exception:
+        pass
+
     context = {
         'medication_request': med_req,
         'refills': refills,
         'attachments': attachments,
         'comments': comments,
         'status_logs': status_logs,
-        'schedule_form': ScheduleRefillForm(),
+        'policy_info': policy_info,
+        'schedule_form': ScheduleRefillForm(initial={'partner': med_req.pharmacy} if med_req.pharmacy else {}),
     }
     return render(request, 'medications/medication_detail.html', context)
 

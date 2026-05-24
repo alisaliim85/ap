@@ -27,6 +27,28 @@
     </div>
 </div>
 
+{# تحذير الوثيقة التأمينية #}
+{% if policy_info and not policy_info.is_valid and medication_request.status == 'ACTIVE' %}
+<div class="mb-4 p-4 bg-red-50 border border-red-300 rounded-md flex gap-3">
+    <i class="ph-duotone ph-shield-warning text-red-500 text-2xl flex-shrink-0"></i>
+    <div>
+        <p class="font-bold text-red-800 text-sm">تنبيه: الوثيقة التأمينية</p>
+        <p class="text-red-700 text-sm mt-0.5">{{ policy_info.message }}</p>
+        {% if policy_info.expiry_date %}
+        <p class="text-red-600 text-xs mt-1">تاريخ الانتهاء: {{ policy_info.expiry_date|date:"Y/m/d" }}</p>
+        {% endif %}
+    </div>
+</div>
+{% elif policy_info and policy_info.is_valid and policy_info.days_remaining <= 60 and medication_request.status == 'ACTIVE' %}
+<div class="mb-4 p-4 bg-amber-50 border border-amber-300 rounded-md flex gap-3">
+    <i class="ph-duotone ph-warning text-amber-500 text-2xl flex-shrink-0"></i>
+    <div>
+        <p class="font-bold text-amber-800 text-sm">تنبيه: الوثيقة التأمينية تقترب من الانتهاء</p>
+        <p class="text-amber-700 text-sm mt-0.5">تبقّى {{ policy_info.days_remaining }} يوماً (تنتهي: {{ policy_info.expiry_date|date:"Y/m/d" }})</p>
+    </div>
+</div>
+{% endif %}
+
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
     {# العمود الرئيسي #}
@@ -66,6 +88,19 @@
                     <p class="text-slate-800 mt-1">{{ medication_request.total_duration_months }} شهر ({{ medication_request.max_cycles }} دورة)</p>
                 </div>
                 <div>
+                    <span class="text-xs text-slate-400 uppercase font-bold">الصيدلية المخصصة</span>
+                    <p class="text-slate-800 mt-1 font-medium">
+                        {% if medication_request.pharmacy %}
+                            <span class="inline-flex items-center gap-1">
+                                <i class="ph-duotone ph-storefront text-brand-500"></i>
+                                {{ medication_request.pharmacy.name_ar }}
+                            </span>
+                        {% else %}
+                            <span class="text-slate-400">—</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
                     <span class="text-xs text-slate-400 uppercase font-bold">أُنشئ بواسطة</span>
                     <p class="text-slate-800 mt-1">{{ medication_request.created_by.get_full_name|default:medication_request.created_by.username }}</p>
                 </div>
@@ -97,18 +132,6 @@
 
                     {% if perms.medications.can_view_medication_dashboard or user.is_superuser %}
 
-                        {# PROCESSING → ACTIVE #}
-                        {% if medication_request.status == 'PROCESSING' %}
-                        <form method="post" action="{% url 'medications:change_medication_status' medication_request.pk %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="new_status" value="ACTIVE">
-                            <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-medium shadow-sm flex items-center gap-2 transition">
-                                <i class="ph-bold ph-play"></i>
-                                تفعيل الطلب
-                            </button>
-                        </form>
-                        {% endif %}
-
                         {# ACTIVE → COMPLETED #}
                         {% if medication_request.status == 'ACTIVE' %}
                         <button onclick="document.getElementById('complete-modal').classList.remove('hidden')"
@@ -127,16 +150,16 @@
                         </button>
                         {% endif %}
 
-                        {# جدولة دورة صرف — ACTIVE فقط #}
+                        {# إضافة دورة استثنائية — ACTIVE فقط (الدورات العادية تُنشأ تلقائياً) #}
                         {% if perms.medications.can_schedule_refill and medication_request.status == 'ACTIVE' %}
                         <button
                             hx-get="{% url 'medications:schedule_refill' medication_request.pk %}"
                             hx-target="#drawer-body"
                             hx-swap="innerHTML"
                             @click="drawerOpen = true"
-                            class="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 font-medium shadow-sm flex items-center gap-2 transition">
+                            class="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 font-medium shadow-sm flex items-center gap-2 transition">
                             <i class="ph-bold ph-calendar-plus"></i>
-                            جدولة دورة صرف
+                            إضافة دورة استثنائية
                         </button>
                         {% endif %}
 

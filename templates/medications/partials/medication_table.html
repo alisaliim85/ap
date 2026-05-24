@@ -22,7 +22,19 @@
                     <a href="{% url 'medications:medication_detail' mr.pk %}" class="hover:text-brand-600 transition">{{ mr.reference }}</a>
                 </td>
                 <td class="px-5 py-4 text-slate-600 font-mono text-xs">{{ mr.service_request.reference }}</td>
-                <td class="px-5 py-4 text-slate-600">{{ mr.prescription_date|date:"Y/m/d" }}</td>
+                <td class="px-5 py-4 text-slate-600">
+                    <span class="inline-flex items-center gap-1.5">
+                        {{ mr.prescription_date|date:"Y/m/d" }}
+                        {% if mr.pk in expiring_pks %}
+                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full
+                                     bg-amber-100 text-amber-700 text-xs font-bold"
+                              title="الوصفة تنتهي في {{ mr.prescription_expiry_date|date:'Y/m/d' }} — أقل من 30 يوم">
+                            <i class="ph-bold ph-warning"></i>
+                            {{ mr.prescription_expiry_date|date:"d/m" }}
+                        </span>
+                        {% endif %}
+                    </span>
+                </td>
                 <td class="px-5 py-4 text-slate-600">{{ mr.interval_months }}</td>
                 <td class="px-5 py-4 text-slate-600">{{ mr.total_duration_months }}</td>
                 <td class="px-5 py-4">
@@ -49,7 +61,17 @@
             <span class="font-mono font-bold text-slate-800 text-sm">{{ mr.reference }}</span>
             {% include 'medications/partials/_med_status_badge.html' with status=mr.status %}
         </div>
-        <p class="text-xs text-slate-500">وصفة: {{ mr.prescription_date|date:"Y/m/d" }} — كل {{ mr.interval_months }} شهر لمدة {{ mr.total_duration_months }} شهر</p>
+        <p class="text-xs text-slate-500">
+            وصفة:
+            {{ mr.prescription_date|date:"Y/m/d" }}
+            {% if mr.pk in expiring_pks %}
+            <span class="inline-flex items-center gap-0.5 text-amber-700 font-bold">
+                <i class="ph-bold ph-warning"></i>
+                (تنتهي {{ mr.prescription_expiry_date|date:"d/m" }})
+            </span>
+            {% endif %}
+            — كل {{ mr.interval_months }} شهر لمدة {{ mr.total_duration_months }} شهر
+        </p>
     </a>
     {% endfor %}
 </div>

@@ -7,6 +7,14 @@ from partners.models import Partner
 class MedicationTransferForm(forms.Form):
     """نموذج نقل طلب الخدمة إلى وحدة الأدوية."""
 
+    pharmacy = forms.ModelChoiceField(
+        label=_("الصيدلية المخصصة"),
+        queryset=Partner.objects.filter(partner_type='PHARMACY_CHAIN', is_active=True),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        empty_label=_("-- اختر الصيدلية --"),
+        help_text=_("الصيدلية التي ستتولى صرف الوصفة لكامل مدة العلاج."),
+    )
+
     prescription_date = forms.DateField(
         label=_("Prescription Date"),
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),

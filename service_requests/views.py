@@ -26,9 +26,19 @@ def get_allowed_requests(user):
     if user.role == User.Roles.SUPER_ADMIN:
         return base_qs
 
-    # 2. الوسيط يرى طلبات الشركات التابعة له (بدون مسودات وبدون طلبات HR)
+    # 2. الوسيط يرى طلبات الشركات التابعة له — مع استثناء:
+    #    - المسودات (DRAFT): لم ترسل بعد
+    #    - طلبات HR_REVIEW: لدى العملاء الذين يشترطون مراجعة الموارد البشرية،
+    #      الطلب لا يصل للوسيط إلا بعد أن يحيله قسم الموارد صراحةً.
     elif user.is_broker_role and user.related_broker:
-        return base_qs.filter(member__client__broker=user.related_broker)
+        return base_qs.filter(
+            member__client__broker=user.related_broker
+        ).exclude(
+            status__in=[
+                ServiceRequest.Status.DRAFT,
+                ServiceRequest.Status.HR_REVIEW,
+            ]
+        )
 
     # 3. الـ HR يرى طلبات شركته فقط
     elif user.is_hr_role and user.related_client:
@@ -50,12 +60,6 @@ def get_allowed_requests(user):
 def request_list(request):
     user = request.user
     requests_qs = get_allowed_requests(user)
-
-    # الوسيط لا يرى المسودات ولا طلبات HR_REVIEW (لم تصله بعد)
-    if user.is_broker_role:
-        requests_qs = requests_qs.exclude(
-            status__in=[ServiceRequest.Status.DRAFT, ServiceRequest.Status.HR_REVIEW]
-        )
 
     # فلترة بالحالة
     status_filter = request.GET.get('status', '')
