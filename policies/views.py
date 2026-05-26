@@ -128,9 +128,11 @@ def policy_update(request, pk):
 def policy_delete(request, pk):
     policy = get_object_or_404(get_allowed_policies(request.user), pk=pk)
     if request.method == 'POST':
+        # حذف لين: في أنظمة التأمين لا تُحذف الوثيقة أبداً حفاظاً على سجل المطالبات التاريخية
         num = policy.policy_number
-        policy.delete()
-        messages.success(request, f"تم حذف البوليصة رقم {num} بنجاح")
+        policy.is_active = False
+        policy.save(update_fields=['is_active'])
+        messages.success(request, f"تم إلغاء تفعيل البوليصة رقم {num} بنجاح")
         return redirect('policies:policy_list')
     return render(request, 'policies/policy_confirm_delete.html', {'policy': policy})
 

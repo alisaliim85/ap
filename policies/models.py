@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 
@@ -128,6 +129,19 @@ class PolicyClass(models.Model):
     
     class Meta:
         unique_together = ('policy', 'name')
+
+    def clean(self):
+        # التحقق: الشبكة المختارة يجب أن تنتمي لنفس مزود تأمين الوثيقة
+        if self.network_id and self.policy_id:
+            effective = self.policy.effective_provider
+            if effective and self.network.provider_id != effective.pk:
+                raise ValidationError(
+                    _("The selected network does not belong to the policy's insurance provider. "
+                      "Expected provider: %(expected)s, got: %(got)s.") % {
+                        'expected': effective,
+                        'got': self.network.provider,
+                    }
+                )
 
     def __str__(self):
         return f"{self.name} - {self.policy.policy_number}"

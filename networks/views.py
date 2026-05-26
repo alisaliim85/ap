@@ -6,6 +6,25 @@ from django.db.models import Q
 from .models import ServiceProvider, Network
 from .forms import ServiceProviderForm, NetworkForm
 
+
+def get_allowed_networks(user):
+    """
+    إرجاع QuerySet بالشبكات المسموح للمستخدم برؤيتها.
+    - السوبر أدمن والوسيط: كل الشبكات
+    - موظف HR: الشبكات المرتبطة بوثائق شركته أو شركتها الأم فقط
+    """
+    qs = Network.objects.select_related('provider')
+    if user.is_hr_role and not user.is_broker_role:
+        client = user.related_client
+        if client:
+            qs = qs.filter(
+                Q(policy_classes__policy__client=client) |
+                Q(policy_classes__policy__client=client.parent)
+            ).distinct()
+        else:
+            qs = qs.none()
+    return qs
+
 # --- إدارة مقدمي الخدمة (Hospitals/Clinics) ---
 
 @login_required
@@ -81,19 +100,8 @@ def service_provider_delete(request, pk):
 @login_required
 @permission_required('networks.view_network', raise_exception=True)
 def network_list(request):
-    networks = Network.objects.all().select_related('provider').order_by('provider__name_ar', 'name_ar')
+    networks = get_allowed_networks(request.user).order_by('provider__name_ar', 'name_ar')
 
-    # تصفية الصلاحيات
-    if request.user.has_perm('accounts.view_hr_dashboard') and not request.user.has_perm('accounts.view_broker_dashboard'):
-        # عرض الشبكات المرتبطة بسياسات الشركة فقط
-        client = request.user.related_client
-
-        # التعديل هنا: البحث عن الشبكة في سياسات الشركة الحالية OR سياسات الشركة الأم
-        networks = networks.filter(
-            Q(policy_classes__policy__client=client) | 
-            Q(policy_classes__policy__client=client.parent) # الوصول للشركة القابضة
-        ).distinct()
-        
     return render(request, 'networks/network_list.html', {'networks': networks})
 
 @login_required
@@ -146,20 +154,15 @@ def network_manage_hospitals(request, pk):
     إدارة المستشفيات داخل الشبكة (إضافة/حذف)
     """
     network = get_object_or_404(Network, pk=pk)
-    
-    # التحقق من الصلاحيات
-    is_broker = request.user.has_perm('networks.change_network')
-    is_hr = request.user.has_perm('accounts.view_hr_dashboard') and not is_broker
-    
+    user = request.user
+
+    # التحقق من الصلاحيات بناء على الدور (is_hr_role / is_broker_role بدلاً من has_perm الهش)
+    is_broker = user.is_broker_role or user.is_superuser
+    is_hr = user.is_hr_role and not is_broker
+
     if is_hr:
-        client = request.user.related_client
-        # السماح بالوصول إذا كانت الشبكة تتبع للشركة أو لشركتها الأم
-        has_access = network.policy_classes.filter(
-            Q(policy__client=client) | 
-            Q(policy__client=client.parent)
-        ).exists()
-        
-        if not has_access:
+        # التحقق من خلال get_allowed_networks لضمان التناسق مع باقي النظام
+        if not get_allowed_networks(user).filter(pk=network.pk).exists():
             messages.error(request, "ليس لديك صلاحية للوصول لهذه الشبكة")
             return redirect('networks:network_list')
 
