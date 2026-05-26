@@ -8,6 +8,7 @@ from django.db.models import Q
 from .models import RequestType, ServiceRequest, RequestAttachment
 from .forms import ServiceRequestCreateForm, validate_dynamic_data
 from members.models import Member
+from members.utils import get_allowed_members
 from accounts.models import User
 
 
@@ -302,8 +303,10 @@ def request_create(request):
     else:
         member_id = request.GET.get('member_id')
         if member_id:
-            from members.views import get_allowed_members
-            prefilled_member = get_allowed_members(request.user).filter(pk=member_id).first()
+            try:
+                prefilled_member = get_allowed_members(request.user).filter(pk=member_id).first()
+            except (ValueError, TypeError):
+                prefilled_member = None
         form = ServiceRequestCreateForm(user=user)
 
     context = {

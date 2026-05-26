@@ -5,38 +5,12 @@ from django.db.models import Count, Q
 from django.core.paginator import Paginator
 from .models import Member
 from .forms import MemberForm
+from .utils import get_allowed_members
 from clients.models import Client
 from accounts.models import User
 from networks.models import ServiceProvider
 from service_requests.models import ServiceRequest
 from claims.models import Claim
-
-# ==========================================
-# دالة مساعدة: عزل البيانات للمشتركين (Data Isolation)
-# ==========================================
-def get_allowed_members(user):
-    """
-    تُرجع المشتركين المسموح للمستخدم رؤيتهم بناءً على دوره.
-    """
-    # 1. السوبر أدمن يرى كل المشتركين
-    if user.role == User.Roles.SUPER_ADMIN:
-        return Member.objects.all()
-        
-    # 2. الوسيط يرى مشتركي العملاء التابعين لشركته فقط
-    elif user.is_broker_role and user.related_broker:
-        return Member.objects.filter(client__broker=user.related_broker)
-        
-    # 3. مدير الموارد البشرية (HR) يرى مشتركي شركته فقط
-    elif user.is_hr_role and user.related_client:
-        return Member.objects.filter(client=user.related_client)
-        
-    # 4. العضو نفسه (يرى نفسه والتابعين له فقط)
-    elif user.is_member_role and hasattr(user, 'member_profile'):
-        return Member.objects.filter(
-            Q(id=user.member_profile.id) | Q(sponsor=user.member_profile)
-        )
-        
-    return Member.objects.none()
 
 # ==========================================
 
