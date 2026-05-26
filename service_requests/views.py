@@ -242,6 +242,7 @@ def add_attachment(request, pk):
 def request_create(request):
     user = request.user
     request_types = RequestType.objects.filter(is_active=True).order_by('display_order')
+    prefilled_member = None
 
     if request.method == 'POST':
         form = ServiceRequestCreateForm(request.POST, request.FILES, user=user)
@@ -299,11 +300,16 @@ def request_create(request):
                 for field_name, error_msg in dynamic_errors.items():
                     messages.error(request, error_msg)
     else:
+        member_id = request.GET.get('member_id')
+        if member_id:
+            from members.views import get_allowed_members
+            prefilled_member = get_allowed_members(request.user).filter(pk=member_id).first()
         form = ServiceRequestCreateForm(user=user)
 
     context = {
         'form': form,
         'request_types': request_types,
+        'prefilled_member': prefilled_member,
     }
     return render(request, 'service_requests/request_create.html', context)
 
