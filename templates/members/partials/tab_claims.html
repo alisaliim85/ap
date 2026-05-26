@@ -1,0 +1,59 @@
+<div class="p-6">
+    <div class="flex items-center justify-between mb-4">
+        <h4 class="font-black text-slate-700 flex items-center gap-2">
+            <i class="ph-duotone ph-hand-coins text-brand-600 text-xl"></i>
+            المطالبات ({{ claims.count }})
+        </h4>
+        {% if perms.claims.can_submit_claim %}
+        <a href="{% url 'claims:claim_create' %}?member_id={{ member.pk }}"
+            class="px-4 py-2 bg-brand-600 text-white rounded-xl hover:bg-brand-700 text-xs font-black transition-all flex items-center gap-2">
+            <i class="ph-bold ph-plus"></i> مطالبة جديدة
+        </a>
+        {% endif %}
+    </div>
+
+    {% if claims %}
+    <div class="overflow-x-auto rounded-xl border border-slate-200">
+        <table class="w-full text-right text-sm">
+            <thead class="bg-slate-50 border-b border-slate-100">
+                <tr>
+                    <th class="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">المرجع</th>
+                    <th class="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">المبلغ</th>
+                    <th class="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">الحالة</th>
+                    <th class="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">التاريخ</th>
+                    <th class="px-5 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for claim in claims %}
+                <tr class="hover:bg-slate-50 transition group">
+                    <td class="px-5 py-3 font-mono text-xs text-slate-600 font-bold">{{ claim.claim_reference }}</td>
+                    <td class="px-5 py-3 text-center font-bold text-slate-800">{{ claim.amount_original|floatformat:2 }} {{ claim.currency_id }}</td>
+                    <td class="px-5 py-3 text-center">
+                        {% if claim.status == 'PAID' or claim.status == 'APPROVED_BY_INSURANCE' %}
+                            <span class="text-[10px] bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-100 font-black">{{ claim.get_status_display }}</span>
+                        {% elif claim.status == 'REJECTED_BY_INSURANCE' %}
+                            <span class="text-[10px] bg-red-50 text-red-700 px-2 py-0.5 rounded border border-red-100 font-black">{{ claim.get_status_display }}</span>
+                        {% elif claim.status == 'DRAFT' %}
+                            <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 font-black">{{ claim.get_status_display }}</span>
+                        {% else %}
+                            <span class="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100 font-black">{{ claim.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-center text-slate-500 text-xs">{{ claim.created_at|date:"Y-m-d" }}</td>
+                    <td class="px-5 py-3 text-left">
+                        <a href="{% url 'claims:claim_detail' claim.pk %}"
+                            class="opacity-0 group-hover:opacity-100 text-brand-600 hover:underline font-bold text-xs">عرض</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="py-16 text-center">
+        <i class="ph-duotone ph-hand-coins text-5xl text-slate-300 mb-3 block"></i>
+        <p class="text-slate-400 font-medium">لا توجد مطالبات مسجلة لهذا العضو</p>
+    </div>
+    {% endif %}
+</div>

@@ -1,0 +1,50 @@
+<div class="p-6">
+    <div class="flex items-center justify-between mb-4">
+        <h4 class="font-black text-slate-700 flex items-center gap-2">
+            <i class="ph-duotone ph-users text-brand-600 text-xl"></i>
+            التابعون ({{ dependents.count }})
+        </h4>
+        {% if perms.members.add_member %}
+        <a href="{% url 'members:member_create' %}?sponsor_id={{ member.pk }}&client_id={{ member.client.pk }}&relation=SPOUSE"
+            class="px-4 py-2 bg-brand-600 text-white rounded-xl hover:bg-brand-700 text-xs font-black transition-all flex items-center gap-2">
+            <i class="ph-bold ph-plus"></i> إضافة تابع
+        </a>
+        {% endif %}
+    </div>
+
+    {% if dependents %}
+    <div class="overflow-x-auto rounded-xl border border-slate-200">
+        <table class="w-full text-right text-sm">
+            <thead class="bg-slate-50 border-b border-slate-100">
+                <tr>
+                    <th class="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">الاسم</th>
+                    <th class="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">العلاقة</th>
+                    <th class="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">رقم البطاقة</th>
+                    <th class="px-5 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for dep in dependents %}
+                <tr class="hover:bg-slate-50 transition group">
+                    <td class="px-5 py-3 font-bold text-slate-800">{{ dep.full_name }}</td>
+                    <td class="px-5 py-3 text-center">
+                        <span class="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-black">
+                            {{ dep.get_relation_display }}</span>
+                    </td>
+                    <td class="px-5 py-3 text-center font-mono text-slate-500">{{ dep.medical_card_number }}</td>
+                    <td class="px-5 py-3 text-left">
+                        <a href="{% url 'members:member_detail' dep.pk %}"
+                            class="opacity-0 group-hover:opacity-100 text-brand-600 hover:underline font-bold text-xs">عرض</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="py-16 text-center">
+        <i class="ph-duotone ph-users text-5xl text-slate-300 mb-3 block"></i>
+        <p class="text-slate-400 font-medium">لا يوجد تابعون مسجلون لهذا الموظف</p>
+    </div>
+    {% endif %}
+</div>
