@@ -8,6 +8,8 @@ from .forms import MemberForm
 from clients.models import Client
 from accounts.models import User
 from networks.models import ServiceProvider
+from service_requests.models import ServiceRequest
+from claims.models import Claim
 
 # ==========================================
 # دالة مساعدة: عزل البيانات للمشتركين (Data Isolation)
@@ -94,16 +96,42 @@ def member_list(request):
 @permission_required('members.view_member', raise_exception=True)
 def member_detail(request, pk):
     """
-    تفاصيل العضو - [محمية تلقائياً بدالة get_allowed_members]
+    تفاصيل العضو مع إحصائيات وتابات
     """
-    # إذا حاول وسيط إدخال ID لمشترك لا يتبع له، سيعطيه 404
-    member = get_object_or_404(get_allowed_members(request.user).select_related('client', 'policy_class__policy', 'policy_class__network', 'sponsor'), pk=pk)
-    
-    dependents = member.dependents.select_related('policy_class').all()
-    
+    member = get_object_or_404(
+        get_allowed_members(request.user).select_related(
+            'client', 'policy_class__policy', 'policy_class__network', 'sponsor'
+        ),
+        pk=pk
+    )
+
+    # إحصائيات سريعة
+    pending_statuses = [
+        ServiceRequest.Status.DRAFT,
+        ServiceRequest.Status.SUBMITTED,
+        ServiceRequest.Status.HR_REVIEW,
+        ServiceRequest.Status.IN_REVIEW,
+    ]
+    requests_total = member.service_requests.count()
+    requests_pending = member.service_requests.filter(status__in=pending_statuses).count()
+    claims_total = member.claims.count()
+    claims_rejected = member.claims.filter(status=Claim.Status.REJECTED_BY_INSURANCE).count()
+    stats = {
+        'requests_total': requests_total,
+        'requests_pending': requests_pending,
+        'requests_done': requests_total - requests_pending,
+        'claims_total': claims_total,
+        'claims_rejected': claims_rejected,
+        'claims_other': claims_total - claims_rejected,
+    }
+
+    # التاب الافتراضي: التابعين للموظف، الطلبات للتابع
+    default_tab = 'dependents' if member.relation == 'PRINCIPAL' else 'requests'
+
     return render(request, 'members/member_detail.html', {
         'member': member,
-        'dependents': dependents
+        'stats': stats,
+        'default_tab': default_tab,
     })
 
 @login_required
@@ -314,4 +342,41 @@ def my_hospitals(request):
     if request.headers.get('HX-Request'):
         return render(request, 'members/partials/hospital_list_content.html', context)
 
-    return render(request, 'members/my_hospitals.html', context)
+    return render(request, 'members/my_hospitals.html', context)
+
+
+# ==========================================
+# Tab Partials — HTMX lazy loading
+# ==========================================
+
+@login_required
+@permission_required('members.view_member', raise_exception=True)
+def member_tab_dependents(request, pk):
+    member = get_object_or_404(get_allowed_members(request.user), pk=pk)
+    dependents = member.dependents.select_related('policy_class').order_by('full_name')
+    return render(request, 'members/partials/tab_dependents.html', {
+        'member': member,
+        'dependents': dependents,
+    })
+
+
+@login_required
+@permission_required('members.view_member', raise_exception=True)
+def member_tab_requests(request, pk):
+    member = get_object_or_404(get_allowed_members(request.user), pk=pk)
+    service_requests = member.service_requests.select_related('request_type').order_by('-created_at')
+    return render(request, 'members/partials/tab_requests.html', {
+        'member': member,
+        'service_requests': service_requests,
+    })
+
+
+@login_required
+@permission_required('members.view_member', raise_exception=True)
+def member_tab_claims(request, pk):
+    member = get_object_or_404(get_allowed_members(request.user), pk=pk)
+    claims = member.claims.order_by('-created_at')
+    return render(request, 'members/partials/tab_claims.html', {
+        'member': member,
+        'claims': claims,
+    })
