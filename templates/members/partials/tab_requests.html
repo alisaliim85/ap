@@ -2,7 +2,7 @@
     <div class="flex items-center justify-between mb-4">
         <h4 class="font-black text-slate-700 flex items-center gap-2">
             <i class="ph-duotone ph-paper-plane-tilt text-brand-600 text-xl"></i>
-            الطلبات ({{ service_requests.count }})
+            الطلبات ({{ service_requests|length }})
         </h4>
         {% if perms.service_requests.can_submit_service_request %}
         <a href="{% url 'service_requests:request_create' %}?member_id={{ member.pk }}"

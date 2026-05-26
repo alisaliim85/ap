@@ -2,7 +2,7 @@
     <div class="flex items-center justify-between mb-4">
         <h4 class="font-black text-slate-700 flex items-center gap-2">
             <i class="ph-duotone ph-hand-coins text-brand-600 text-xl"></i>
-            المطالبات ({{ claims.count }})
+            المطالبات ({{ claims|length }})
         </h4>
         {% if perms.claims.can_submit_claim %}
         <a href="{% url 'claims:claim_create' %}?member_id={{ member.pk }}"

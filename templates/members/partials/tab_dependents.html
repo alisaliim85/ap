@@ -2,7 +2,7 @@
     <div class="flex items-center justify-between mb-4">
         <h4 class="font-black text-slate-700 flex items-center gap-2">
             <i class="ph-duotone ph-users text-brand-600 text-xl"></i>
-            التابعون ({{ dependents.count }})
+            التابعون ({{ dependents|length }})
         </h4>
         {% if perms.members.add_member %}
         <a href="{% url 'members:member_create' %}?sponsor_id={{ member.pk }}&client_id={{ member.client.pk }}&relation=SPOUSE"
