@@ -8,6 +8,7 @@ from django_fsm import TransitionNotAllowed
 from .models import Claim, ClaimComment, ClaimAttachment
 from .forms import ClaimCreateForm, ClaimCommentForm
 from members.models import Member
+from members.utils import get_allowed_members
 from accounts.models import User
 
 # ==========================================
@@ -320,6 +321,8 @@ def mark_claim_as_paid(request, pk):
 @permission_required('claims.can_submit_claim', raise_exception=True)
 def claim_create(request):
 
+    prefilled_member = None
+
     if request.method == 'POST':
         form = ClaimCreateForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
@@ -348,9 +351,15 @@ def claim_create(request):
             except Exception as e:
                 messages.error(request, f"حدث خطأ غير متوقع: {str(e)}")
     else:
+        member_id = request.GET.get('member_id')
+        if member_id:
+            try:
+                prefilled_member = get_allowed_members(request.user).filter(pk=member_id).first()
+            except (ValueError, TypeError):
+                prefilled_member = None
         form = ClaimCreateForm(user=request.user)
 
-    return render(request, 'claims/claim_create.html', {'form': form})
+    return render(request, 'claims/claim_create.html', {'form': form, 'prefilled_member': prefilled_member})
 
 @login_required
 @permission_required('claims.can_submit_claim', raise_exception=True)
