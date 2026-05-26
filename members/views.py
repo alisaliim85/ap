@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.core.paginator import Paginator
 from .models import Member
 from .forms import MemberForm
@@ -112,21 +112,25 @@ def member_detail(request, pk):
         ServiceRequest.Status.HR_REVIEW,
         ServiceRequest.Status.IN_REVIEW,
     ]
-    requests_total = member.service_requests.count()
-    requests_pending = member.service_requests.filter(status__in=pending_statuses).count()
-    claims_total = member.claims.count()
-    claims_rejected = member.claims.filter(status=Claim.Status.REJECTED_BY_INSURANCE).count()
+    req_agg = member.service_requests.aggregate(
+        total=Count('id'),
+        pending=Count('id', filter=Q(status__in=pending_statuses)),
+    )
+    claims_agg = member.claims.aggregate(
+        total=Count('id'),
+        rejected=Count('id', filter=Q(status=Claim.Status.REJECTED_BY_INSURANCE)),
+    )
     stats = {
-        'requests_total': requests_total,
-        'requests_pending': requests_pending,
-        'requests_done': requests_total - requests_pending,
-        'claims_total': claims_total,
-        'claims_rejected': claims_rejected,
-        'claims_other': claims_total - claims_rejected,
+        'requests_total': req_agg['total'],
+        'requests_pending': req_agg['pending'],
+        'requests_done': req_agg['total'] - req_agg['pending'],
+        'claims_total': claims_agg['total'],
+        'claims_rejected': claims_agg['rejected'],
+        'claims_other': claims_agg['total'] - claims_agg['rejected'],
     }
 
     # التاب الافتراضي: التابعين للموظف، الطلبات للتابع
-    default_tab = 'dependents' if member.relation == 'PRINCIPAL' else 'requests'
+    default_tab = 'dependents' if member.relation == Member.RelationType.PRINCIPAL else 'requests'
 
     return render(request, 'members/member_detail.html', {
         'member': member,
