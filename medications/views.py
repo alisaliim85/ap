@@ -11,7 +11,10 @@ from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 
+from django.db.models import Q
+from accounts.models import User
 from service_requests.models import ServiceRequest, RequestAttachment
+from service_requests.views import get_allowed_requests
 from .models import MedicationRequest, MedicationRefill, MedicationAttachment
 from .models import _add_months
 from .forms import MedicationTransferForm, ScheduleRefillForm, RefillReviewForm
@@ -24,16 +27,49 @@ from .utils import (
 
 
 # ---------------------------------------------------------------------------
+# حارس البوابة — عزل البيانات حسب الدور
+# ---------------------------------------------------------------------------
+def get_allowed_medication_requests(user):
+    """
+    يُرجع QuerySet بطلبات الأدوية المسموح للمستخدم برؤيتها فقط.
+    يعكس بالكامل منطق get_allowed_requests في service_requests app.
+    """
+    base_qs = MedicationRequest.objects.select_related(
+        'service_request',
+        'service_request__member',
+        'service_request__member__client',
+        'created_by',
+    )
+
+    if user.role == User.Roles.SUPER_ADMIN:
+        return base_qs
+
+    elif user.is_broker_role and user.related_broker:
+        return base_qs.filter(
+            service_request__member__client__broker=user.related_broker
+        )
+
+    elif user.is_hr_role and user.related_client:
+        return base_qs.filter(
+            service_request__member__client=user.related_client
+        )
+
+    elif user.is_member_role and hasattr(user, 'member_profile'):
+        return base_qs.filter(
+            Q(service_request__member=user.member_profile) |
+            Q(service_request__member__sponsor=user.member_profile)
+        )
+
+    return MedicationRequest.objects.none()
+
+
+# ---------------------------------------------------------------------------
 # 1. Dashboard
 # ---------------------------------------------------------------------------
 @login_required
 @permission_required('medications.can_view_medication_dashboard', raise_exception=True)
 def medication_dashboard(request):
-    qs = (
-        MedicationRequest.objects
-        .select_related('service_request', 'created_by')
-        .order_by('-created_at')
-    )
+    qs = get_allowed_medication_requests(request.user).order_by('-created_at')
 
     search = request.GET.get('q', '').strip()
     status_filter = request.GET.get('status', '').strip()
@@ -68,7 +104,8 @@ def medication_dashboard(request):
 @login_required
 @permission_required('medications.can_transfer_to_medications', raise_exception=True)
 def transfer_to_medications(request, service_request_id):
-    sr = get_object_or_404(ServiceRequest, pk=service_request_id)
+    # عزل البيانات: يجب أن يكون طلب الخدمة مرئياً للمستخدم الحالي
+    sr = get_object_or_404(get_allowed_requests(request.user), pk=service_request_id)
 
     # Guard: already transferred
     if hasattr(sr, 'medication_details'):
@@ -222,7 +259,7 @@ def transfer_to_medications(request, service_request_id):
 @login_required
 @permission_required('medications.can_schedule_refill', raise_exception=True)
 def schedule_refill(request, medication_request_id):
-    med_req = get_object_or_404(MedicationRequest, pk=medication_request_id)
+    med_req = get_object_or_404(get_allowed_medication_requests(request.user), pk=medication_request_id)
 
     # الصيدلية الافتراضية من الوصفة — يمكن للوسيط تغييرها
     initial_data = {'partner': med_req.pharmacy} if med_req.pharmacy else {}
@@ -277,7 +314,13 @@ def schedule_refill(request, medication_request_id):
 @login_required
 @permission_required('medications.can_approve_refill', raise_exception=True)
 def review_refill(request, refill_id):
-    refill = get_object_or_404(MedicationRefill, pk=refill_id)
+    # عزل البيانات: التحقق من أن الدورة تتبع لطلب مسموح للمستخدم برؤيته
+    refill = get_object_or_404(
+        MedicationRefill.objects.filter(
+            medication_request__in=get_allowed_medication_requests(request.user)
+        ),
+        pk=refill_id,
+    )
     form = RefillReviewForm(request.POST or None)
 
     policy_status = None
@@ -328,7 +371,7 @@ def review_refill(request, refill_id):
 @login_required
 def medication_detail(request, medication_request_id):
     med_req = get_object_or_404(
-        MedicationRequest.objects.select_related('service_request', 'created_by'),
+        get_allowed_medication_requests(request.user),
         pk=medication_request_id,
     )
     refills = med_req.refills.select_related('partner', 'scheduled_by', 'approved_by').order_by('cycle_number')
@@ -364,7 +407,7 @@ def medication_detail(request, medication_request_id):
 @permission_required('medications.can_view_medication_dashboard', raise_exception=True)
 @require_POST
 def change_medication_status(request, medication_request_id):
-    med_req = get_object_or_404(MedicationRequest, pk=medication_request_id)
+    med_req = get_object_or_404(get_allowed_medication_requests(request.user), pk=medication_request_id)
     new_status = request.POST.get('new_status', '').strip()
     note = request.POST.get('note', '').strip()
 
