@@ -39,7 +39,11 @@
             <i class="ph-duotone ph-shield-check text-xl flex-shrink-0"></i>
             <span class="whitespace-nowrap text-sm" x-show="sidebarOpen">شركات التأمين</span>
         </a>
-        <a href="{% url 'policies:policy_list' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all {% if 'polic' in path %}bg-slate-800 text-brand-400{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+        <a href="{% url 'policies:plan_list' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all {% if 'plans' in path %}bg-slate-800 text-brand-400{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+            <i class="ph-duotone ph-bookmarks text-xl flex-shrink-0"></i>
+            <span class="whitespace-nowrap text-sm" x-show="sidebarOpen">خطط التأمين</span>
+        </a>
+        <a href="{% url 'policies:policy_list' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all {% if 'polic' in path and 'plans' not in path %}bg-slate-800 text-brand-400{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
             <i class="ph-duotone ph-file-text text-xl flex-shrink-0"></i>
             <span class="whitespace-nowrap text-sm" x-show="sidebarOpen">وثائق التأمين</span>
         </a>
@@ -150,9 +154,15 @@
             <i class="ph-duotone ph-shield-check text-xl flex-shrink-0"></i>
             <span class="whitespace-nowrap text-sm" x-show="sidebarOpen">شركات التأمين</span>
         </a>
+        <a href="{% url 'policies:plan_list' %}"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all
+            {% if 'plans' in path %}bg-slate-800 text-brand-400{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+            <i class="ph-duotone ph-bookmarks text-xl flex-shrink-0"></i>
+            <span class="whitespace-nowrap text-sm" x-show="sidebarOpen">خطط التأمين</span>
+        </a>
         <a href="{% url 'policies:policy_list' %}"
             class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all
-            {% if 'polic' in path %}bg-slate-800 text-brand-400{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+            {% if 'polic' in path and 'plans' not in path %}bg-slate-800 text-brand-400{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
             <i class="ph-duotone ph-file-text text-xl flex-shrink-0"></i>
             <span class="whitespace-nowrap text-sm" x-show="sidebarOpen">وثائق التأمين</span>
         </a>

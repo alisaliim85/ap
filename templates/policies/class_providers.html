@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+    {# ======== Header ======== #}
+    <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div class="flex items-start gap-3">
+            <a href="{% url 'policies:policy_detail' policy_class.policy.pk %}"
+                class="mt-1 w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-brand-600 transition shadow-sm flex-shrink-0">
+                <i class="ph-bold ph-arrow-right"></i>
+            </a>
+            <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <h2 class="text-2xl font-black text-slate-800">مستشفيات الفئة: {{ policy_class.name }}</h2>
+                    {% if policy_class.plan_class %}
+                    <span class="text-xs bg-brand-100 text-brand-700 font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <i class="ph-bold ph-lightning text-[10px]"></i> مرتبطة بخطة
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="text-slate-500 text-sm mt-0.5 flex items-center gap-2">
+                    <span>{{ policy_class.policy.client.name_ar }}</span>
+                    <span class="text-slate-300">·</span>
+                    <span class="font-mono font-bold text-brand-600">{{ policy_class.policy.policy_number }}</span>
+                </p>
+            </div>
+        </div>
+        <div class="flex gap-2 flex-shrink-0">
+            <a href="{% url 'policies:class_benefit_manage' policy_class.pk %}"
+                class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-bold text-sm flex items-center gap-2 transition shadow-sm">
+                <i class="ph-duotone ph-heart-half text-emerald-500 text-lg"></i> إدارة المنافع
+            </a>
+            {% if is_editable %}
+            <a href="{% url 'policies:policy_class_update' policy_class.pk %}"
+                class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-bold text-sm flex items-center gap-2 transition shadow-sm">
+                <i class="ph-duotone ph-network text-brand-600 text-lg"></i> تعديل الشبكة
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ======== Summary Cards ======== #}
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+        {# Effective Network #}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
+            {% if effective_network %}
+            <div class="w-11 h-11 bg-brand-50 border border-brand-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="ph-duotone ph-network text-brand-500 text-2xl"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">الشبكة الفعلية</p>
+                <p class="font-black text-slate-800 text-sm">{{ effective_network.name_en }}</p>
+                {% if not policy_class.network_id and policy_class.plan_class_id %}
+                <p class="text-[10px] text-brand-500 font-bold mt-0.5">موروثة من الخطة</p>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="w-11 h-11 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="ph-duotone ph-network text-slate-400 text-2xl"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">الشبكة الفعلية</p>
+                <p class="font-bold text-slate-400 text-sm">بدون شبكة</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {# Network hospitals count #}
+        <div class="bg-indigo-900 rounded-xl p-5 flex items-center gap-4">
+            <div class="w-11 h-11 bg-indigo-800 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="ph-duotone ph-hospital text-indigo-300 text-2xl"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-indigo-300 uppercase tracking-wider mb-0.5">في الشبكة</p>
+                <p class="font-black text-white text-2xl leading-none">{{ network_rows|length }}</p>
+            </div>
+        </div>
+
+        {# Extra hospitals count #}
+        <div class="bg-emerald-50 rounded-xl border border-emerald-200 p-5 flex items-center gap-4">
+            <div class="w-11 h-11 bg-emerald-100 border border-emerald-200 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="ph-duotone ph-plus-circle text-emerald-500 text-2xl"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-emerald-600 uppercase tracking-wider mb-0.5">مستشفيات إضافية</p>
+                <p class="font-black text-emerald-800 text-2xl leading-none">{{ extra_providers|length }}</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {# ======== Left: Search & Add Extra Hospitals ======== #}
+        {% if is_editable %}
+        <div class="space-y-5">
+
+            {# Search Form #}
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                    <i class="ph-duotone ph-magnifying-glass text-slate-500 text-xl"></i>
+                    <h3 class="font-black text-slate-700 text-sm">إضافة مستشفى إضافي</h3>
+                </div>
+                <div class="p-4">
+                    <form method="get" class="flex gap-2">
+                        <input type="text" name="search" value="{{ search_q }}" placeholder="ابحث باسم المستشفى..."
+                            class="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        <button type="submit"
+                            class="px-3 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition text-sm font-bold">
+                            <i class="ph-bold ph-magnifying-glass"></i>
+                        </button>
+                    </form>
+
+                    {% if search_q %}
+                    <div class="mt-3 space-y-2">
+                        {% if search_results %}
+                        {% for sp in search_results %}
+                        <div class="flex items-center justify-between px-3 py-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                            <div>
+                                <p class="font-bold text-slate-800 text-sm">{{ sp.name_ar }}</p>
+                                <p class="text-xs text-slate-500">{{ sp.get_type_display }} · {{ sp.city }}</p>
+                            </div>
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="add_extra">
+                                <input type="hidden" name="provider_id" value="{{ sp.pk }}">
+                                <button type="submit"
+                                    class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-black hover:bg-emerald-700 transition flex items-center gap-1">
+                                    <i class="ph-bold ph-plus"></i> إضافة
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-center text-slate-400 text-xs py-4">لا توجد نتائج مطابقة</p>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <p class="text-xs text-slate-400 mt-3 text-center">اكتب اسم المستشفى للبحث</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Legend #}
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-2">
+                <p class="text-[11px] font-black text-slate-500 uppercase tracking-wider mb-3">دليل الألوان</p>
+                <div class="flex items-center gap-2 text-xs text-slate-600">
+                    <span class="w-3 h-3 rounded-full bg-slate-400 flex-shrink-0"></span>
+                    من الشبكة — مُفعَّل
+                </div>
+                <div class="flex items-center gap-2 text-xs text-slate-600">
+                    <span class="w-3 h-3 rounded-full bg-red-400 flex-shrink-0"></span>
+                    مستبعد من الشبكة
+                </div>
+                <div class="flex items-center gap-2 text-xs text-slate-600">
+                    <span class="w-3 h-3 rounded-full bg-emerald-400 flex-shrink-0"></span>
+                    مستشفى إضافي
+                </div>
+            </div>
+
+        </div>
+        {% endif %}
+
+        {# ======== Right: Network Hospitals + Extra Hospitals ======== #}
+        <div class="{% if is_editable %}lg:col-span-2{% else %}lg:col-span-3{% endif %} space-y-5">
+
+            {# Extra Hospitals #}
+            {% if extra_providers %}
+            <div class="bg-white rounded-xl border border-emerald-200 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i class="ph-duotone ph-plus-circle text-emerald-500 text-xl"></i>
+                        <h3 class="font-black text-emerald-800 text-sm">المستشفيات الإضافية</h3>
+                    </div>
+                    <span class="text-xs font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">{{ extra_providers|length }}</span>
+                </div>
+                <div class="divide-y divide-slate-100">
+                    {% for sp in extra_providers %}
+                    <div class="flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="ph-duotone ph-hospital text-emerald-500 text-base"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-800 text-sm">{{ sp.name_ar }}</p>
+                                <p class="text-xs text-slate-500">{{ sp.get_type_display }} · {{ sp.city }}</p>
+                            </div>
+                        </div>
+                        {% if is_editable %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="remove_extra">
+                            <input type="hidden" name="provider_id" value="{{ sp.pk }}">
+                            <button type="submit"
+                                class="px-3 py-1 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-black hover:bg-red-50 transition flex items-center gap-1">
+                                <i class="ph-bold ph-x"></i> إزالة
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {# Network Hospitals #}
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i class="ph-duotone ph-network text-brand-600 text-xl"></i>
+                        <h3 class="font-black text-slate-800 text-sm">
+                            {% if effective_network %}
+                                مستشفيات شبكة {{ effective_network.name_en }}
+                            {% else %}
+                                مستشفيات الشبكة
+                            {% endif %}
+                        </h3>
+                    </div>
+                    <span class="text-xs font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{{ network_rows|length }}</span>
+                </div>
+
+                {% if network_rows %}
+                <div class="divide-y divide-slate-100">
+                    {% for row in network_rows %}
+                    <div class="flex items-center justify-between px-5 py-3 {% if row.is_excluded %}bg-red-50/60{% else %}hover:bg-slate-50{% endif %} transition">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 {% if row.is_excluded %}bg-red-100{% else %}bg-slate-100{% endif %} rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="ph-duotone ph-hospital {% if row.is_excluded %}text-red-400{% else %}text-slate-500{% endif %} text-base"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-sm {% if row.is_excluded %}text-red-500 line-through{% else %}text-slate-800{% endif %}">
+                                    {{ row.provider.name_ar }}
+                                </p>
+                                <p class="text-xs text-slate-500">{{ row.provider.get_type_display }} · {{ row.provider.city }}</p>
+                            </div>
+                            {% if row.is_excluded %}
+                            <span class="text-[10px] font-black bg-red-100 text-red-600 px-2 py-0.5 rounded-full">مستبعد</span>
+                            {% endif %}
+                        </div>
+                        {% if is_editable %}
+                        <div class="flex gap-2">
+                            {% if row.is_excluded %}
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="restore">
+                                <input type="hidden" name="provider_id" value="{{ row.provider.pk }}">
+                                <button type="submit"
+                                    class="px-3 py-1 bg-white border border-slate-300 text-slate-600 rounded-lg text-xs font-black hover:bg-slate-50 transition flex items-center gap-1">
+                                    <i class="ph-bold ph-arrow-counter-clockwise"></i> استعادة
+                                </button>
+                            </form>
+                            {% else %}
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="exclude">
+                                <input type="hidden" name="provider_id" value="{{ row.provider.pk }}">
+                                <button type="submit"
+                                    class="px-3 py-1 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-black hover:bg-red-50 transition flex items-center gap-1">
+                                    <i class="ph-bold ph-x-circle"></i> استبعاد
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-12 text-slate-400">
+                    <i class="ph-duotone ph-network text-4xl mb-3"></i>
+                    <p class="font-bold text-sm">لا توجد شبكة مرتبطة بهذه الفئة</p>
+                    {% if is_editable %}
+                    <a href="{% url 'policies:policy_class_update' policy_class.pk %}"
+                        class="inline-flex items-center gap-1 mt-3 text-xs text-brand-600 hover:underline font-bold">
+                        <i class="ph-bold ph-plus"></i> تعيين شبكة للفئة
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

@@ -249,6 +249,22 @@ class PolicyClass(models.Model):
 
     name = models.CharField(_("Class Name"), max_length=50)  # VIP, Class A
 
+    # تخصيص مستشفيات الفئة على مستوى الوثيقة (يتجاوز شبكة الخطة)
+    excluded_providers = models.ManyToManyField(
+        'networks.ServiceProvider',
+        blank=True,
+        related_name='excluded_in_classes',
+        verbose_name=_("Excluded Hospitals"),
+        help_text=_("Hospitals to exclude from this class's effective network."),
+    )
+    extra_providers = models.ManyToManyField(
+        'networks.ServiceProvider',
+        blank=True,
+        related_name='added_in_classes',
+        verbose_name=_("Extra Hospitals"),
+        help_text=_("Additional hospitals beyond the assigned network."),
+    )
+
     # الحد السنوي — nullable: null يعني يرث من plan_class
     annual_limit = models.DecimalField(
         _("General Annual Limit"),
@@ -273,6 +289,28 @@ class PolicyClass(models.Model):
             return self.plan_class.network
         return None
 
+    def get_effective_providers(self):
+        """
+        يُرجع QuerySet بالمستشفيات الفعلية لهذه الفئة:
+        - مستشفيات الشبكة الفعلية
+        - ناقصاً المستشفيات المستبعدة (excluded_providers)
+        - زائداً المستشفيات الإضافية (extra_providers)
+        """
+        from networks.models import ServiceProvider
+        network = self.effective_network
+        if network:
+            base_ids = set(network.hospitals.values_list('id', flat=True))
+        else:
+            base_ids = set()
+
+        excluded_ids = set(self.excluded_providers.values_list('id', flat=True))
+        extra_ids = set(self.extra_providers.values_list('id', flat=True))
+
+        final_ids = (base_ids - excluded_ids) | extra_ids
+        if not final_ids:
+            return ServiceProvider.objects.none()
+        return ServiceProvider.objects.filter(id__in=final_ids).order_by('name_ar')
+
     @property
     def effective_annual_limit(self):
         """الحد السنوي الفعلي: override الوثيقة أولاً، ثم قالب الخطة."""
@@ -286,6 +324,7 @@ class PolicyClass(models.Model):
         """
         يُرجع قائمة المنافع الفعلية مع تفادي N+1.
         الأولوية: ClassBenefit (override) ثم PlanClassBenefit (افتراضي).
+        المنافع ذات is_excluded=True تُحذف من النتيجة.
 
         يجب استدعاء هذه الدالة بعد prefetch_related كالتالي:
             PolicyClass.objects.prefetch_related(
@@ -296,7 +335,8 @@ class PolicyClass(models.Model):
         overrides = {b.benefit_type_id: b for b in self.benefits.all()}
 
         if not self.plan_class_id:
-            return list(self.benefits.all())
+            # لا خطة — فقط أعد المنافع المباشرة غير المستبعدة
+            return [b for b in self.benefits.all() if not b.is_excluded]
 
         result = []
         seen_ids = set()
@@ -304,13 +344,16 @@ class PolicyClass(models.Model):
         for pb in self.plan_class.benefits.all():
             seen_ids.add(pb.benefit_type_id)
             if pb.benefit_type_id in overrides:
-                result.append(overrides[pb.benefit_type_id])
+                override = overrides[pb.benefit_type_id]
+                if not override.is_excluded:
+                    result.append(override)  # override بقيم مختلفة
+                # إذا is_excluded=True — لا نضيف المنفعة (مستبعدة)
             else:
-                result.append(pb)
+                result.append(pb)  # موروثة من الخطة بدون تعديل
 
-        # منافع override إضافية غير موجودة في القالب
+        # منافع override مباشرة غير موجودة في قالب الخطة
         for b in self.benefits.all():
-            if b.benefit_type_id not in seen_ids:
+            if b.benefit_type_id not in seen_ids and not b.is_excluded:
                 result.append(b)
 
         return result
@@ -372,7 +415,12 @@ class ClassBenefit(models.Model):
     )
     
     description = models.TextField(_("Coverage Details"), blank=True)
-
+    # استبعاد المنفعة الموروثة من الخطة (Override بالاستبعاد)
+    is_excluded = models.BooleanField(
+        _("Excluded"),
+        default=False,
+        help_text=_("If checked, this benefit is excluded from coverage even if inherited from the plan."),
+    )
     class Meta:
         unique_together = ('policy_class', 'benefit_type') # لا تكرر نفس المنفعة لنفس الفئة
         verbose_name = _("Class Benefit Detail")

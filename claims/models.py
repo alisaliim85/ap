@@ -283,7 +283,7 @@ class Claim(models.Model):
         )
 
     # 6. ردود شركة التأمين
-    @transition(field=status, source=Status.SENT_TO_INSURANCE, target=Status.INSURANCE_QUERY, permission=lambda i, u: u.has_perm('claims.can_process_broker'))
+    @transition(field=status, source=Status.SENT_TO_INSURANCE, target=Status.INSURANCE_QUERY, permission=lambda i, u: u.has_perm('claims.can_process_insurance'))
     def insurance_query(self, user):
         self.log_status_change(
             user=user,
@@ -293,7 +293,7 @@ class Claim(models.Model):
             reason='',
         )
 
-    @transition(field=status, source=Status.INSURANCE_QUERY, target=Status.SENT_TO_INSURANCE, permission=lambda i, u: u.has_perm('claims.can_process_broker'))
+    @transition(field=status, source=Status.INSURANCE_QUERY, target=Status.SENT_TO_INSURANCE, permission=lambda i, u: u.has_perm('claims.can_process_insurance'))
     def answer_insurance_query(self, user):
         self.log_status_change(
             user=user,
@@ -303,7 +303,7 @@ class Claim(models.Model):
             reason='',
         )
 
-    @transition(field=status, source=Status.SENT_TO_INSURANCE, target=Status.APPROVED_BY_INSURANCE, permission=lambda i, u: u.has_perm('claims.can_process_broker'))
+    @transition(field=status, source=Status.SENT_TO_INSURANCE, target=Status.APPROVED_BY_INSURANCE, permission=lambda i, u: u.has_perm('claims.can_process_insurance'))
     def insurance_approve(self, user):
         self.log_status_change(
             user=user,
@@ -313,7 +313,7 @@ class Claim(models.Model):
             reason='',
         )
 
-    @transition(field=status, source=Status.SENT_TO_INSURANCE, target=Status.REJECTED_BY_INSURANCE, permission=lambda i, u: u.has_perm('claims.can_process_broker'))
+    @transition(field=status, source=Status.SENT_TO_INSURANCE, target=Status.REJECTED_BY_INSURANCE, permission=lambda i, u: u.has_perm('claims.can_process_insurance'))
     def insurance_reject(self, user, reason):
         self.rejection_reason = reason
         self.log_status_change(

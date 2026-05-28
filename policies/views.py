@@ -146,18 +146,35 @@ def policy_create(request):
 @login_required
 @permission_required('policies.change_policy', raise_exception=True)
 def policy_update(request, pk):
-    # التأكد أن الوسيط يعدل بوليصة تابعة له فقط
     policy = get_object_or_404(get_allowed_policies(request.user), pk=pk)
-    
+    old_plan_id = policy.plan_id  # حفظ الخطة القديمة للمقارنة
+
     if request.method == 'POST':
         form = PolicyForm(request.POST, request.FILES, instance=policy, user=request.user)
         if form.is_valid():
-            form.save()
+            updated_policy = form.save()
+            new_plan_id = updated_policy.plan_id
+
+            # إذا تغيرت الخطة أو لم تكن هناك فئات → مزامنة تلقائية
+            if new_plan_id and (new_plan_id != old_plan_id or not policy.classes.exists()):
+                existing_names = set(updated_policy.classes.values_list('name', flat=True))
+                for plan_cls in updated_policy.plan.classes.order_by('order', 'name'):
+                    if plan_cls.name not in existing_names:
+                        PolicyClass.objects.create(
+                            policy=updated_policy,
+                            plan_class=plan_cls,
+                            name=plan_cls.name,
+                        )
+
             messages.success(request, "تم تحديث بيانات البوليصة بنجاح")
             return redirect('policies:policy_detail', pk=policy.pk)
     else:
         form = PolicyForm(instance=policy, user=request.user)
-    return render(request, 'policies/policy_form.html', {'form': form, 'title': f'تعديل بوليصة: {policy.policy_number}', 'policy': policy})
+    return render(request, 'policies/policy_form.html', {
+        'form': form,
+        'title': f'تعديل بوليصة: {policy.policy_number}',
+        'policy': policy,
+    })
 
 
 @login_required
@@ -244,7 +261,7 @@ def policy_class_create(request, policy_pk):
     policy = get_object_or_404(get_allowed_policies(request.user), pk=policy_pk)
     
     if request.method == 'POST':
-        form = PolicyClassForm(request.POST) # لا حاجة لتمرير user هنا ما لم يكن هناك قوائم منسدلة تحتاج فلترة
+        form = PolicyClassForm(request.POST)
         if form.is_valid():
             policy_class = form.save(commit=False)
             policy_class.policy = policy
@@ -257,61 +274,341 @@ def policy_class_create(request, policy_pk):
 
 
 @login_required
+@permission_required('policies.change_policy', raise_exception=True)
+def policy_sync_plan_classes(request, pk):
+    """
+    مزامنة فئات الوثيقة من خطة التأمين المرتبطة.
+    ينشئ PolicyClass لكل PlanClass غير موجودة بعد (لا يحذف الفئات الموجودة).
+    """
+    if request.method != 'POST':
+        return redirect('policies:policy_detail', pk=pk)
+
+    policy = get_object_or_404(
+        get_allowed_policies(request.user).select_related('plan'),
+        pk=pk,
+    )
+
+    if not policy.plan_id:
+        messages.error(request, "هذه الوثيقة غير مرتبطة بأي خطة تأمين.")
+        return redirect('policies:policy_detail', pk=pk)
+
+    existing_names = set(policy.classes.values_list('name', flat=True))
+    created_count = 0
+
+    plan_classes = policy.plan.classes.order_by('order', 'name')
+    for plan_cls in plan_classes:
+        if plan_cls.name not in existing_names:
+            PolicyClass.objects.create(
+                policy=policy,
+                plan_class=plan_cls,
+                name=plan_cls.name,
+                # network=None → يرث من plan_class
+                # annual_limit=None → يرث من plan_class
+            )
+            created_count += 1
+
+    if created_count:
+        messages.success(request, f"تمت مزامنة {created_count} فئة من خطة التأمين.")
+    else:
+        messages.info(request, "جميع الفئات موجودة بالفعل، لم تُضَف فئات جديدة.")
+
+    return redirect('policies:policy_detail', pk=pk)
+
+
+@login_required
+@permission_required('policies.change_policy', raise_exception=True)
+def policy_class_update(request, class_pk):
+    """تعديل فئة موجودة (الشبكة / الحد السنوي)."""
+    policy_class = get_object_or_404(PolicyClass, pk=class_pk)
+    policy = policy_class.policy
+
+    # حماية: تأكد أن الفئة تعود لوثيقة مسموح بها للمستخدم
+    allowed = get_allowed_policies(request.user)
+    if not allowed.filter(pk=policy.pk).exists():
+        messages.error(request, "لا تملك صلاحية تعديل هذه الفئة.")
+        return redirect('policies:policy_list')
+
+    if request.method == 'POST':
+        form = PolicyClassForm(request.POST, instance=policy_class)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"تم تحديث الفئة «{policy_class.name}» بنجاح.")
+            return redirect('policies:policy_detail', pk=policy.pk)
+    else:
+        form = PolicyClassForm(instance=policy_class)
+
+    return render(request, 'policies/class_form.html', {
+        'form': form,
+        'policy': policy,
+        'policy_class': policy_class,
+        'title': f'تعديل فئة: {policy_class.name}',
+    })
+
+
+@login_required
 @permission_required('policies.view_policy', raise_exception=True)
 def class_benefit_manage(request, class_pk):
     """
-    صفحة عرض وإدارة المنافع - [تم تطبيق حماية الـ SaaS]
+    صفحة عرض وإدارة المنافع.
+    تعرض المنافع الفعلية (موروثة من الخطة + overrides) مع إمكانية:
+    - تعديل قيم المنفعة (override)
+    - استبعاد منفعة موروثة (is_excluded)
+    - استعادة القيم الافتراضية (حذف ClassBenefit)
     """
-    policy_class = get_object_or_404(PolicyClass, pk=class_pk)
+    policy_class = get_object_or_404(
+        PolicyClass.objects.select_related(
+            'policy__client__broker',
+            'policy__client',
+            'plan_class__plan',
+            'plan_class__network',
+            'network',
+        ).prefetch_related(
+            'benefits__benefit_type',
+            'plan_class__benefits__benefit_type',
+        ),
+        pk=class_pk,
+    )
     policy = policy_class.policy
     user = request.user
 
-    # 1. التحقق من الصلاحية (هل المستخدم وسيط يملك البوليصة؟ أو HR يتبع لشركتها؟)
+    # صلاحية الوصول
     if user.role == User.Roles.SUPER_ADMIN:
         has_access = True
     elif user.is_broker_role and user.related_broker:
         has_access = (policy.client.broker == user.related_broker)
     elif user.is_hr_role and user.related_client:
         client = user.related_client
-        has_access = (policy.client == client) or (client.parent and policy.client == client.parent)
+        has_access = (policy.client == client) or (
+            client.parent and policy.client == client.parent
+        )
     else:
         has_access = False
 
     if not has_access:
-        messages.error(request, "لا تملك صلاحية عرض هذه المنافع")
+        messages.error(request, "لا تملك صلاحية عرض هذه المنافع.")
         return redirect('policies:policy_list')
 
-    # 2. إعداد البيانات
-    benefits = policy_class.benefits.all().select_related('benefit_type')
-    benefit_types = BenefitType.objects.all()
-    # يُسمح بالتعديل للسوبر أدمن وموظفي الوسيط فقط
-    is_broker = user.role == User.Roles.SUPER_ADMIN or user.is_broker_role 
+    is_editable = user.role == User.Roles.SUPER_ADMIN or user.is_broker_role
 
-    # 3. معالجة الحفظ (POST Request)
+    # --- معالجة الطلبات ---
     if request.method == 'POST':
-        if not is_broker:
-            messages.error(request, "عذراً، لديك صلاحية العرض فقط")
+        if not is_editable:
+            messages.error(request, "عذراً، لديك صلاحية العرض فقط.")
             return redirect('policies:class_benefit_manage', class_pk=policy_class.pk)
 
-        benefit_id = request.POST.get('benefit_id')
-        if benefit_id:
-            benefit = get_object_or_404(ClassBenefit, pk=benefit_id)
-            form = ClassBenefitForm(request.POST, instance=benefit)
-        else:
-            form = ClassBenefitForm(request.POST)
-        
-        if form.is_valid():
-            benefit = form.save(commit=False)
-            benefit.policy_class = policy_class
-            benefit.save()
-            messages.success(request, "تم حفظ بيانات المنفعة بنجاح")
+        action = request.POST.get('action', 'save')
+        benefit_type_id = request.POST.get('benefit_type_id')
+
+        if action == 'restore' and benefit_type_id:
+            # حذف ClassBenefit لاستعادة القيم الافتراضية من الخطة
+            ClassBenefit.objects.filter(
+                policy_class=policy_class,
+                benefit_type_id=benefit_type_id,
+            ).delete()
+            messages.success(request, "تمت استعادة القيم الافتراضية من الخطة.")
             return redirect('policies:class_benefit_manage', class_pk=policy_class.pk)
+
+        elif action == 'exclude' and benefit_type_id:
+            # استبعاد المنفعة (سواء كانت موروثة أو مباشرة)
+            obj, _ = ClassBenefit.objects.get_or_create(
+                policy_class=policy_class,
+                benefit_type_id=benefit_type_id,
+                defaults={'limit_amount': 0, 'deductible_percentage': 0},
+            )
+            obj.is_excluded = True
+            obj.save(update_fields=['is_excluded'])
+            messages.success(request, "تم استبعاد المنفعة من التغطية.")
+            return redirect('policies:class_benefit_manage', class_pk=policy_class.pk)
+
+        elif action in ('save', 'add'):
+            # حفظ override للمنفعة
+            benefit_type_id = request.POST.get('benefit_type')
+            existing = ClassBenefit.objects.filter(
+                policy_class=policy_class,
+                benefit_type_id=benefit_type_id,
+            ).first()
+            form = ClassBenefitForm(request.POST, instance=existing)
+            if form.is_valid():
+                cb = form.save(commit=False)
+                cb.policy_class = policy_class
+                cb.is_excluded = False
+                cb.save()
+                messages.success(request, "تم حفظ بيانات المنفعة بنجاح.")
+                return redirect('policies:class_benefit_manage', class_pk=policy_class.pk)
+            # إذا كان الـ form غير صالح، أكمل لعرض الصفحة مع الخطأ
+
+    # --- بناء قائمة المنافع الفعلية مع البيانات الكاملة ---
+    overrides = {
+        b.benefit_type_id: b
+        for b in policy_class.benefits.all()
+    }
+
+    effective_benefits = []
+    plan_benefit_type_ids = set()
+
+    if policy_class.plan_class_id:
+        for pb in policy_class.plan_class.benefits.all():
+            plan_benefit_type_ids.add(pb.benefit_type_id)
+            override = overrides.get(pb.benefit_type_id)
+            is_exc = override.is_excluded if override else False
+            is_over = override is not None and not is_exc
+
+            effective_benefits.append({
+                'benefit_type': pb.benefit_type,
+                'limit_amount': override.limit_amount if is_over else pb.limit_amount,
+                'deductible_percentage': override.deductible_percentage if is_over else pb.deductible_percentage,
+                'description': override.description if is_over else pb.description,
+                'source': 'plan',
+                'is_overridden': is_over,
+                'is_excluded': is_exc,
+                'override_obj': override,
+                'plan_limit': pb.limit_amount,
+                'plan_deductible': pb.deductible_percentage,
+            })
+
+    # منافع مباشرة ليست في قالب الخطة
+    for b in policy_class.benefits.all():
+        if b.benefit_type_id not in plan_benefit_type_ids:
+            effective_benefits.append({
+                'benefit_type': b.benefit_type,
+                'limit_amount': b.limit_amount,
+                'deductible_percentage': b.deductible_percentage,
+                'description': b.description,
+                'source': 'custom',
+                'is_overridden': False,
+                'is_excluded': b.is_excluded,
+                'override_obj': b,
+                'plan_limit': None,
+                'plan_deductible': None,
+            })
+
+    benefit_types = BenefitType.objects.all()
 
     return render(request, 'policies/benefit_manage.html', {
         'policy_class': policy_class,
-        'benefits': benefits,
+        'effective_benefits': effective_benefits,
         'benefit_types': benefit_types,
-        'is_broker': is_broker,
+        'is_editable': is_editable,
+    })
+
+
+@login_required
+@permission_required('policies.view_policy', raise_exception=True)
+def class_provider_manage(request, class_pk):
+    """
+    صفحة إدارة المستشفيات لفئة معينة.
+    - استبعاد مستشفيات من شبكة الفئة (excluded_providers)
+    - إضافة مستشفيات إضافية خارج الشبكة (extra_providers)
+    """
+    from networks.models import ServiceProvider
+    policy_class = get_object_or_404(
+        PolicyClass.objects.select_related(
+            'policy__client__broker',
+            'network',
+            'plan_class__network',
+        ).prefetch_related(
+            'excluded_providers',
+            'extra_providers',
+        ),
+        pk=class_pk,
+    )
+    policy = policy_class.policy
+    user = request.user
+
+    # صلاحية الوصول
+    if user.role == User.Roles.SUPER_ADMIN:
+        has_access = True
+    elif user.is_broker_role and user.related_broker:
+        has_access = (policy.client.broker == user.related_broker)
+    elif user.is_hr_role and user.related_client:
+        has_access = (policy.client == user.related_client) or (
+            user.related_client.parent and policy.client == user.related_client.parent
+        )
+    else:
+        has_access = False
+
+    if not has_access:
+        messages.error(request, "لا تملك صلاحية عرض هذه الصفحة.")
+        return redirect('policies:policy_list')
+
+    is_editable = user.role == User.Roles.SUPER_ADMIN or user.is_broker_role
+
+    if request.method == 'POST':
+        if not is_editable:
+            messages.error(request, "عذراً، لديك صلاحية العرض فقط.")
+            return redirect('policies:class_provider_manage', class_pk=class_pk)
+
+        action = request.POST.get('action')
+        provider_id = request.POST.get('provider_id')
+
+        if provider_id:
+            provider = get_object_or_404(ServiceProvider, pk=provider_id)
+
+            if action == 'exclude':
+                policy_class.excluded_providers.add(provider)
+                # إذا كان في extra_providers عن طريق الخطأ، أزله
+                policy_class.extra_providers.remove(provider)
+                messages.success(request, f"تم استبعاد «{provider.name_ar}» من الفئة.")
+
+            elif action == 'restore':
+                policy_class.excluded_providers.remove(provider)
+                messages.success(request, f"تمت استعادة «{provider.name_ar}» إلى الشبكة.")
+
+            elif action == 'add_extra':
+                policy_class.extra_providers.add(provider)
+                # إذا كان مستبعداً سابقاً، أزل الاستبعاد
+                policy_class.excluded_providers.remove(provider)
+                messages.success(request, f"تمت إضافة «{provider.name_ar}» كمستشفى إضافي.")
+
+            elif action == 'remove_extra':
+                policy_class.extra_providers.remove(provider)
+                messages.success(request, f"تمت إزالة «{provider.name_ar}» من المستشفيات الإضافية.")
+
+        return redirect('policies:class_provider_manage', class_pk=class_pk)
+
+    # --- بناء بيانات العرض ---
+    effective_network = policy_class.effective_network
+    excluded_ids = set(policy_class.excluded_providers.values_list('id', flat=True))
+    extra_ids = set(policy_class.extra_providers.values_list('id', flat=True))
+
+    # مستشفيات الشبكة الأصلية مع تمييز المستبعدة
+    if effective_network:
+        network_hospitals = effective_network.hospitals.all().order_by('name_ar')
+    else:
+        network_hospitals = ServiceProvider.objects.none()
+
+    network_rows = []
+    for h in network_hospitals:
+        network_rows.append({
+            'provider': h,
+            'is_excluded': h.pk in excluded_ids,
+        })
+
+    extra_providers = policy_class.extra_providers.all().order_by('name_ar')
+
+    # قائمة البحث: كل المستشفيات المتاحة عند شركة التأمين
+    search_q = request.GET.get('search', '').strip()
+    network_ids = set(network_hospitals.values_list('id', flat=True))
+    # نحتاج معرفة مزود التأمين الفعلي لتضييق نطاق البحث
+    effective_provider = policy.effective_provider
+    if search_q:
+        search_results = ServiceProvider.objects.filter(
+            Q(name_ar__icontains=search_q) | Q(name_en__icontains=search_q)
+        )
+        if effective_provider:
+            search_results = search_results.filter(networks__provider=effective_provider).distinct()
+        search_results = search_results.exclude(id__in=network_ids | extra_ids)[:20]
+    else:
+        search_results = []
+
+    return render(request, 'policies/class_providers.html', {
+        'policy_class': policy_class,
+        'effective_network': effective_network,
+        'network_rows': network_rows,
+        'extra_providers': extra_providers,
+        'search_results': search_results,
+        'search_q': search_q,
+        'is_editable': is_editable,
     })
 
 
@@ -476,7 +773,7 @@ def plan_class_benefit_manage(request, plan_pk, class_pk):
 
 
 @login_required
-@permission_required('policies.manage_insurance_plans', raise_exception=True)
+@permission_required('policies.view_policy', raise_exception=True)
 def plan_get_classes(request, plan_pk):
     """HTMX endpoint: يُرجع خيارات الفئات لخطة معينة لحقل select."""
     plan = get_object_or_404(get_allowed_plans(request.user), pk=plan_pk)

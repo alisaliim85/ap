@@ -10,10 +10,13 @@ urlpatterns = [
     path('<uuid:pk>/edit/', views.policy_update, name='policy_update'),
     path('<uuid:pk>/delete/', views.policy_delete, name='policy_delete'),
     path('<uuid:pk>/renew/', views.policy_renew, name='policy_renew'),
+    path('<uuid:pk>/sync-plan-classes/', views.policy_sync_plan_classes, name='policy_sync_plan_classes'),
 
     # الفئات والمنافع (وثائق)
     path('<uuid:policy_pk>/classes/add/', views.policy_class_create, name='policy_class_create'),
+    path('classes/<uuid:class_pk>/edit/', views.policy_class_update, name='policy_class_update'),
     path('classes/<uuid:class_pk>/benefits/', views.class_benefit_manage, name='class_benefit_manage'),
+    path('classes/<uuid:class_pk>/providers/', views.class_provider_manage, name='class_provider_manage'),
 
     # أنواع المنافع
     path('benefit-types/', views.benefit_type_list, name='benefit_type_list'),

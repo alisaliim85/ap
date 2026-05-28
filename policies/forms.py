@@ -13,9 +13,6 @@ class PolicyForm(forms.ModelForm):
             'provider': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'}),
             'plan': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500',
-                'hx-get': '',  # يُعبأ ديناميكياً في __init__
-                'hx-target': '#plan-classes-preview',
-                'hx-trigger': 'change',
             }),
             'policy_number': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500', 'placeholder': 'رقم البوليصة'}),
             'start_date': forms.DateInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500', 'type': 'date'}),

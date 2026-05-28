@@ -1,163 +1,347 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto">
+<div class="max-w-6xl mx-auto space-y-6">
 
-    <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <div class="flex items-center gap-3">
-                <a href="{% url 'policies:policy_detail' policy_class.policy.pk %}"
-                    class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-brand-600 transition shadow-sm">
-                    <i class="ph-bold ph-arrow-right"></i>
-                </a>
-                <h2 class="text-2xl font-black text-slate-800">إدارة منافع الفئة: {{ policy_class.name }}</h2>
+    {# ======== Header ======== #}
+    <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div class="flex items-start gap-3">
+            <a href="{% url 'policies:policy_detail' policy_class.policy.pk %}"
+                class="mt-1 w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-brand-600 transition shadow-sm flex-shrink-0">
+                <i class="ph-bold ph-arrow-right"></i>
+            </a>
+            <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <h2 class="text-2xl font-black text-slate-800">تخصيص فئة: {{ policy_class.name }}</h2>
+                    {% if policy_class.plan_class %}
+                    <span class="text-xs bg-brand-100 text-brand-700 font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <i class="ph-bold ph-lightning text-[10px]"></i> مرتبطة بخطة
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="text-slate-500 text-sm mt-0.5 flex items-center gap-2">
+                    <span>{{ policy_class.policy.client.name_ar }}</span>
+                    <span class="text-slate-300">·</span>
+                    <span class="font-mono font-bold text-brand-600">{{ policy_class.policy.policy_number }}</span>
+                    {% if policy_class.plan_class %}
+                    <span class="text-slate-300">·</span>
+                    <span class="text-slate-500">من خطة: {{ policy_class.plan_class.plan.name }}</span>
+                    {% endif %}
+                </p>
             </div>
-            <p class="text-slate-500 text-sm mt-1 mr-11">{{ policy_class.policy.client.name_ar }} - وثيقة رقم:
-                {{ policy_class.policy.policy_number }}</p>
+        </div>
+        {% if is_editable %}
+        <div class="flex gap-2 flex-shrink-0">
+            <a href="{% url 'policies:class_provider_manage' policy_class.pk %}"
+                class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-bold text-sm flex items-center gap-2 transition shadow-sm">
+                <i class="ph-duotone ph-hospital text-indigo-500 text-lg"></i> إدارة المستشفيات
+            </a>
+            <a href="{% url 'policies:policy_class_update' policy_class.pk %}"
+                class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-bold text-sm flex items-center gap-2 transition shadow-sm">
+                <i class="ph-duotone ph-network text-brand-600 text-lg"></i> تعديل الشبكة / الحد السنوي
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    {# ======== Network + Annual Limit summary ======== #}
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {# Effective Network #}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
+            {% with net=policy_class.effective_network %}
+            {% if net %}
+            <div class="w-11 h-11 bg-brand-50 border border-brand-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="ph-duotone ph-network text-brand-500 text-2xl"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">الشبكة الطبية</p>
+                <p class="font-black text-slate-800 text-sm mt-0.5">{{ net.name_en }}</p>
+                {% if not policy_class.network_id and policy_class.plan_class_id %}
+                <p class="text-[9px] text-brand-500 font-bold">موروث من الخطة</p>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="w-11 h-11 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="ph-duotone ph-network text-slate-400 text-2xl"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">الشبكة الطبية</p>
+                <p class="font-bold text-slate-400 text-sm mt-0.5">غير محددة</p>
+            </div>
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        {# Annual Limit #}
+        <div class="bg-indigo-900 rounded-xl p-5 flex items-center gap-4">
+            <div class="w-11 h-11 bg-indigo-800 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="ph-duotone ph-shield-check text-indigo-300 text-2xl"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-indigo-300 uppercase tracking-wider">الحد السنوي العام</p>
+                {% with lim=policy_class.effective_annual_limit %}
+                {% if lim %}
+                <p class="font-black text-white font-mono text-lg leading-tight mt-0.5">{{ lim|floatformat:0 }} <span class="text-xs text-indigo-300 font-normal">SAR</span></p>
+                {% if policy_class.annual_limit is None and policy_class.plan_class_id %}
+                <p class="text-[9px] text-indigo-300 font-bold">↑ موروث من الخطة</p>
+                {% endif %}
+                {% else %}
+                <p class="font-bold text-indigo-300 text-sm mt-0.5">غير محدد</p>
+                {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+
+        {# Benefits count #}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
+            <div class="w-11 h-11 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="ph-duotone ph-list-checks text-emerald-500 text-2xl"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">المنافع النشطة</p>
+                {% with active=effective_benefits|length %}
+                <p class="font-black text-slate-800 text-xl leading-tight mt-0.5">{{ active }}</p>
+                {% endwith %}
+            </div>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <!-- Form Section -->
-        {% if not policy_class.policy.is_subsidiary %}
+        {# ======== Left: Add/Edit Form ======== #}
+        {% if is_editable and not policy_class.policy.is_subsidiary %}
         <div class="lg:col-span-1">
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden sticky top-6">
-                <div class="p-5 border-b border-slate-200 bg-slate-50">
-                    <h3 class="font-black text-slate-800 flex items-center gap-2">
-                        <i class="ph-duotone ph-plus-circle text-brand-600 text-xl"></i>
-                        إضافة / تحديث منفعة
-                    </h3>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden sticky top-6">
+                <div class="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+                    <i class="ph-duotone ph-plus-circle text-brand-600 text-xl"></i>
+                    <h3 class="font-black text-slate-800 text-sm" id="form-title">إضافة / تعديل منفعة</h3>
                 </div>
-                <div class="p-6">
-                    <form method="post" class="space-y-5">
+                <div class="p-5">
+                    <form method="post" id="benefit-form" class="space-y-4">
                         {% csrf_token %}
-                        <input type="hidden" name="benefit_id" id="id_benefit_id">
+                        <input type="hidden" name="action" id="form-action" value="add">
+                        <input type="hidden" name="benefit_type_id" id="form-benefit-type-id">
 
                         <div>
-                            <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">نوع
-                                المنفعة</label>
-                            <select name="benefit_type"
-                                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-bold text-slate-700"
-                                id="id_benefit_type">
+                            <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">نوع المنفعة</label>
+                            <select name="benefit_type" id="id_benefit_type"
+                                class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition font-bold text-slate-700 text-sm">
                                 {% for t in benefit_types %}
-                                <option value="{{ t.id }}">{{ t.name_ar }} ({{ t.name_en }})</option>
+                                <option value="{{ t.id }}">{{ t.name_ar }} — {{ t.name_en }}</option>
                                 {% endfor %}
                             </select>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">الحد
-                                المالي (SAR)</label>
-                            <input type="number" name="limit_amount" value="0" step="0.01"
-                                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-bold text-slate-700"
-                                id="id_limit_amount">
+                            <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">الحد المالي (SAR)</label>
+                            <input type="number" name="limit_amount" id="id_limit_amount" value="0" step="0.01" min="0"
+                                class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition font-bold text-slate-700 text-sm">
                         </div>
 
                         <div>
-                            <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">نسبة
-                                التحمل (%)</label>
-                            <input type="number" name="deductible_percentage" value="0"
-                                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-bold text-slate-700"
-                                id="id_deductible_percentage">
-                            <p class="text-[9px] text-slate-400 mt-1">النسبة التي يتحملها الموظف عند الاستخدام.</p>
+                            <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">نسبة التحمل (%)</label>
+                            <input type="number" name="deductible_percentage" id="id_deductible" value="0" min="0" max="100"
+                                class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition font-bold text-slate-700 text-sm">
+                            <p class="text-[9px] text-slate-400 mt-1">النسبة التي يتحملها الموظف عند استخدام هذه المنفعة</p>
                         </div>
 
                         <div>
-                            <label
-                                class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">ملاحظات
-                                التغطية</label>
-                            <textarea name="description" rows="2"
-                                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all text-sm"
-                                placeholder="مثال: يغطي العدسات الطبية كل سنتين..." id="id_description"></textarea>
+                            <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">ملاحظات التغطية</label>
+                            <textarea name="description" id="id_description" rows="2"
+                                class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition text-sm resize-none"
+                                placeholder="مثال: يغطي العدسات الطبية كل سنتين…"></textarea>
                         </div>
 
                         <button type="submit"
-                            class="w-full py-3 bg-brand-600 text-white rounded-xl font-black shadow-lg shadow-brand-200 hover:bg-brand-700 transition flex items-center justify-center gap-2">
+                            class="w-full py-2.5 bg-brand-600 text-white rounded-lg font-black text-sm shadow-md shadow-brand-100 hover:bg-brand-700 transition flex items-center justify-center gap-2">
                             <i class="ph-bold ph-check"></i> حفظ المنفعة
+                        </button>
+
+                        <button type="button" id="btn-reset-form" onclick="resetForm()"
+                            class="w-full py-2 border border-slate-200 text-slate-500 rounded-lg font-bold text-xs hover:bg-slate-50 transition hidden">
+                            إلغاء / إضافة جديدة
                         </button>
                     </form>
                 </div>
+
+                {% if policy_class.plan_class %}
+                <div class="px-5 pb-4">
+                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 leading-relaxed">
+                        <i class="ph-bold ph-info me-1"></i>
+                        المنافع الموروثة من الخطة تظهر تلقائياً. يمكنك تعديل قيمها أو استبعادها دون التأثير على الخطة الأصلية.
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
         {% endif %}
 
-        <!-- List Section -->
-        <div class="lg:col-span-2 space-y-4">
-            <div
-                class="bg-indigo-900 rounded-2xl p-6 text-white flex items-center justify-between shadow-xl shadow-indigo-900/20 overflow-hidden relative">
-                <div class="relative z-10">
-                    <h4 class="text-xs font-black uppercase tracking-widest text-indigo-300 mb-1">إجمالي التغطية العامة
-                        للفئة</h4>
-                    <div class="text-3xl font-black">{{ policy_class.annual_limit|floatformat:0 }} <span
-                            class="text-xs">SAR</span></div>
-                </div>
-                <i class="ph-duotone ph-shield-check text-8xl absolute -left-4 -bottom-4 text-white/10"></i>
-            </div>
+        {# ======== Right: Benefits List ======== #}
+        <div class="{% if is_editable and not policy_class.policy.is_subsidiary %}lg:col-span-2{% else %}lg:col-span-3{% endif %} space-y-3">
 
-            <div class="space-y-3">
-                {% for b in benefits %}
-                <div
-                    class="bg-white p-5 rounded-2xl border border-slate-200 flex items-center justify-between group hover:border-brand-500 hover:shadow-xl hover:shadow-brand-500/5 transition-all">
-                    <div class="flex items-center gap-4">
-                        <div
-                            class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
-                            <i class="{{ b.benefit_type.icon|default:'ph-duotone ph-list-plus' }} text-2xl"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-black text-slate-800">{{ b.benefit_type.name_ar }}</h4>
-                            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
-                                {{ b.benefit_type.name_en }}</p>
-                        </div>
+            {% if effective_benefits %}
+            {% for b in effective_benefits %}
+            <div class="bg-white rounded-xl border {% if b.is_excluded %}border-red-200 opacity-60{% elif b.is_overridden %}border-brand-300{% else %}border-slate-200{% endif %} shadow-sm p-5 flex items-center justify-between gap-4 group hover:shadow-md transition-all">
+
+                {# Icon + Type #}
+                <div class="flex items-center gap-4 min-w-0">
+                    <div class="w-12 h-12 rounded-xl {% if b.is_excluded %}bg-red-50{% elif b.is_overridden %}bg-brand-50{% else %}bg-slate-50{% endif %} flex items-center justify-center flex-shrink-0">
+                        <i class="{{ b.benefit_type.icon|default:'ph-duotone ph-shield-check' }} text-2xl {% if b.is_excluded %}text-red-400{% elif b.is_overridden %}text-brand-500{% else %}text-slate-400{% endif %}"></i>
                     </div>
-
-                    <div class="flex items-center gap-8">
-                        <div class="text-center">
-                            <span
-                                class="block text-[9px] font-black text-slate-400 uppercase tracking-tighter">الحد</span>
-                            <span class="text-slate-800 font-black font-mono">{{ b.limit_amount|floatformat:0 }}</span>
-                        </div>
-                        <div class="text-center">
-                            <span
-                                class="block text-[9px] font-black text-slate-400 uppercase tracking-tighter">التحمل</span>
-                            <span class="text-brand-600 font-black">{{ b.deductible_percentage }}%</span>
-                        </div>
-                        <div class="flex gap-1">
-                            {% if not policy_class.policy.is_subsidiary %}
-                            <button
-                                onclick="editBenefit('{{ b.id }}', '{{ b.benefit_type.id }}', '{{ b.limit_amount }}', '{{ b.deductible_percentage }}', '{{ b.description|escapejs }}')"
-                                class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition"
-                                title="تعديل">
-                                <i class="ph-bold ph-pencil-simple"></i>
-                            </button>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h4 class="font-black text-slate-800 text-sm {% if b.is_excluded %}line-through text-slate-400{% endif %}">{{ b.benefit_type.name_ar }}</h4>
+                            {# Source badge #}
+                            {% if b.is_excluded %}
+                            <span class="text-[9px] font-black bg-red-100 text-red-600 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                                <i class="ph-bold ph-x-circle text-[8px]"></i> مستبعدة
+                            </span>
+                            {% elif b.is_overridden %}
+                            <span class="text-[9px] font-black bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                                <i class="ph-bold ph-pencil-simple text-[8px]"></i> مُخصَّصة
+                            </span>
+                            {% elif b.source == 'plan' %}
+                            <span class="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                                <i class="ph-bold ph-lightning text-[8px]"></i> من الخطة
+                            </span>
+                            {% else %}
+                            <span class="text-[9px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                                <i class="ph-bold ph-plus text-[8px]"></i> مُضافة
+                            </span>
                             {% endif %}
                         </div>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{{ b.benefit_type.name_en }}</p>
+                        {% if b.description and not b.is_excluded %}
+                        <p class="text-xs text-slate-500 mt-0.5 truncate max-w-xs">{{ b.description }}</p>
+                        {% endif %}
                     </div>
                 </div>
-                {% empty %}
-                <div class="py-20 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                    <i class="ph-duotone ph-stack text-5xl text-slate-300 mb-3 block"></i>
-                    <p class="text-slate-500 font-bold">لم يتم إضافة أي منافع تفصيلية بعد</p>
-                    <p class="text-[10px] text-slate-400 mt-1">ابدأ بإدخال أول منفعة من القائمة الجانبية</p>
+
+                {# Values #}
+                {% if not b.is_excluded %}
+                <div class="flex items-center gap-6 flex-shrink-0">
+                    <div class="text-center">
+                        <p class="text-[9px] font-black text-slate-400 uppercase">الحد</p>
+                        <p class="font-black text-slate-800 font-mono text-sm">{{ b.limit_amount|floatformat:0 }}</p>
+                        {% if b.is_overridden and b.plan_limit is not None and b.plan_limit != b.limit_amount %}
+                        <p class="text-[9px] text-slate-400 line-through font-mono">{{ b.plan_limit|floatformat:0 }}</p>
+                        {% endif %}
+                        <p class="text-[8px] text-slate-400">SAR</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[9px] font-black text-slate-400 uppercase">التحمل</p>
+                        <p class="font-black text-brand-600 text-sm">{{ b.deductible_percentage }}%</p>
+                        {% if b.is_overridden and b.plan_deductible is not None and b.plan_deductible != b.deductible_percentage %}
+                        <p class="text-[9px] text-slate-400 line-through">{{ b.plan_deductible }}%</p>
+                        {% endif %}
+                    </div>
                 </div>
-                {% endfor %}
+                {% endif %}
+
+                {# Actions #}
+                {% if is_editable and not policy_class.policy.is_subsidiary %}
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    {% if not b.is_excluded %}
+                    <button
+                        onclick="fillEditForm('{{ b.benefit_type.id }}', '{{ b.benefit_type.name_ar }}', '{{ b.limit_amount }}', '{{ b.deductible_percentage }}', '{{ b.description|escapejs }}')"
+                        class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition" title="تعديل">
+                        <i class="ph-bold ph-pencil-simple"></i>
+                    </button>
+                    {% endif %}
+
+                    {% if b.source == 'plan' or b.source == 'custom' %}
+                    {% if b.is_overridden %}
+                    {# Restore to plan default #}
+                    <form method="post" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="restore">
+                        <input type="hidden" name="benefit_type_id" value="{{ b.benefit_type.id }}">
+                        <button type="submit"
+                            class="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
+                            title="استعادة القيم الافتراضية من الخطة"
+                            onclick="return confirm('استعادة القيم الافتراضية من الخطة؟')">
+                            <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if not b.is_excluded %}
+                    {# Exclude #}
+                    <form method="post" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="exclude">
+                        <input type="hidden" name="benefit_type_id" value="{{ b.benefit_type.id }}">
+                        <button type="submit"
+                            class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                            title="استبعاد هذه المنفعة من التغطية"
+                            onclick="return confirm('هل أنت متأكد من استبعاد هذه المنفعة من التغطية؟')">
+                            <i class="ph-bold ph-x-circle"></i>
+                        </button>
+                    </form>
+                    {% else %}
+                    {# Restore excluded benefit #}
+                    <form method="post" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="restore">
+                        <input type="hidden" name="benefit_type_id" value="{{ b.benefit_type.id }}">
+                        <button type="submit"
+                            class="p-2 text-red-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+                            title="إعادة تفعيل هذه المنفعة">
+                            <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
+            {% endfor %}
+
+            {% else %}
+            {# Empty state #}
+            <div class="py-20 text-center bg-white border-2 border-dashed border-slate-200 rounded-xl">
+                <i class="ph-duotone ph-stack text-6xl text-slate-200 mb-3 block"></i>
+                <p class="font-bold text-slate-400">لا توجد منافع مضافة لهذه الفئة</p>
+                {% if policy_class.plan_class %}
+                <p class="text-xs text-slate-400 mt-1">قالب الخطة المرتبط لا يحتوي على منافع بعد.</p>
+                {% elif is_editable %}
+                <p class="text-xs text-slate-400 mt-1">أضف أول منفعة من النموذج الجانبي.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
         </div>
     </div>
+
+    {# Info legend #}
+    <div class="flex flex-wrap gap-4 text-[10px] text-slate-500 font-bold border-t border-slate-100 pt-4">
+        <span class="flex items-center gap-1"><span class="w-2 h-2 bg-slate-100 border border-slate-300 rounded-full inline-block"></span> من الخطة — قيم افتراضية موروثة</span>
+        <span class="flex items-center gap-1"><span class="w-2 h-2 bg-brand-200 border border-brand-400 rounded-full inline-block"></span> مُخصَّصة — تم تعديل قيمها لهذه الوثيقة</span>
+        <span class="flex items-center gap-1"><span class="w-2 h-2 bg-emerald-200 border border-emerald-400 rounded-full inline-block"></span> مُضافة — منفعة جديدة خارج الخطة</span>
+        <span class="flex items-center gap-1"><span class="w-2 h-2 bg-red-200 border border-red-400 rounded-full inline-block"></span> مستبعدة — محذوفة من تغطية هذه الوثيقة</span>
+    </div>
+
 </div>
 
 <script>
-    function editBenefit(id, type, amount, coPay, desc) {
-        document.getElementById('id_benefit_id').value = id;
-        document.getElementById('id_benefit_type').value = type;
-        document.getElementById('id_limit_amount').value = amount;
-        document.getElementById('id_deductible_percentage').value = coPay;
-        document.getElementById('id_description').value = desc;
+function fillEditForm(typeId, typeName, limit, deductible, desc) {
+    document.getElementById('form-action').value = 'save';
+    document.getElementById('form-benefit-type-id').value = typeId;
+    document.getElementById('id_benefit_type').value = typeId;
+    document.getElementById('id_limit_amount').value = limit;
+    document.getElementById('id_deductible').value = deductible;
+    document.getElementById('id_description').value = desc;
+    document.getElementById('form-title').textContent = 'تعديل: ' + typeName;
+    document.getElementById('btn-reset-form').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
-        // Smooth scroll to form on mobile
-        if (window.innerWidth < 1024) {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    }
+function resetForm() {
+    document.getElementById('benefit-form').reset();
+    document.getElementById('form-action').value = 'add';
+    document.getElementById('form-benefit-type-id').value = '';
+    document.getElementById('form-title').textContent = 'إضافة / تعديل منفعة';
+    document.getElementById('btn-reset-form').classList.add('hidden');
+}
 </script>
 {% endblock %}

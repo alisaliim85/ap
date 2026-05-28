@@ -105,10 +105,10 @@ class User(AbstractUser):
             self.is_superuser = True
             self.is_staff = True
         
-        # 2. موظفو الوسيط (يدخلون الأدمن لكن ليسوا سوبر)
+        # 2. موظفو الوسيط (يستخدمون البوابة المخصصة فقط، لا Django Admin)
         elif self.role in [self.Roles.BROKER_ADMIN, self.Roles.BROKER_STAFF]:
-            self.is_superuser = False # سحب الصلاحية المطلقة منهم
-            self.is_staff = False      # السماح بدخول لوحة التحكم
+            self.is_superuser = False
+            self.is_staff = False
             
         # 3. باقي المستخدمين (لا يدخلون لوحة تحكم دجانغو الافتراضية)
         else:

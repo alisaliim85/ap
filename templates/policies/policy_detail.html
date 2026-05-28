@@ -1,36 +1,44 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto">
+<div class="max-w-6xl mx-auto space-y-6">
 
-    <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <div class="flex items-center gap-3">
-                <a href="{% url 'policies:policy_list' %}"
-                    class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-brand-600 transition shadow-sm">
-                    <i class="ph-bold ph-arrow-right"></i>
-                </a>
+    {# ======== Header ======== #}
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-start gap-3">
+            <a href="{% url 'policies:policy_list' %}"
+                class="mt-1 w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-brand-600 transition shadow-sm flex-shrink-0">
+                <i class="ph-bold ph-arrow-right"></i>
+            </a>
+            <div>
                 <h2 class="text-2xl font-black text-slate-800">تفاصيل الوثيقة: {{ policy.policy_number }}</h2>
+                <p class="text-slate-500 text-sm mt-0.5">
+                    {% if policy.is_subsidiary %}
+                        وثيقة تابعة لـ
+                        <a href="{% url 'policies:policy_detail' policy.master_policy.pk %}" class="text-brand-600 font-bold hover:underline">{{ policy.master_policy.policy_number }}</a>
+                        &mdash; {{ policy.client.name_ar }}
+                    {% else %}
+                        وثيقة رئيسية &mdash; {{ policy.client.name_ar }}
+                        {% if policy.provider %}&nbsp;|&nbsp;{{ policy.provider.name_ar }}{% endif %}
+                    {% endif %}
+                </p>
             </div>
-            {% if policy.is_subsidiary %}
-            <p class="text-slate-500 text-sm mt-1 mr-11">
-                وثيقة تابعة لـ <a href="{% url 'policies:policy_detail' policy.master_policy.pk %}"class="text-brand-600 hover:underline font-bold">{{ policy.master_policy.policy_number }}</a>
-                - {{ policy.client.name_ar }}
-            </p>
-            {% else %}
-            <p class="text-slate-500 text-sm mt-1 mr-11">
-                وثيقة رئيسية لـ {{ policy.client.name_ar }} من خلال {{ policy.provider.name_ar }}
-                {% if policy.plan %}
-                | <span class="text-brand-600 font-semibold"><i class="ph-duotone ph-file-dashed"></i> {{ policy.plan.name }}</span>
-                {% endif %}
-            </p>
-            {% endif %}
         </div>
-        <div class="flex gap-2">
+        <div class="flex items-center gap-2 flex-shrink-0">
             <a href="{% url 'policies:policy_update' policy.pk %}"
                 class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-bold text-sm flex items-center gap-2 transition shadow-sm">
                 <i class="ph-duotone ph-pencil-simple text-brand-600 text-lg"></i> تعديل
             </a>
+            {% if policy.plan and not policy.is_subsidiary %}
+            <form method="post" action="{% url 'policies:policy_sync_plan_classes' policy.pk %}" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                    class="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 font-bold text-sm flex items-center gap-2 transition shadow-sm"
+                    title="مزامنة الفئات من خطة التأمين المرتبطة">
+                    <i class="ph-duotone ph-arrows-clockwise text-lg"></i> مزامنة الخطة
+                </button>
+            </form>
+            {% endif %}
             <a href="{% url 'policies:policy_renew' policy.pk %}"
                 class="px-4 py-2 bg-brand-50 text-brand-700 border border-brand-200 rounded-lg hover:bg-brand-100 font-bold text-sm flex items-center gap-2 transition shadow-sm">
                 <i class="ph-duotone ph-arrow-clockwise text-lg"></i> تجديد
@@ -42,176 +50,340 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    {# ======== Summary Cards Row ======== #}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 
-        <!-- Sidebar Info -->
-        <div class="space-y-6">
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-center p-6">
-                {% if policy.is_active %}
-                <div
-                    class="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-100 shadow-inner">
-                    <i class="ph-duotone ph-check-circle text-3xl"></i>
-                </div>
-                <span
-                    class="text-green-600 text-xs font-black uppercase tracking-widest bg-green-50 px-3 py-1 rounded-full border border-green-100">وثيقة
-                    نشطة</span>
-                {% else %}
-                <div
-                    class="w-16 h-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-200 shadow-inner">
-                    <i class="ph-duotone ph-x-circle text-3xl"></i>
-                </div>
-                <span
-                    class="text-slate-400 text-xs font-black uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full border border-slate-200">منتهية
-                    الصلاحية</span>
-                {% endif %}
-
-                <div class="mt-8 pt-6 border-t border-slate-50 space-y-4">
-                    <div class="text-right">
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">تبدأ
-                            من</label>
-                        <p class="text-slate-700 font-bold font-mono">{{ policy.start_date|date:"Y-m-d" }}</p>
-                    </div>
-                    <div class="text-right">
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">تنتهي
-                            في</label>
-                        <p class="text-slate-700 font-bold font-mono">{{ policy.end_date|date:"Y-m-d" }}</p>
-                    </div>
-                </div>
-
-                {% if policy.contract_file %}
-                <a href="{{ policy.contract_file.url }}" target="_blank"
-                    class="mt-8 w-full py-3 bg-brand-600 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-brand-100 hover:bg-brand-700 transition">
-                    <i class="ph-bold ph-file-pdf text-lg"></i> عرض ملف العقد
-                </a>
-                {% endif %}
+        {# Status #}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
+            {% if policy.is_active %}
+            <div class="w-12 h-12 bg-green-50 border border-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="ph-duotone ph-check-circle text-green-500 text-2xl"></i>
             </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">الحالة</p>
+                <p class="font-black text-green-600 text-sm mt-0.5">وثيقة نشطة</p>
+            </div>
+            {% else %}
+            <div class="w-12 h-12 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="ph-duotone ph-x-circle text-slate-400 text-2xl"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">الحالة</p>
+                <p class="font-black text-slate-500 text-sm mt-0.5">منتهية</p>
+            </div>
+            {% endif %}
+        </div>
 
-            <div class="bg-indigo-900 rounded-xl p-6 text-white text-center">
-                <h4 class="text-xs font-bold uppercase tracking-widest text-indigo-300 mb-6">إحصائيات الفئات</h4>
-                <div class="text-4xl font-black mb-1">{{ classes.count }}</div>
-                <p class="text-indigo-200 text-[10px] font-medium">فئات تأمينية مضافة</p>
+        {# Start Date #}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
+            <div class="w-12 h-12 bg-brand-50 border border-brand-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="ph-duotone ph-calendar-check text-brand-500 text-2xl"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">تبدأ من</p>
+                <p class="font-black text-slate-700 font-mono text-sm mt-0.5">{{ policy.start_date|date:"Y-m-d" }}</p>
             </div>
         </div>
 
-        <!-- Main Content -->
-        <div class="md:col-span-3 space-y-6">
+        {# End Date #}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
+            <div class="w-12 h-12 bg-amber-50 border border-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="ph-duotone ph-calendar-x text-amber-500 text-2xl"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">تنتهي في</p>
+                <p class="font-black text-slate-700 font-mono text-sm mt-0.5">{{ policy.end_date|date:"Y-m-d" }}</p>
+            </div>
+        </div>
 
+        {# Classes Count #}
+        <div class="bg-indigo-900 rounded-xl p-5 flex items-center gap-4">
+            <div class="w-12 h-12 bg-indigo-800 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="ph-duotone ph-users-three text-indigo-300 text-2xl"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-indigo-300 uppercase tracking-wider">الفئات</p>
+                <p class="font-black text-white text-2xl leading-none mt-1">{{ classes.count }}</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {# ======== Left Column: Plan Info + Contract + Sub-Policies ======== #}
+        <div class="space-y-5">
+
+            {# Plan Card — shown only when plan is linked #}
+            {% if policy.plan %}
+            <div class="bg-white rounded-xl border border-brand-200 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 bg-brand-50 border-b border-brand-100 flex items-center gap-2">
+                    <i class="ph-duotone ph-file-dashed text-brand-600 text-xl"></i>
+                    <h3 class="font-black text-brand-800 text-sm">خطة التأمين المرتبطة</h3>
+                </div>
+                <div class="p-5 space-y-3">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">اسم الخطة</p>
+                        <a href="{% url 'policies:plan_detail' policy.plan.pk %}"
+                            class="font-black text-slate-800 hover:text-brand-600 transition text-sm flex items-center gap-1">
+                            {{ policy.plan.name }}
+                            <i class="ph-bold ph-arrow-up-left text-xs text-brand-400"></i>
+                        </a>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">جهة التأمين</p>
+                        <p class="text-slate-700 font-bold text-sm">{{ policy.plan.provider.name_ar }}</p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-100">
+                        <span class="inline-flex items-center gap-1 text-[10px] font-black text-brand-600 bg-brand-50 px-2 py-1 rounded-full">
+                            <i class="ph-bold ph-lightning"></i>
+                            الفئات موروثة من الخطة
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% elif policy.provider %}
+            {# No plan — show standalone provider card #}
             <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div class="p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                    <i class="ph-duotone ph-buildings text-slate-500 text-xl"></i>
+                    <h3 class="font-black text-slate-700 text-sm">جهة التأمين</h3>
+                </div>
+                <div class="p-5">
+                    <p class="font-black text-slate-800">{{ policy.provider.name_ar }}</p>
+                    <p class="text-slate-500 text-xs mt-1">{{ policy.provider.name_en }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            {# Contract File #}
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                    <i class="ph-duotone ph-file-pdf text-red-500 text-xl"></i>
+                    <h3 class="font-black text-slate-700 text-sm">ملف العقد</h3>
+                </div>
+                <div class="p-5">
+                    {% if policy.contract_file %}
+                    <a href="{{ policy.contract_file.url }}" target="_blank"
+                        class="w-full py-2.5 bg-brand-600 text-white rounded-lg font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-brand-100 hover:bg-brand-700 transition">
+                        <i class="ph-bold ph-file-pdf text-base"></i> عرض ملف العقد
+                    </a>
+                    {% else %}
+                    <div class="text-center">
+                        <p class="text-slate-400 text-xs mb-3">لا يوجد ملف مرفق</p>
+                        <a href="{% url 'policies:policy_update' policy.pk %}"
+                            class="w-full py-2 border border-dashed border-slate-300 text-slate-500 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:border-brand-400 hover:text-brand-600 transition">
+                            <i class="ph-bold ph-upload-simple"></i> رفع ملف العقد
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Sub-Policies #}
+            {% if sub_policies %}
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i class="ph-duotone ph-tree-structure text-slate-500 text-xl"></i>
+                        <h3 class="font-black text-slate-700 text-sm">الوثائق التابعة</h3>
+                    </div>
+                    <span class="text-xs font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{{ sub_policies.count }}</span>
+                </div>
+                <div class="divide-y divide-slate-100">
+                    {% for sub in sub_policies %}
+                    <a href="{% url 'policies:policy_detail' sub.pk %}"
+                        class="flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition group">
+                        <div>
+                            <p class="font-bold text-slate-800 text-sm group-hover:text-brand-600 transition">{{ sub.policy_number }}</p>
+                            <p class="text-xs text-slate-500">{{ sub.client.name_ar }}</p>
+                        </div>
+                        <i class="ph-bold ph-arrow-left text-slate-300 text-xs group-hover:text-brand-400 transition"></i>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+
+        {# ======== Right Column (2/3): Policy Classes ======== #}
+        <div class="lg:col-span-2 space-y-5">
+
+            {# Inherited data banner #}
+            {% if inherited_data %}
+            <div class="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm font-bold">
+                <i class="ph-duotone ph-warning text-amber-500 text-xl flex-shrink-0"></i>
+                الفئات الظاهرة موروثة من الوثيقة الأم
+                <a href="{% url 'policies:policy_detail' master_policy_ref.pk %}"
+                    class="mr-auto text-xs text-amber-700 hover:underline font-black">
+                    {{ master_policy_ref.policy_number }}
+                </a>
+            </div>
+            {% endif %}
+
+            {# Classes Panel #}
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                    <h3 class="font-black text-slate-800 flex items-center gap-2 text-sm">
                         <i class="ph-duotone ph-users-three text-brand-600 text-xl"></i>
                         الفئات والشبكات (Policy Classes)
                     </h3>
                     {% if not policy.is_subsidiary %}
                     <a href="{% url 'policies:policy_class_create' policy.pk %}"
-                        class="px-3 py-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-bold text-[10px] transition flex items-center gap-1">
+                        class="px-3 py-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-black text-[11px] transition flex items-center gap-1.5">
                         <i class="ph-bold ph-plus"></i> إضافة فئة جديدة
                     </a>
                     {% else %}
-                    <div
-                        class="flex items-center gap-2 text-xs bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg border border-amber-100 font-bold">
-                        <i class="ph-duotone ph-lock-key text-lg"></i>
-                        الفئات موروثة من الوثيقة الأم
-                    </div>
+                    <span class="text-[11px] bg-amber-50 text-amber-700 border border-amber-100 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1">
+                        <i class="ph-duotone ph-lock-key"></i> موروثة من الأم
+                    </span>
                     {% endif %}
                 </div>
 
-                <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {% for c in classes %}
-                    <div
-                        class="group bg-slate-50 rounded-xl p-5 border border-slate-200 hover:border-brand-500 hover:bg-white hover:shadow-xl hover:shadow-brand-500/5 transition-all relative overflow-hidden">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h4 class="text-xl font-black text-slate-800">{{ c.name }}</h4>
-                                {% with eff_net=c.effective_network %}
-                                {% if eff_net %}
-                                    <p class="text-xs text-brand-600 font-bold flex items-center gap-1">
-                                        {{ eff_net.name_en }}
-                                        {% if not c.network_id and c.plan_class_id %}
-                                            <span class="text-[9px] text-slate-400 font-normal">(من الخطة)</span>
+                <div class="p-5">
+                    {% if classes %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {% for c in classes %}
+                        <div class="group relative bg-slate-50 rounded-xl border border-slate-200 hover:border-brand-300 hover:bg-white hover:shadow-lg hover:shadow-brand-500/5 transition-all overflow-hidden">
+
+                            {# Inherited-from-plan badge #}
+                            {% if c.plan_class %}
+                            <div class="absolute top-3 start-3">
+                                <span class="text-[9px] font-black bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                                    <i class="ph-bold ph-lightning text-[8px]"></i> من خطة
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            <div class="p-5 pt-4">
+
+                                {# Class Name + Limit #}
+                                <div class="flex justify-between items-start mb-3">
+                                    <div class="pe-14">
+                                        <h4 class="text-lg font-black text-slate-800">{{ c.name }}</h4>
+                                        {% with eff_net=c.effective_network %}
+                                        {% if eff_net %}
+                                        <p class="text-xs text-brand-600 font-bold flex items-center gap-1 mt-0.5">
+                                            <i class="ph-bold ph-network text-[10px]"></i>
+                                            {{ eff_net.name_en }}
+                                            {% if not c.network_id and c.plan_class_id %}
+                                            <span class="text-[9px] text-slate-400 font-normal">(موروث)</span>
+                                            {% endif %}
+                                        </p>
+                                        {% else %}
+                                        <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                                            <i class="ph-bold ph-minus-circle text-[10px]"></i> بدون شبكة
+                                        </p>
                                         {% endif %}
-                                    </p>
+                                        {% endwith %}
+                                    </div>
+                                    <div class="text-end flex-shrink-0">
+                                        {% with lim=c.effective_annual_limit %}
+                                        {% if lim %}
+                                        <p class="text-[9px] font-black text-slate-400 uppercase">Annual Limit</p>
+                                        <p class="font-black text-slate-800 font-mono text-sm leading-tight">{{ lim|floatformat:0 }}</p>
+                                        <p class="text-[9px] text-slate-400">SAR
+                                            {% if c.annual_limit is None and c.plan_class_id %}
+                                            <span class="text-brand-500 font-bold">↑ موروث</span>
+                                            {% endif %}
+                                        </p>
+                                        {% else %}
+                                        <p class="text-[9px] text-slate-400 mt-1">بدون حد</p>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+
+                                {# Benefits chips #}
+                                {% with benefits=c.get_effective_benefits %}
+                                {% if benefits %}
+                                <div class="mb-4 flex flex-wrap gap-1 min-h-[20px]">
+                                    {% for b in benefits|slice:":4" %}
+                                    <span class="text-[10px] bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded font-medium">
+                                        {{ b.benefit_type.name_ar|default:b.benefit_type.name_en }}
+                                    </span>
+                                    {% endfor %}
+                                    {% if benefits|length > 4 %}
+                                    <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-medium">
+                                        +{{ benefits|length|add:"-4" }}
+                                    </span>
+                                    {% endif %}
+                                </div>
                                 {% else %}
-                                    <p class="text-xs text-slate-400">بدون شبكة</p>
+                                <p class="text-[11px] text-slate-400 mb-4 italic">لا توجد منافع محددة</p>
                                 {% endif %}
                                 {% endwith %}
+
+                                {# Action buttons #}
+                                <div class="flex gap-2 border-t border-slate-100 pt-3">
+                                    <a href="{% url 'policies:class_benefit_manage' c.pk %}"
+                                        class="flex-1 py-1.5 text-center text-[11px] font-black bg-white border border-slate-200 rounded-lg hover:bg-brand-50 hover:border-brand-300 hover:text-brand-600 transition text-slate-600">
+                                        <i class="ph-bold ph-list-checks me-1"></i>
+                                        {% if policy.is_subsidiary %}عرض المنافع{% else %}إدارة المنافع{% endif %}
+                                    </a>
+                                    {% if not policy.is_subsidiary %}
+                                    <a href="{% url 'policies:class_provider_manage' c.pk %}"
+                                        class="px-3 py-1.5 text-center text-[11px] font-black bg-white border border-slate-200 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition text-slate-600"
+                                        title="إدارة المستشفيات">
+                                        <i class="ph-bold ph-hospital"></i>
+                                    </a>
+                                    <a href="{% url 'policies:policy_class_update' c.pk %}"
+                                        class="px-3 py-1.5 text-center text-[11px] font-black bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition text-slate-600"
+                                        title="تعديل الفئة">
+                                        <i class="ph-bold ph-pencil-simple"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
                             </div>
-                            <div class="text-left">
-                                <span class="block text-[9px] font-black text-slate-400 uppercase">Limit</span>
-                                <span class="text-slate-800 font-mono font-black">
-                                    {% with lim=c.effective_annual_limit %}
-                                        {% if lim %}{{ lim|floatformat:0 }}{% else %}—{% endif %}
-                                    {% endwith %}
-                                </span>
-                                <span class="text-[9px] text-slate-400">SAR</span>
-                            </div>
+
+                            {# Decorative icon #}
+                            <i class="ph-duotone ph-shield-check absolute -bottom-3 -start-3 text-brand-500/5 text-7xl group-hover:text-brand-500/10 transition-colors pointer-events-none"></i>
                         </div>
-
-                        <div
-                            class="grid grid-cols-2 gap-2 text-[10px] font-bold text-slate-500 mt-6 pt-4 border-t border-slate-100">
-                            <a href="{% url 'policies:class_benefit_manage' c.pk %}"
-                                class="py-2 bg-white border border-slate-200 rounded-lg text-center hover:bg-brand-50 hover:text-brand-600 transition">
-                                {% if policy.is_subsidiary %}عرض المنافع{% else %}إدارة المنافع{% endif %}
-                            </a>
-                            <a href="#"
-                                class="py-2 bg-white border border-slate-200 rounded-lg text-center hover:bg-brand-50 hover:text-brand-600 transition text-slate-400">تعديل
-                                الفئة</a>
-                        </div>
-                        <i
-                            class="ph-duotone ph-shield-check absolute -bottom-4 -left-4 text-brand-500/5 text-8xl group-hover:text-brand-500/10 transition-colors"></i>
+                        {% endfor %}
                     </div>
-                    {% empty %}
-                    <div class="sm:col-span-2 py-12 text-center text-slate-400">
-                        <i class="ph-duotone ph-selection-plus text-5xl mb-2 opacity-30"></i>
-                        <p class="text-sm font-bold">لا يوجد فئات مضافة لهذه الوثيقة حتى الآن</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
 
-        </div>
-
-        {% if sub_policies %}
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="p-6 border-b border-slate-200 bg-slate-50">
-                <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                    <i class="ph-duotone ph-tree-structure text-brand-600 text-xl"></i>
-                    الوثائق التابعة ({{ sub_policies.count }})
-                </h3>
-            </div>
-            <div class="divide-y divide-slate-100">
-                {% for sub in sub_policies %}
-                <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition">
-                    <div>
-                        <a href="{% url 'policies:policy_detail' sub.pk %}"
-                            class="font-bold text-slate-800 hover:text-brand-600">
-                            {{ sub.policy_number }}
+                    {% else %}
+                    {# Empty State #}
+                    <div class="py-16 text-center">
+                        <i class="ph-duotone ph-selection-plus text-6xl text-slate-200 mb-3 block"></i>
+                        <p class="font-bold text-slate-400 text-sm mb-1">لا توجد فئات مضافة لهذه الوثيقة</p>
+                        {% if policy.plan %}
+                        <p class="text-xs text-slate-400 max-w-xs mx-auto mt-1 mb-5">
+                            الوثيقة مرتبطة بخطة تأمين تحتوي على فئات — يمكن مزامنتها تلقائياً.
+                        </p>
+                        <form method="post" action="{% url 'policies:policy_sync_plan_classes' policy.pk %}" class="inline-block">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-black text-sm hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
+                                <i class="ph-bold ph-arrows-clockwise"></i> مزامنة الفئات من الخطة
+                            </button>
+                        </form>
+                        {% elif not policy.is_subsidiary %}
+                        <a href="{% url 'policies:policy_class_create' policy.pk %}"
+                            class="mt-5 inline-flex items-center gap-2 px-6 py-2.5 bg-brand-600 text-white rounded-lg font-black text-sm hover:bg-brand-700 transition shadow-md shadow-brand-100">
+                            <i class="ph-bold ph-plus"></i> إضافة أول فئة
                         </a>
-                        <p class="text-xs text-slate-500 mt-1">{{ sub.client.name_ar }}</p>
+                        {% endif %}
                     </div>
-                    <span class="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">
-                        {{ sub.start_date|date:"Y-m-d" }}
-                    </span>
+                    {% endif %}
                 </div>
-                {% endfor %}
             </div>
-        </div>
-        {% endif %}
 
-        <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-10 text-center">
-            <i class="ph-duotone ph-info text-4xl text-slate-300 mb-2"></i>
-            <p class="text-slate-400 text-sm font-medium leading-relaxed">
-                {% if policy.is_subsidiary %}
-                هذه الوثيقة تابعة لوثيقة أم، لذا فهي ترث الفئات والمنافع منها.<br>
-                يمكنك فقط استعراض المنافع ولا يمكن تعديلها من هنا.
-                {% else %}
-                بعد إضافة الفئات، يمكنك تحديد سقف التغطية لكل منفعة (مثل الأسنان، البصريات، الحمل والولادة) <br>
-                بشكل مستقل لكل فئة تأمينية.
-                {% endif %}
-            </p>
-        </div>
+            {# Guidance box (always visible at bottom) #}
+            <div class="flex items-start gap-3 p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-xs text-slate-400 leading-relaxed">
+                <i class="ph-duotone ph-info text-xl text-slate-300 flex-shrink-0 mt-0.5"></i>
+                <span>
+                    {% if policy.is_subsidiary %}
+                        هذه الوثيقة تابعة لوثيقة أم — الفئات والمنافع مُورَثة منها ولا يمكن تعديلها من هنا.
+                    {% else %}
+                        بعد إضافة الفئات يمكنك تحديد سقف التغطية لكل منفعة (أسنان، بصريات، حمل ووالدة…) بشكل مستقل لكل فئة.
+                    {% endif %}
+                </span>
+            </div>
 
+        </div>
     </div>
-</div>
+
 </div>
 {% endblock %}
