@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+        <a href="{% url 'policies:plan_list' %}" class="hover:text-brand-600 transition">خطط التأمين</a>
+        <i class="ph-bold ph-caret-left text-xs"></i>
+        <span>{{ title }}</span>
+    </div>
+    <h2 class="text-2xl font-bold text-slate-800">{{ title }}</h2>
+</div>
+
+<div class="max-w-2xl bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="space-y-5">
+            <!-- شركة التأمين -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">شركة التأمين <span class="text-red-500">*</span></label>
+                {{ form.provider }}
+                {% if form.provider.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.provider.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- اسم الخطة -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">اسم الخطة <span class="text-red-500">*</span></label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.name.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- الوصف -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">الوصف</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- الحالة -->
+            <div class="flex items-center gap-3">
+                {{ form.is_active }}
+                <label class="text-sm font-semibold text-slate-700">الخطة نشطة</label>
+            </div>
+
+            {% if form.non_field_errors %}
+            <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mt-6 flex gap-3">
+            <button type="submit"
+                class="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-bold transition text-sm">
+                حفظ الخطة
+            </button>
+            <a href="{% if plan %}{% url 'policies:plan_detail' plan_pk=plan.pk %}{% else %}{% url 'policies:plan_list' %}{% endif %}"
+                class="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition text-sm">
+                إلغاء
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

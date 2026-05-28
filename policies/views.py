@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
-from .models import Policy, PolicyClass, ClassBenefit, BenefitType
+from .models import Policy, PolicyClass, ClassBenefit, BenefitType, InsurancePlan, PlanClass, PlanClassBenefit
 from .forms import PolicyForm, PolicyClassForm, ClassBenefitForm
 from accounts.models import User
 
@@ -27,6 +27,19 @@ def get_allowed_policies(user):
         return Policy.objects.filter(client=user.related_client)
         
     return Policy.objects.none()
+
+
+def get_allowed_plans(user):
+    """
+    تُرجع InsurancePlan المسموح للمستخدم رؤيتها.
+    الخطط مملوكة للوسيط — HR والأعضاء لا يصلون إليها مباشرة.
+    """
+    if user.role == User.Roles.SUPER_ADMIN:
+        return InsurancePlan.objects.all()
+    elif user.is_broker_role and user.related_broker:
+        return InsurancePlan.objects.filter(broker=user.related_broker)
+    return InsurancePlan.objects.none()
+
 
 # ==========================================
 # 1. إدارة البوالص (Policies Management)
@@ -225,3 +238,164 @@ def benefit_type_list(request):
     # قائمة أنواع المنافع عامة (Master Data)، لذا لا تتطلب فلترة بالوسيط
     types = BenefitType.objects.all()
     return render(request, 'policies/benefit_type_list.html', {'types': types})
+
+
+# ==========================================
+# إدارة خطط التأمين (Insurance Plan Templates)
+# ==========================================
+
+@login_required
+@permission_required('policies.manage_insurance_plans', raise_exception=True)
+def plan_list(request):
+    """قائمة خطط التأمين مع البحث والفلترة."""
+    plans_qs = get_allowed_plans(request.user).select_related('broker', 'provider')
+
+    search_query = request.GET.get('search', '')
+    if search_query:
+        plans_qs = plans_qs.filter(
+            Q(name__icontains=search_query) | Q(provider__name_en__icontains=search_query)
+        )
+
+    provider_filter = request.GET.get('provider', '')
+    if provider_filter:
+        plans_qs = plans_qs.filter(provider_id=provider_filter)
+
+    paginator = Paginator(plans_qs, 20)
+    page = request.GET.get('page')
+    plans = paginator.get_page(page)
+
+    from providers.models import Provider
+    providers = Provider.objects.all().order_by('name_en')
+
+    return render(request, 'policies/plan_list.html', {
+        'plans': plans,
+        'search_query': search_query,
+        'provider_filter': provider_filter,
+        'providers': providers,
+    })
+
+
+@login_required
+@permission_required('policies.manage_insurance_plans', raise_exception=True)
+def plan_create(request):
+    """إنشاء خطة تأمين جديدة."""
+    from .forms import InsurancePlanForm
+    if request.method == 'POST':
+        form = InsurancePlanForm(request.POST, user=request.user)
+        if form.is_valid():
+            plan = form.save(commit=False)
+            if request.user.is_broker_role and request.user.related_broker:
+                plan.broker = request.user.related_broker
+            plan.save()
+            messages.success(request, f"تم إنشاء الخطة '{plan.name}' بنجاح.")
+            return redirect('policies:plan_detail', plan_pk=plan.pk)
+    else:
+        form = InsurancePlanForm(user=request.user)
+    return render(request, 'policies/plan_form.html', {'form': form, 'title': 'إنشاء خطة تأمين جديدة'})
+
+
+@login_required
+@permission_required('policies.manage_insurance_plans', raise_exception=True)
+def plan_detail(request, plan_pk):
+    """تفاصيل الخطة: الفئات + المنافع + الوثائق المرتبطة."""
+    plan = get_object_or_404(
+        get_allowed_plans(request.user).select_related('broker', 'provider'),
+        pk=plan_pk,
+    )
+    classes = plan.classes.select_related('network').prefetch_related('benefits__benefit_type').order_by('order', 'name')
+    linked_policies_count = plan.policies.filter(is_active=True).count()
+    return render(request, 'policies/plan_detail.html', {
+        'plan': plan,
+        'classes': classes,
+        'linked_policies_count': linked_policies_count,
+    })
+
+
+@login_required
+@permission_required('policies.manage_insurance_plans', raise_exception=True)
+def plan_update(request, plan_pk):
+    """تعديل بيانات الخطة الأساسية."""
+    plan = get_object_or_404(get_allowed_plans(request.user), pk=plan_pk)
+    from .forms import InsurancePlanForm
+    if request.method == 'POST':
+        form = InsurancePlanForm(request.POST, instance=plan, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "تم تحديث الخطة بنجاح.")
+            return redirect('policies:plan_detail', plan_pk=plan.pk)
+    else:
+        form = InsurancePlanForm(instance=plan, user=request.user)
+    return render(request, 'policies/plan_form.html', {'form': form, 'plan': plan, 'title': 'تعديل الخطة'})
+
+
+@login_required
+@permission_required('policies.manage_insurance_plans', raise_exception=True)
+def plan_class_create(request, plan_pk):
+    """إضافة فئة جديدة لخطة تأمين."""
+    plan = get_object_or_404(get_allowed_plans(request.user), pk=plan_pk)
+    from .forms import PlanClassForm
+    if request.method == 'POST':
+        form = PlanClassForm(request.POST, plan=plan)
+        if form.is_valid():
+            plan_class = form.save(commit=False)
+            plan_class.plan = plan
+            plan_class.save()
+            if request.htmx:
+                classes = plan.classes.select_related('network').prefetch_related('benefits__benefit_type').order_by('order', 'name')
+                return render(request, 'policies/partials/plan_classes_list.html', {'plan': plan, 'classes': classes})
+            messages.success(request, f"تم إضافة الفئة '{plan_class.name}' بنجاح.")
+            return redirect('policies:plan_detail', plan_pk=plan.pk)
+    else:
+        form = PlanClassForm(plan=plan)
+    return render(request, 'policies/partials/plan_class_form.html', {'form': form, 'plan': plan})
+
+
+@login_required
+@permission_required('policies.manage_insurance_plans', raise_exception=True)
+def plan_class_benefit_manage(request, plan_pk, class_pk):
+    """إدارة منافع فئة خطة التأمين."""
+    plan = get_object_or_404(get_allowed_plans(request.user), pk=plan_pk)
+    plan_class = get_object_or_404(PlanClass, pk=class_pk, plan=plan)
+    benefits = plan_class.benefits.select_related('benefit_type').all()
+    benefit_types = BenefitType.objects.all().order_by('name_en')
+    from .forms import PlanClassBenefitForm
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'delete':
+            benefit_id = request.POST.get('benefit_id')
+            PlanClassBenefit.objects.filter(pk=benefit_id, plan_class=plan_class).delete()
+            messages.success(request, "تم حذف المنفعة بنجاح.")
+            return redirect('policies:plan_class_benefit_manage', plan_pk=plan.pk, class_pk=plan_class.pk)
+
+        benefit_id = request.POST.get('benefit_id')
+        if benefit_id:
+            benefit = get_object_or_404(PlanClassBenefit, pk=benefit_id, plan_class=plan_class)
+            form = PlanClassBenefitForm(request.POST, instance=benefit)
+        else:
+            form = PlanClassBenefitForm(request.POST)
+        if form.is_valid():
+            benefit = form.save(commit=False)
+            benefit.plan_class = plan_class
+            benefit.save()
+            messages.success(request, "تم حفظ بيانات المنفعة بنجاح.")
+            return redirect('policies:plan_class_benefit_manage', plan_pk=plan.pk, class_pk=plan_class.pk)
+    else:
+        form = PlanClassBenefitForm()
+
+    return render(request, 'policies/plan_class_benefit_manage.html', {
+        'plan': plan,
+        'plan_class': plan_class,
+        'benefits': benefits,
+        'benefit_types': benefit_types,
+        'form': form,
+    })
+
+
+@login_required
+@permission_required('policies.manage_insurance_plans', raise_exception=True)
+def plan_get_classes(request, plan_pk):
+    """HTMX endpoint: يُرجع خيارات الفئات لخطة معينة لحقل select."""
+    plan = get_object_or_404(get_allowed_plans(request.user), pk=plan_pk)
+    classes = plan.classes.order_by('order', 'name')
+    return render(request, 'policies/partials/plan_classes_options.html', {'classes': classes})

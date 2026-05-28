@@ -1,0 +1,5 @@
+{% for cls in classes %}
+    <option value="{{ cls.pk }}">{{ cls.name }}</option>
+{% empty %}
+    <option value="">— لا توجد فئات في هذه الخطة —</option>
+{% endfor %}

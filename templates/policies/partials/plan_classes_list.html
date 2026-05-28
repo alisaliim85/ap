@@ -1,0 +1,59 @@
+{% if classes %}
+<div class="space-y-4">
+    {% for cls in classes %}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <!-- رأس الفئة -->
+        <div class="flex items-center justify-between px-5 py-4 bg-slate-50 border-b border-slate-200">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm">
+                    {{ forloop.counter }}
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-800">{{ cls.name }}</h3>
+                    <div class="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                        {% if cls.network %}
+                            <span><i class="ph-duotone ph-network"></i> {{ cls.network.name_ar }}</span>
+                        {% else %}
+                            <span class="text-slate-400">بدون شبكة افتراضية</span>
+                        {% endif %}
+                        <span><i class="ph-duotone ph-currency-circle-dollar"></i> {{ cls.annual_limit|floatformat:0 }} ر.س</span>
+                    </div>
+                </div>
+            </div>
+            <a href="{% url 'policies:plan_class_benefit_manage' plan_pk=plan.pk class_pk=cls.pk %}"
+                class="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition text-xs flex items-center gap-1">
+                <i class="ph-duotone ph-list-checks"></i> إدارة المنافع
+            </a>
+        </div>
+
+        <!-- منافع الفئة -->
+        {% if cls.benefits.all %}
+        <div class="divide-y divide-slate-50">
+            {% for benefit in cls.benefits.all %}
+            <div class="flex items-center justify-between px-5 py-3 text-sm">
+                <span class="text-slate-700 font-medium">{{ benefit.benefit_type.name_ar }}</span>
+                <div class="flex items-center gap-4 text-slate-500">
+                    <span>{{ benefit.limit_amount|floatformat:0 }} ر.س</span>
+                    {% if benefit.deductible_percentage %}
+                        <span class="text-orange-600">تحمل {{ benefit.deductible_percentage }}%</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="px-5 py-4 text-sm text-slate-400">
+            <i class="ph-duotone ph-info"></i> لم تُضف منافع لهذه الفئة بعد.
+            <a href="{% url 'policies:plan_class_benefit_manage' plan_pk=plan.pk class_pk=cls.pk %}" class="text-brand-600 hover:underline">إضافة الآن</a>
+        </p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-12 text-slate-400 bg-white rounded-xl border border-dashed border-slate-300">
+    <i class="ph-duotone ph-squares-four text-5xl mb-3 block"></i>
+    <p class="text-base font-medium">لا توجد فئات بعد</p>
+    <p class="text-sm mt-1">أضف فئات (VIP، فئة أ، ...) لتكتمل الخطة</p>
+</div>
+{% endif %}

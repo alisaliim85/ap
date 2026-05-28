@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ plan.name }}{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="mb-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+    <div>
+        <div class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+            <a href="{% url 'policies:plan_list' %}" class="hover:text-brand-600 transition">خطط التأمين</a>
+            <i class="ph-bold ph-caret-left text-xs"></i>
+            <span>{{ plan.name }}</span>
+        </div>
+        <h2 class="text-2xl font-bold text-slate-800">{{ plan.name }}</h2>
+        <div class="flex items-center gap-3 mt-2">
+            <span class="text-slate-500 text-sm">
+                <i class="ph-duotone ph-buildings text-brand-600"></i> {{ plan.provider.name_en }}
+            </span>
+            {% if plan.is_active %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">نشطة</span>
+            {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">معطلة</span>
+            {% endif %}
+            {% if linked_policies_count > 0 %}
+                <span class="text-slate-400 text-xs">مستخدمة في {{ linked_policies_count }} وثيقة نشطة</span>
+            {% endif %}
+        </div>
+        {% if plan.description %}
+            <p class="text-slate-500 text-sm mt-2 max-w-lg">{{ plan.description }}</p>
+        {% endif %}
+    </div>
+    <div class="flex items-center gap-2">
+        <a href="{% url 'policies:plan_update' plan_pk=plan.pk %}"
+            class="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition flex items-center gap-2 text-sm">
+            <i class="ph-duotone ph-pencil-simple"></i> تعديل
+        </a>
+        <a href="{% url 'policies:plan_class_create' plan_pk=plan.pk %}"
+            class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-bold shadow-md shadow-brand-200 transition flex items-center gap-2 text-sm"
+            hx-get="{% url 'policies:plan_class_create' plan_pk=plan.pk %}"
+            hx-target="#class-form-container"
+            hx-swap="innerHTML">
+            <i class="ph-bold ph-plus"></i> إضافة فئة
+        </a>
+    </div>
+</div>
+
+<!-- HTMX Form Container -->
+<div id="class-form-container" class="mb-4"></div>
+
+<!-- فئات الخطة -->
+<div id="plan-classes-container">
+    {% include 'policies/partials/plan_classes_list.html' %}
+</div>
+{% endblock %}

@@ -4,6 +4,113 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 
+
+# --- 0. قالب خطة التأمين (Insurance Plan Template Layer) ---
+
+class InsurancePlan(models.Model):
+    """
+    منتج تأميني يُعرَّف مرة واحدة لكل وسيط + مزود تأمين.
+    مثال: "بوبا الذهبي 2026" — يُستخدم كقالب لإنشاء وثائق متعددة.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    broker = models.ForeignKey(
+        'brokers.Broker',
+        on_delete=models.CASCADE,
+        related_name='insurance_plans',
+    )
+    provider = models.ForeignKey(
+        'providers.Provider',
+        on_delete=models.PROTECT,
+        related_name='plans',
+    )
+    name = models.CharField(_("Plan Name"), max_length=150)
+    description = models.TextField(_("Description"), blank=True)
+    is_active = models.BooleanField(_("Active"), default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('broker', 'provider', 'name')
+        ordering = ['provider', 'name']
+        permissions = [
+            ("manage_insurance_plans", "Can create/edit insurance plan templates"),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.provider})"
+
+
+class PlanClass(models.Model):
+    """
+    فئة افتراضية داخل خطة التأمين (VIP, فئة أ, فئة ج ...).
+    تحدد الشبكة الافتراضية والحد السنوي الافتراضي.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    plan = models.ForeignKey(
+        InsurancePlan,
+        on_delete=models.CASCADE,
+        related_name='classes',
+    )
+    name = models.CharField(_("Class Name"), max_length=50)
+    network = models.ForeignKey(
+        'networks.Network',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='plan_classes',
+        verbose_name=_("Default Network"),
+    )
+    annual_limit = models.DecimalField(
+        _("Default Annual Limit"),
+        max_digits=12,
+        decimal_places=2,
+    )
+    order = models.PositiveSmallIntegerField(_("Display Order"), default=0)
+
+    class Meta:
+        unique_together = ('plan', 'name')
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return f"{self.plan.name} — {self.name}"
+
+
+class PlanClassBenefit(models.Model):
+    """
+    منفعة افتراضية داخل فئة الخطة.
+    يمكن override هذه القيم في ClassBenefit على مستوى الوثيقة.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    plan_class = models.ForeignKey(
+        PlanClass,
+        on_delete=models.CASCADE,
+        related_name='benefits',
+    )
+    benefit_type = models.ForeignKey(
+        'BenefitType',
+        on_delete=models.PROTECT,
+        verbose_name=_("Benefit Type"),
+    )
+    limit_amount = models.DecimalField(
+        _("Benefit Limit (SAR)"),
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+    )
+    deductible_percentage = models.IntegerField(
+        _("Co-Pay %"),
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
+    description = models.TextField(_("Coverage Details"), blank=True)
+
+    class Meta:
+        unique_together = ('plan_class', 'benefit_type')
+
+    def __str__(self):
+        return f"{self.plan_class} — {self.benefit_type}: {self.limit_amount}"
+
+
 # --- 1. أنواع المنافع (Master Data) ---
 class BenefitType(models.Model):
     """
@@ -38,6 +145,14 @@ class Policy(models.Model):
         verbose_name=_("Master Policy (For Holding)")
     )
     provider = models.ForeignKey('providers.Provider', on_delete=models.CASCADE, related_name='issued_policies',null=True, blank=True)
+    plan = models.ForeignKey(
+        InsurancePlan,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='policies',
+        verbose_name=_("Insurance Plan Template"),
+    )
     policy_number = models.CharField(_("Policy Number"), max_length=100)
     start_date = models.DateField(_("Start Date"))
     end_date = models.DateField(_("End Date"))
@@ -113,33 +228,104 @@ class PolicyClass(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     policy = models.ForeignKey(Policy, on_delete=models.CASCADE, related_name='classes')
     
+    plan_class = models.ForeignKey(
+        PlanClass,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='policy_classes',
+        verbose_name=_("Plan Class Template"),
+    )
+
     # ربط الفئة بالشبكة الطبية
     network = models.ForeignKey(
         'networks.Network',
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         related_name='policy_classes',
         verbose_name=_("Linked Network")
     )
-    
-    name = models.CharField(_("Class Name"), max_length=50) # VIP, Class A
-    
-    # الحد السنوي العام للفئة (General Annual Limit)
-    annual_limit = models.DecimalField(_("General Annual Limit"), max_digits=12, decimal_places=2)
-    
+
+    name = models.CharField(_("Class Name"), max_length=50)  # VIP, Class A
+
+    # الحد السنوي — nullable: null يعني يرث من plan_class
+    annual_limit = models.DecimalField(
+        _("General Annual Limit"),
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_("Leave blank to inherit from plan class template."),
+    )
+
     class Meta:
         unique_together = ('policy', 'name')
 
+    # --- خصائص الوراثة (Inheritance Properties) ---
+
+    @property
+    def effective_network(self):
+        """الشبكة الفعلية: override الوثيقة أولاً، ثم قالب الخطة."""
+        if self.network_id:
+            return self.network
+        if self.plan_class_id:
+            return self.plan_class.network
+        return None
+
+    @property
+    def effective_annual_limit(self):
+        """الحد السنوي الفعلي: override الوثيقة أولاً، ثم قالب الخطة."""
+        if self.annual_limit is not None:
+            return self.annual_limit
+        if self.plan_class_id:
+            return self.plan_class.annual_limit
+        return None
+
+    def get_effective_benefits(self):
+        """
+        يُرجع قائمة المنافع الفعلية مع تفادي N+1.
+        الأولوية: ClassBenefit (override) ثم PlanClassBenefit (افتراضي).
+
+        يجب استدعاء هذه الدالة بعد prefetch_related كالتالي:
+            PolicyClass.objects.prefetch_related(
+                'benefits__benefit_type',
+                'plan_class__benefits__benefit_type',
+            )
+        """
+        overrides = {b.benefit_type_id: b for b in self.benefits.all()}
+
+        if not self.plan_class_id:
+            return list(self.benefits.all())
+
+        result = []
+        seen_ids = set()
+
+        for pb in self.plan_class.benefits.all():
+            seen_ids.add(pb.benefit_type_id)
+            if pb.benefit_type_id in overrides:
+                result.append(overrides[pb.benefit_type_id])
+            else:
+                result.append(pb)
+
+        # منافع override إضافية غير موجودة في القالب
+        for b in self.benefits.all():
+            if b.benefit_type_id not in seen_ids:
+                result.append(b)
+
+        return result
+
     def clean(self):
-        # التحقق: الشبكة المختارة يجب أن تنتمي لنفس مزود تأمين الوثيقة
-        if self.network_id and self.policy_id:
-            effective = self.policy.effective_provider
-            if effective and self.network.provider_id != effective.pk:
+        # التحقق: الشبكة الفعلية يجب أن تنتمي لنفس مزود تأمين الوثيقة
+        effective_net = self.effective_network
+        if effective_net and self.policy_id:
+            effective_provider = self.policy.effective_provider
+            if effective_provider and effective_net.provider_id != effective_provider.pk:
                 raise ValidationError(
                     _("The selected network does not belong to the policy's insurance provider. "
                       "Expected provider: %(expected)s, got: %(got)s.") % {
-                        'expected': effective,
-                        'got': self.network.provider,
+                        'expected': effective_provider,
+                        'got': effective_net.provider,
                     }
                 )
 

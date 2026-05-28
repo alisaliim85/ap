@@ -1,5 +1,5 @@
 from django import forms
-from .models import Policy, PolicyClass, ClassBenefit, BenefitType
+from .models import Policy, PolicyClass, ClassBenefit, BenefitType, InsurancePlan, PlanClass, PlanClassBenefit
 from clients.models import Client
 from accounts.models import User
 
@@ -83,4 +83,69 @@ class ClassBenefitForm(forms.ModelForm):
             'limit_amount': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'}),
             'deductible_percentage': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'}),
             'description': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500', 'rows': 2}),
+        }
+
+
+FIELD_CSS = 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'
+
+
+class InsurancePlanForm(forms.ModelForm):
+    """نموذج إنشاء/تعديل خطة تأمين."""
+
+    class Meta:
+        model = InsurancePlan
+        fields = ['provider', 'name', 'description', 'is_active']
+        widgets = {
+            'provider': forms.Select(attrs={'class': FIELD_CSS}),
+            'name': forms.TextInput(attrs={'class': FIELD_CSS, 'placeholder': 'مثال: بوبا الذهبي 2026'}),
+            'description': forms.Textarea(attrs={'class': FIELD_CSS, 'rows': 3}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        # فلترة شركات التأمين المتاحة (عالمية — لا عزل على Provider)
+        from providers.models import Provider
+        self.fields['provider'].queryset = Provider.objects.all().order_by('name_en')
+
+
+class PlanClassForm(forms.ModelForm):
+    """نموذج إضافة/تعديل فئة داخل خطة التأمين."""
+
+    class Meta:
+        model = PlanClass
+        fields = ['name', 'network', 'annual_limit', 'order']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': FIELD_CSS, 'placeholder': 'مثال: VIP، فئة أ'}),
+            'network': forms.Select(attrs={'class': FIELD_CSS}),
+            'annual_limit': forms.NumberInput(attrs={'class': FIELD_CSS, 'step': '0.01'}),
+            'order': forms.NumberInput(attrs={'class': FIELD_CSS}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.plan = kwargs.pop('plan', None)
+        super().__init__(*args, **kwargs)
+        if self.plan and self.plan.provider_id:
+            from networks.models import Network
+            self.fields['network'].queryset = Network.objects.filter(
+                provider=self.plan.provider
+            ).order_by('name_ar')
+        else:
+            from networks.models import Network
+            self.fields['network'].queryset = Network.objects.none()
+        self.fields['network'].required = False
+
+
+class PlanClassBenefitForm(forms.ModelForm):
+    """نموذج إضافة/تعديل منفعة داخل فئة خطة التأمين."""
+
+    class Meta:
+        model = PlanClassBenefit
+        fields = ['benefit_type', 'limit_amount', 'deductible_percentage', 'description']
+        widgets = {
+            'benefit_type': forms.Select(attrs={'class': FIELD_CSS}),
+            'limit_amount': forms.NumberInput(attrs={'class': FIELD_CSS, 'step': '0.01'}),
+            'deductible_percentage': forms.NumberInput(attrs={'class': FIELD_CSS}),
+            'description': forms.Textarea(attrs={'class': FIELD_CSS, 'rows': 2}),
         }

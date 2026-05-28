@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}منافع {{ plan_class.name }} — {{ plan.name }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-sm text-slate-500 mb-4">
+    <a href="{% url 'policies:plan_list' %}" class="hover:text-brand-600 transition">خطط التأمين</a>
+    <i class="ph-bold ph-caret-left text-xs"></i>
+    <a href="{% url 'policies:plan_detail' plan_pk=plan.pk %}" class="hover:text-brand-600 transition">{{ plan.name }}</a>
+    <i class="ph-bold ph-caret-left text-xs"></i>
+    <span>{{ plan_class.name }}</span>
+</div>
+
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h2 class="text-2xl font-bold text-slate-800">{{ plan_class.name }}</h2>
+        <p class="text-slate-500 text-sm mt-1">
+            إدارة منافع الفئة الافتراضية |
+            الحد السنوي: <strong>{{ plan_class.annual_limit|floatformat:0 }} ر.س</strong>
+            {% if plan_class.network %}| الشبكة: <strong>{{ plan_class.network.name_ar }}</strong>{% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- نموذج إضافة منفعة -->
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                <i class="ph-duotone ph-plus-circle text-brand-600 text-xl"></i>
+                إضافة / تعديل منفعة
+            </h3>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">نوع المنفعة</label>
+                        {{ form.benefit_type }}
+                        {% if form.benefit_type.errors %}
+                            <p class="text-red-500 text-xs mt-1">{{ form.benefit_type.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">الحد المالي (ر.س)</label>
+                        {{ form.limit_amount }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">نسبة التحمل %</label>
+                        {{ form.deductible_percentage }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ملاحظات</label>
+                        {{ form.description }}
+                    </div>
+                    {% if form.non_field_errors %}
+                    <div class="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                        {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+                    </div>
+                    {% endif %}
+                    <button type="submit"
+                        class="w-full py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-bold transition text-sm">
+                        حفظ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- قائمة المنافع -->
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            {% if benefits %}
+            <table class="w-full text-sm text-right">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="px-4 py-3 text-slate-600 font-semibold">المنفعة</th>
+                        <th class="px-4 py-3 text-slate-600 font-semibold text-center">الحد (ر.س)</th>
+                        <th class="px-4 py-3 text-slate-600 font-semibold text-center">تحمل %</th>
+                        <th class="px-4 py-3 text-slate-600 font-semibold text-center">حذف</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for benefit in benefits %}
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-4 py-3 font-medium text-slate-800">{{ benefit.benefit_type.name_ar }}</td>
+                        <td class="px-4 py-3 text-center text-slate-600">{{ benefit.limit_amount|floatformat:0 }}</td>
+                        <td class="px-4 py-3 text-center text-slate-600">{{ benefit.deductible_percentage }}%</td>
+                        <td class="px-4 py-3 text-center">
+                            <form method="post" onsubmit="return confirm('حذف هذه المنفعة؟')">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="benefit_id" value="{{ benefit.pk }}">
+                                <button type="submit" class="text-red-400 hover:text-red-600 transition">
+                                    <i class="ph-duotone ph-trash text-lg"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="text-center py-10 text-slate-400">
+                <i class="ph-duotone ph-list-checks text-4xl mb-2 block"></i>
+                <p class="text-sm">لم تُضف منافع بعد لهذه الفئة</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
