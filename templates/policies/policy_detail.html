@@ -18,13 +18,22 @@
                 - {{ policy.client.name_ar }}
             </p>
             {% else %}
-            <p class="text-slate-500 text-sm mt-1 mr-11">وثيقة رئيسية لـ {{ policy.client.name_ar }} من خلال {{policy.provider.name_ar }}</p>
+            <p class="text-slate-500 text-sm mt-1 mr-11">
+                وثيقة رئيسية لـ {{ policy.client.name_ar }} من خلال {{ policy.provider.name_ar }}
+                {% if policy.plan %}
+                | <span class="text-brand-600 font-semibold"><i class="ph-duotone ph-file-dashed"></i> {{ policy.plan.name }}</span>
+                {% endif %}
+            </p>
             {% endif %}
         </div>
         <div class="flex gap-2">
             <a href="{% url 'policies:policy_update' policy.pk %}"
                 class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-bold text-sm flex items-center gap-2 transition shadow-sm">
                 <i class="ph-duotone ph-pencil-simple text-brand-600 text-lg"></i> تعديل
+            </a>
+            <a href="{% url 'policies:policy_renew' policy.pk %}"
+                class="px-4 py-2 bg-brand-50 text-brand-700 border border-brand-200 rounded-lg hover:bg-brand-100 font-bold text-sm flex items-center gap-2 transition shadow-sm">
+                <i class="ph-duotone ph-arrow-clockwise text-lg"></i> تجديد
             </a>
             <a href="{% url 'policies:policy_delete' policy.pk %}"
                 class="px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-lg hover:bg-red-100 font-bold text-sm flex items-center gap-2 transition shadow-sm">
@@ -114,12 +123,25 @@
                         <div class="flex justify-between items-start mb-4">
                             <div>
                                 <h4 class="text-xl font-black text-slate-800">{{ c.name }}</h4>
-                                <p class="text-xs text-brand-600 font-bold">{{ c.network.name_en }}</p>
+                                {% with eff_net=c.effective_network %}
+                                {% if eff_net %}
+                                    <p class="text-xs text-brand-600 font-bold flex items-center gap-1">
+                                        {{ eff_net.name_en }}
+                                        {% if not c.network_id and c.plan_class_id %}
+                                            <span class="text-[9px] text-slate-400 font-normal">(من الخطة)</span>
+                                        {% endif %}
+                                    </p>
+                                {% else %}
+                                    <p class="text-xs text-slate-400">بدون شبكة</p>
+                                {% endif %}
+                                {% endwith %}
                             </div>
                             <div class="text-left">
                                 <span class="block text-[9px] font-black text-slate-400 uppercase">Limit</span>
                                 <span class="text-slate-800 font-mono font-black">
-                                    {{ c.annual_limit|floatformat:0 }}
+                                    {% with lim=c.effective_annual_limit %}
+                                        {% if lim %}{{ lim|floatformat:0 }}{% else %}—{% endif %}
+                                    {% endwith %}
                                 </span>
                                 <span class="text-[9px] text-slate-400">SAR</span>
                             </div>

@@ -9,6 +9,7 @@ urlpatterns = [
     path('<uuid:pk>/', views.policy_detail, name='policy_detail'),
     path('<uuid:pk>/edit/', views.policy_update, name='policy_update'),
     path('<uuid:pk>/delete/', views.policy_delete, name='policy_delete'),
+    path('<uuid:pk>/renew/', views.policy_renew, name='policy_renew'),
 
     # الفئات والمنافع (وثائق)
     path('<uuid:policy_pk>/classes/add/', views.policy_class_create, name='policy_class_create'),

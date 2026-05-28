@@ -77,28 +77,42 @@ def policy_list(request):
 @permission_required('policies.view_policy', raise_exception=True)
 def policy_detail(request, pk):
     """
-    تفاصيل البوليصة - [محمية بالكامل ضد الاختراق بين الوسطاء]
+    تفاصيل البوليصة مع N+1 prevention كامل.
     """
-    # بمجرد استخدام get_allowed_policies، نضمن أن الوسيط (أو الـ HR) لا يمكنه فتح بوليصة لا تخصه
-    # ولذلك تم الاستغناء عن شروط التحقق اليدوية السابقة!
-    policy = get_object_or_404(get_allowed_policies(request.user).select_related('client', 'provider', 'master_policy'), pk=pk)
-    
-    # منطق الوراثة (Inheritance Logic)
-    classes = policy.effective_classes.select_related('network')
-    
+    policy = get_object_or_404(
+        get_allowed_policies(request.user).select_related(
+            'client', 'provider', 'master_policy', 'plan__provider'
+        ),
+        pk=pk,
+    )
+
+    # جلب الفئات مع كل بياناتها بـ query واحد فعال
+    classes_qs = policy.effective_classes.select_related(
+        'network',
+        'plan_class__network',
+        'plan_class__plan__provider',
+    ).prefetch_related(
+        'benefits__benefit_type',
+        'plan_class__benefits__benefit_type',
+    )
+
     inherited_data = False
     master_policy_ref = None
-
-    if not classes.exists() and policy.master_policy:
-        classes = policy.master_policy.effective_classes.select_related('network')
+    if not classes_qs.exists() and policy.master_policy:
+        classes_qs = policy.master_policy.effective_classes.select_related(
+            'network', 'plan_class__network',
+        ).prefetch_related(
+            'benefits__benefit_type',
+            'plan_class__benefits__benefit_type',
+        )
         inherited_data = True
         master_policy_ref = policy.master_policy
 
     context = {
-        'policy': policy, 
-        'classes': classes,
-        'inherited_data': inherited_data,        
-        'master_policy_ref': master_policy_ref,  
+        'policy': policy,
+        'classes': classes_qs,
+        'inherited_data': inherited_data,
+        'master_policy_ref': master_policy_ref,
         'sub_policies': policy.sub_policies.all() if not policy.is_subsidiary else None,
     }
     return render(request, 'policies/policy_detail.html', context)
@@ -108,10 +122,20 @@ def policy_detail(request, pk):
 @permission_required('policies.add_policy', raise_exception=True)
 def policy_create(request):
     if request.method == 'POST':
-        # تمرير المستخدم للفورم لفلترة قائمة العملاء المنسدلة (سنعدل الـ Form لاحقاً)
         form = PolicyForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             policy = form.save()
+            # توليد PolicyClass تلقائياً من PlanClass إذا اختار الوسيط خطة
+            if policy.plan_id:
+                plan_classes = policy.plan.classes.prefetch_related('benefits').order_by('order', 'name')
+                for plan_cls in plan_classes:
+                    PolicyClass.objects.create(
+                        policy=policy,
+                        plan_class=plan_cls,
+                        name=plan_cls.name,
+                        # network=None → يرث من plan_class عبر effective_network
+                        # annual_limit=None → يرث من plan_class عبر effective_annual_limit
+                    )
             messages.success(request, "تمت إضافة البوليصة بنجاح")
             return redirect('policies:policy_detail', pk=policy.pk)
     else:
@@ -148,6 +172,65 @@ def policy_delete(request, pk):
         messages.success(request, f"تم إلغاء تفعيل البوليصة رقم {num} بنجاح")
         return redirect('policies:policy_list')
     return render(request, 'policies/policy_confirm_delete.html', {'policy': policy})
+
+
+@login_required
+@permission_required('policies.add_policy', raise_exception=True)
+def policy_renew(request, pk):
+    """
+    تجديد وثيقة منتهية: ينشئ وثيقة جديدة بنفس الخطة وينسخ overrides من الوثيقة القديمة.
+    """
+    old_policy = get_object_or_404(get_allowed_policies(request.user).select_related('plan', 'provider', 'client'), pk=pk)
+
+    if request.method == 'POST':
+        new_start = request.POST.get('start_date')
+        new_end = request.POST.get('end_date')
+        new_number = request.POST.get('policy_number', '').strip()
+
+        if not new_start or not new_end or not new_number:
+            messages.error(request, "يرجى تعبئة جميع الحقول المطلوبة.")
+            return render(request, 'policies/policy_renew_confirm.html', {'old_policy': old_policy})
+
+        # إنشاء الوثيقة الجديدة بنسخ بيانات القديمة
+        new_policy = Policy.objects.create(
+            client=old_policy.client,
+            provider=old_policy.provider,
+            plan=old_policy.plan,
+            master_policy=old_policy.master_policy,
+            policy_number=new_number,
+            start_date=new_start,
+            end_date=new_end,
+            is_active=True,
+        )
+
+        # نسخ PolicyClass + overrides من الوثيقة القديمة
+        old_classes = old_policy.classes.select_related('plan_class', 'network').prefetch_related('benefits__benefit_type')
+        for old_cls in old_classes:
+            new_cls = PolicyClass.objects.create(
+                policy=new_policy,
+                plan_class=old_cls.plan_class,
+                name=old_cls.name,
+                network=old_cls.network,           # نسخ override الشبكة
+                annual_limit=old_cls.annual_limit,  # نسخ override الحد السنوي
+            )
+            # نسخ ClassBenefit overrides
+            for benefit in old_cls.benefits.all():
+                ClassBenefit.objects.create(
+                    policy_class=new_cls,
+                    benefit_type=benefit.benefit_type,
+                    limit_amount=benefit.limit_amount,
+                    deductible_percentage=benefit.deductible_percentage,
+                    description=benefit.description,
+                )
+
+        # تعطيل الوثيقة القديمة (اختياري — يمكن تركها نشطة كسجل تاريخي)
+        # old_policy.is_active = False
+        # old_policy.save(update_fields=['is_active'])
+
+        messages.success(request, f"تم تجديد الوثيقة بنجاح. الرقم الجديد: {new_policy.policy_number}")
+        return redirect('policies:policy_detail', pk=new_policy.pk)
+
+    return render(request, 'policies/policy_renew_confirm.html', {'old_policy': old_policy})
 
 
 # ==========================================

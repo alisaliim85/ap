@@ -6,11 +6,17 @@ from accounts.models import User
 class PolicyForm(forms.ModelForm):
     class Meta:
         model = Policy
-        fields = ['client', 'master_policy', 'provider', 'policy_number', 'start_date', 'end_date', 'contract_file', 'is_active']
+        fields = ['client', 'master_policy', 'provider', 'plan', 'policy_number', 'start_date', 'end_date', 'contract_file', 'is_active']
         widgets = {
             'client': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'}),
             'master_policy': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'}),
             'provider': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'}),
+            'plan': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500',
+                'hx-get': '',  # يُعبأ ديناميكياً في __init__
+                'hx-target': '#plan-classes-preview',
+                'hx-trigger': 'change',
+            }),
             'policy_number': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500', 'placeholder': 'رقم البوليصة'}),
             'start_date': forms.DateInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500', 'type': 'date'}),
             'end_date': forms.DateInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500', 'type': 'date'}),
@@ -26,6 +32,8 @@ class PolicyForm(forms.ModelForm):
         # حقل مزود التأمين اختياري لأنه قد يورث من الوثيقة الأم
         self.fields['provider'].required = False
         self.fields['master_policy'].label = "الوثيقة الأم (للشركات القابضة)"
+        self.fields['plan'].required = False
+        self.fields['plan'].label = "خطة التأمين (اختياري — يُولِّد الفئات تلقائياً)"
 
         # 2. تطبيق العزل على القوائم المنسدلة بناءً على الصلاحيات
         if self.user:
@@ -33,7 +41,8 @@ class PolicyForm(forms.ModelForm):
                 # السوبر أدمن يرى جميع العملاء وجميع الوثائق الأم
                 self.fields['client'].queryset = Client.objects.all()
                 self.fields['master_policy'].queryset = Policy.objects.filter(master_policy__isnull=True)
-                
+                self.fields['plan'].queryset = InsurancePlan.objects.select_related('provider').all()
+
                 # تحسين تجربة السوبر أدمن: إظهار اسم الوسيط بجانب اسم العميل في القائمة
                 self.fields['client'].label_from_instance = lambda obj: f"{obj.name_en} - (الوسيط: {obj.broker.name_ar if obj.broker else 'بدون وسيط'})"
                 
@@ -46,10 +55,16 @@ class PolicyForm(forms.ModelForm):
                     master_policy__isnull=True, 
                     client__broker=self.user.related_broker
                 )
+                # الوسيط يرى خططه فقط
+                self.fields['plan'].queryset = InsurancePlan.objects.filter(
+                    broker=self.user.related_broker,
+                    is_active=True,
+                ).select_related('provider')
             else:
                 # إفراغ القوائم لأي مستخدم غير مصرح له كإجراء أمني
                 self.fields['client'].queryset = Client.objects.none()
                 self.fields['master_policy'].queryset = Policy.objects.none()
+                self.fields['plan'].queryset = InsurancePlan.objects.none()
     
     def clean(self):
         cleaned_data = super().clean()
