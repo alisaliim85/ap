@@ -195,3 +195,62 @@ class NotificationServiceTest(TestCase):
 
         notif = Notification.objects.get(recipient=broker)
         self.assertEqual(notif.notification_type, Notification.Type.REPLY)
+
+
+from clients.models import Client
+
+
+class HRScopingIntegrationTest(TestCase):
+    """
+    Verifies that HR users from one company do NOT receive notifications
+    about service requests from another company's members.
+    """
+
+    def setUp(self):
+        # Create two separate companies
+        self.company_a = Client.objects.create(
+            name_ar='شركة الفا', name_en='Alpha Co', commercial_record='CR-TEST-001',
+        )
+        self.company_b = Client.objects.create(
+            name_ar='شركة بيتا', name_en='Beta Co', commercial_record='CR-TEST-002',
+        )
+
+        # HR users linked to their respective companies
+        self.hr_a = User.objects.create_user(
+            username='hr_company_a', password='pass', role=User.Roles.HR_ADMIN,
+            related_client=self.company_a, is_active=True,
+        )
+        self.hr_b = User.objects.create_user(
+            username='hr_company_b', password='pass', role=User.Roles.HR_ADMIN,
+            related_client=self.company_b, is_active=True,
+        )
+
+        # Member user for Company A (sr.member is mocked; .client set directly)
+        self.member_user = User.objects.create_user(
+            username='member_a', password='pass', role=User.Roles.MEMBER, is_active=True,
+        )
+
+    def _make_sr(self):
+        """Build a minimal ServiceRequest-like mock for Company A's member."""
+        sr = MagicMock()
+        sr.pk = uuid.uuid4()
+        sr.reference = 'REQ-2026-SCOPING'
+        sr.member.client = self.company_a
+        sr.member.user = self.member_user
+        return sr
+
+    @patch('notifications.services.reverse', return_value='/service-requests/test/')
+    def test_hr_from_other_company_does_not_receive_notification(self, mock_reverse):
+        sr = self._make_sr()
+        NotificationService.notify_service_request_status_change(sr, 'DRAFT', 'SUBMITTED')
+
+        # Company A's HR should receive it
+        self.assertEqual(
+            Notification.objects.filter(recipient=self.hr_a).count(), 1,
+            'HR from Company A should receive notification'
+        )
+        # Company B's HR must NOT receive it
+        self.assertEqual(
+            Notification.objects.filter(recipient=self.hr_b).count(), 0,
+            'HR from Company B must NOT receive Company A notification'
+        )

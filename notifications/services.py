@@ -1,7 +1,9 @@
 # notifications/services.py
 from django.urls import reverse
-from accounts.models import User
+from django.contrib.auth import get_user_model
 from .models import Notification
+
+User = get_user_model()
 
 
 class NotificationService:
@@ -104,6 +106,7 @@ class NotificationService:
         Called by the post_save signal for ServiceRequest.
         instance must be loaded with select_related('member__client', 'member__user').
         """
+        # old_status: reserved for future idempotency checks (currently unused)
         rule = cls.SR_ROUTING.get(new_status)
         if not rule:
             return
@@ -131,6 +134,7 @@ class NotificationService:
         Called by the post_save signal for Claim.
         instance must be loaded with select_related('member__client', 'member__user').
         """
+        # old_status: reserved for future idempotency checks (currently unused)
         rule = cls.CLAIM_ROUTING.get(new_status)
         if not rule:
             return
