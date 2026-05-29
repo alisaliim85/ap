@@ -17,13 +17,14 @@
 
     <div class="flex items-center gap-4">
         {% if user.is_authenticated %}
-        <!-- Notifications -->
-        <div class="relative">
-            <button class="p-2 text-slate-500 hover:text-brand-600 transition">
-                <i class="ph-duotone ph-bell text-2xl"></i>
-                <span
-                    class="absolute top-1.5 right-1.5 h-2.5 w-2.5 bg-red-500 border-2 border-white rounded-full"></span>
-            </button>
+        <!-- Notifications Bell (HTMX-powered, loads _bell_badge.html) -->
+        <div id="notification-badge"
+             hx-get="{% url 'notifications:unread-count' %}"
+             hx-trigger="load"
+             hx-swap="outerHTML">
+          <div class="relative p-2 text-slate-400">
+            <i class="ph-duotone ph-bell text-2xl"></i>
+          </div>
         </div>
 
         <!-- User Profile Dropdown -->

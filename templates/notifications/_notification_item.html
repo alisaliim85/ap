@@ -1,0 +1,47 @@
+<div id="notif-{{ notification.pk }}"
+     class="flex items-start gap-3 p-4 rounded-xl border transition
+            {% if not notification.is_read %}bg-brand-50 border-brand-200 border-s-4 border-s-brand-500{% else %}bg-white border-slate-200{% endif %}">
+
+  <!-- Type Icon -->
+  <div class="mt-0.5 flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center
+              {% if not notification.is_read %}bg-brand-100 text-brand-600{% else %}bg-slate-100 text-slate-400{% endif %}">
+    <i class="ph-duotone
+              {% if notification.notification_type == 'MESSAGE' %}ph-envelope
+              {% elif notification.notification_type == 'REPLY' %}ph-arrow-bend-up-left
+              {% else %}ph-bell{% endif %}
+              text-lg"></i>
+  </div>
+
+  <!-- Content -->
+  <div class="flex-1 min-w-0">
+    <div class="flex items-start justify-between gap-2">
+      <p class="text-sm {% if not notification.is_read %}font-bold{% else %}font-medium{% endif %} text-slate-800 leading-snug">
+        {% if notification.url %}
+        <a href="{{ notification.url }}" class="hover:text-brand-600 transition">{{ notification.title }}</a>
+        {% else %}
+        {{ notification.title }}
+        {% endif %}
+      </p>
+      <time class="flex-shrink-0 text-xs text-slate-400 whitespace-nowrap"
+            datetime="{{ notification.created_at|date:'c' }}">
+        {{ notification.created_at|timesince }} مضت
+      </time>
+    </div>
+    {% if notification.body %}
+    <p class="mt-1 text-sm text-slate-500 leading-relaxed line-clamp-2">
+      {{ notification.body|truncatechars:120 }}
+    </p>
+    {% endif %}
+  </div>
+
+  <!-- Mark as Read -->
+  {% if not notification.is_read %}
+  <button hx-post="{% url 'notifications:mark-read' notification.pk %}"
+          hx-swap="outerHTML"
+          hx-target="#notif-{{ notification.pk }}"
+          class="flex-shrink-0 p-1.5 rounded-full text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition"
+          title="تحديد كمقروء">
+    <i class="ph-bold ph-check text-sm"></i>
+  </button>
+  {% endif %}
+</div>
