@@ -254,3 +254,56 @@ class HRScopingIntegrationTest(TestCase):
             Notification.objects.filter(recipient=self.hr_b).count(), 0,
             'HR from Company B must NOT receive Company A notification'
         )
+
+
+class SignalIntegrationTest(TestCase):
+    """
+    Tests that post_save signals correctly call NotificationService.
+    Uses @patch to avoid full fixture setup for ServiceRequest / Claim.
+    """
+
+    @patch('notifications.signals.NotificationService.notify_service_request_status_change')
+    def test_signal_calls_service_on_status_change(self, mock_notify):
+        from service_requests.models import ServiceRequest
+        mock_instance = MagicMock(spec=ServiceRequest)
+        mock_instance.pk = uuid.uuid4()
+        mock_instance.status = 'SUBMITTED'
+        mock_instance._original_status = 'DRAFT'
+
+        from notifications.signals import sr_notify_on_status_change
+        sr_notify_on_status_change(sender=ServiceRequest, instance=mock_instance, created=False)
+
+        mock_notify.assert_called_once()
+        args = mock_notify.call_args[0]
+        self.assertEqual(args[1], 'DRAFT')    # old_status
+        self.assertEqual(args[2], 'SUBMITTED')  # new_status
+
+    @patch('notifications.signals.NotificationService.notify_service_request_status_change')
+    def test_signal_does_not_fire_on_create(self, mock_notify):
+        from service_requests.models import ServiceRequest
+        from notifications.signals import sr_notify_on_status_change
+        mock_instance = MagicMock(spec=ServiceRequest)
+        mock_instance.status = 'DRAFT'
+        sr_notify_on_status_change(sender=ServiceRequest, instance=mock_instance, created=True)
+        mock_notify.assert_not_called()
+
+    @patch('notifications.signals.NotificationService.notify_service_request_status_change')
+    def test_signal_does_not_fire_when_status_unchanged(self, mock_notify):
+        from service_requests.models import ServiceRequest
+        from notifications.signals import sr_notify_on_status_change
+        mock_instance = MagicMock(spec=ServiceRequest)
+        mock_instance.status = 'SUBMITTED'
+        mock_instance._original_status = 'SUBMITTED'
+        sr_notify_on_status_change(sender=ServiceRequest, instance=mock_instance, created=False)
+        mock_notify.assert_not_called()
+
+    @patch('notifications.signals.NotificationService.notify_claim_status_change')
+    def test_claim_signal_calls_service_on_status_change(self, mock_notify):
+        from claims.models import Claim
+        from notifications.signals import claim_notify_on_status_change
+        mock_instance = MagicMock(spec=Claim)
+        mock_instance.pk = uuid.uuid4()
+        mock_instance.status = 'SUBMITTED_TO_HR'
+        mock_instance._original_status = 'DRAFT'
+        claim_notify_on_status_change(sender=Claim, instance=mock_instance, created=False)
+        mock_notify.assert_called_once()
