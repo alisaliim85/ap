@@ -15,6 +15,8 @@ _CLOCK_LOCK = Lock()
 _last_clock: datetime.datetime | None = None
 
 
+# NOTE: This function is referenced by migrations/0001_initial.py as a callable default.
+# Do NOT rename it without also squashing/updating the migration.
 def _monotonic_now() -> datetime.datetime:
     """Return current time, guaranteed strictly greater than the previous call."""
     global _last_clock

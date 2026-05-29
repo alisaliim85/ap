@@ -83,14 +83,17 @@ class MessageModelTest(TestCase):
         self.assertEqual(reply.parent, root)
         self.assertEqual(root.replies.count(), 1)
 
-    def test_reply_to_reply_points_to_root(self):
-        """Replies must always point to the root — enforced at view level (tested in Task 7)."""
+    def test_reply_to_reply_is_permitted_at_model_level(self):
+        """Model allows deep nesting at DB level; the view must enforce flat threads."""
         root = Message.objects.create(
             sender=self.broker, recipient=self.member, subject='موضوع', body='نص'
         )
         reply = Message.objects.create(
             sender=self.member, recipient=self.broker, subject='رد', body='رد', parent=root
         )
-        # The model allows parent=reply at DB level; the view enforces parent=None only
-        # This test documents the constraint is at the view level
-        self.assertEqual(reply.parent, root)
+        nested = Message.objects.create(
+            sender=self.broker, recipient=self.member, subject='رد متداخل', body='نص', parent=reply
+        )
+        # DB allows it — view must reject it (tested in Task 7 MessageViewTest)
+        self.assertEqual(nested.parent, reply)
+        self.assertIsNotNone(nested.pk)
