@@ -99,6 +99,85 @@ class MessageModelTest(TestCase):
         self.assertIsNotNone(nested.pk)
 
 
+from django.urls import reverse as url_reverse
+
+
+class UnreadCountViewTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='viewuser', password='pass123', role=User.Roles.MEMBER
+        )
+        self.client.force_login(self.user)
+
+    def test_unread_count_returns_200(self):
+        response = self.client.get(url_reverse('notifications:unread-count'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_unread_count_requires_login(self):
+        self.client.logout()
+        response = self.client.get(url_reverse('notifications:unread-count'))
+        self.assertEqual(response.status_code, 302)  # redirect to login
+
+    def test_unread_count_shows_correct_count(self):
+        Notification.objects.create(
+            recipient=self.user, notification_type=Notification.Type.STATUS_CHANGE,
+            title='غير مقروء 1',
+        )
+        Notification.objects.create(
+            recipient=self.user, notification_type=Notification.Type.STATUS_CHANGE,
+            title='مقروء', is_read=True,
+        )
+        response = self.client.get(url_reverse('notifications:unread-count'))
+        self.assertContains(response, '1')
+
+
+class MarkReadViewTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='markuser', password='pass123', role=User.Roles.MEMBER
+        )
+        self.other = User.objects.create_user(
+            username='otheruser', password='pass123', role=User.Roles.MEMBER
+        )
+        self.client.force_login(self.user)
+
+    def test_mark_read_marks_own_notification(self):
+        notif = Notification.objects.create(
+            recipient=self.user, notification_type=Notification.Type.STATUS_CHANGE,
+            title='اختبار',
+        )
+        response = self.client.post(
+            url_reverse('notifications:mark-read', kwargs={'pk': notif.pk})
+        )
+        self.assertIn(response.status_code, [200, 302])
+        notif.refresh_from_db()
+        self.assertTrue(notif.is_read)
+
+    def test_mark_read_cannot_mark_others_notification(self):
+        other_notif = Notification.objects.create(
+            recipient=self.other, notification_type=Notification.Type.STATUS_CHANGE,
+            title='لغير المستخدم',
+        )
+        response = self.client.post(
+            url_reverse('notifications:mark-read', kwargs={'pk': other_notif.pk})
+        )
+        self.assertEqual(response.status_code, 404)
+        other_notif.refresh_from_db()
+        self.assertFalse(other_notif.is_read)
+
+    def test_mark_all_read(self):
+        for i in range(3):
+            Notification.objects.create(
+                recipient=self.user, notification_type=Notification.Type.STATUS_CHANGE,
+                title=f'إشعار {i}',
+            )
+        response = self.client.post(url_reverse('notifications:mark-all-read'))
+        self.assertIn(response.status_code, [200, 302])
+        self.assertEqual(
+            Notification.objects.filter(recipient=self.user, is_read=False).count(), 0
+        )
+
+
 from unittest.mock import patch, MagicMock
 from .services import NotificationService
 
