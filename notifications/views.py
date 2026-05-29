@@ -1,10 +1,12 @@
 # notifications/views.py
+import uuid as _uuid
 from datetime import datetime, timezone as dt_timezone
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied, SuspiciousOperation
 from django.db import models as db_models
+from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.decorators.http import require_POST
@@ -164,7 +166,17 @@ class ComposeMessageView(LoginRequiredMixin, View):
                 'error': 'جميع الحقول مطلوبة.',
             }, status=400)
 
+        # Validate UUID format before hitting the DB (avoids unhandled ValueError)
+        try:
+            _uuid.UUID(str(recipient_id))
+        except ValueError:
+            return HttpResponseBadRequest()
+
         recipient = get_object_or_404(User, pk=recipient_id, is_active=True)
+        # Server-side: enforce the SUPER_ADMIN exclusion shown in the UI
+        if recipient.role == User.Roles.SUPER_ADMIN:
+            raise PermissionDenied
+
         msg = Message.objects.create(
             sender=request.user,
             recipient=recipient,
@@ -178,14 +190,15 @@ class ComposeMessageView(LoginRequiredMixin, View):
 
 class ReplyMessageView(LoginRequiredMixin, View):
     def post(self, request, pk):
-        # pk MUST point to a root message — reject replies-to-replies
         root = get_object_or_404(Message, pk=pk)
+        # Participant check first — prevents leaking thread structure to outsiders
+        if request.user not in (root.sender, root.recipient):
+            raise PermissionDenied
+        # pk MUST point to a root message — reject replies-to-replies
         if root.parent is not None:
             raise SuspiciousOperation(
                 'يجب أن يكون الـ pk لرسالة جذرية (parent=None) فقط.'
             )
-        if request.user not in (root.sender, root.recipient):
-            raise PermissionDenied
 
         body = request.POST.get('body', '').strip()
         if not body:
