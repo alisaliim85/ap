@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'brokers',
     'service_requests',
     'medications',
+    'notifications',
 ]
 
 MIDDLEWARE = [
