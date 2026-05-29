@@ -312,3 +312,18 @@ class SignalIntegrationTest(TestCase):
         claim_notify_on_status_change(sender=MockClaim, instance=mock_instance, created=False)
 
         mock_notify.assert_called_once_with(reloaded, 'DRAFT', 'SUBMITTED_TO_HR')
+
+    def test_pre_save_sets_none_for_new_records(self):
+        """New records (pk set but not yet in DB) should get _original_status = None."""
+        from service_requests.models import ServiceRequest
+        from notifications.signals import sr_capture_old_status
+
+        # Create a mock instance that simulates a new (unsaved) object
+        mock_instance = MagicMock(spec=ServiceRequest)
+        mock_instance.pk = uuid.uuid4()
+        mock_instance._state = MagicMock()
+        mock_instance._state.adding = True  # New object not yet in DB
+
+        sr_capture_old_status(sender=ServiceRequest, instance=mock_instance, using='default')
+
+        self.assertIsNone(mock_instance._original_status)

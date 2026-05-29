@@ -14,7 +14,7 @@ def sr_capture_old_status(sender, instance, **kwargs):
     Store the current DB status on the instance before saving.
     post_save handler uses _original_status to detect actual changes.
     """
-    if instance.pk:
+    if instance.pk and not instance._state.adding:
         try:
             old = ServiceRequest.objects.get(pk=instance.pk)
             instance._original_status = old.status
@@ -49,7 +49,7 @@ def claim_capture_old_status(sender, instance, **kwargs):
     """
     Same pattern as ServiceRequest — capture status before FSM transition saves.
     """
-    if instance.pk:
+    if instance.pk and not instance._state.adding:
         try:
             old = Claim.objects.get(pk=instance.pk)
             instance._original_status = old.status
