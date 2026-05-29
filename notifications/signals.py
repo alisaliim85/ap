@@ -36,7 +36,10 @@ def sr_notify_on_status_change(sender, instance, created, **kwargs):
     if old_status is None or old_status == new_status:
         return
 
-    NotificationService.notify_service_request_status_change(instance, old_status, new_status)
+    fresh = ServiceRequest.objects.select_related(
+        'member__client', 'member__user'
+    ).get(pk=instance.pk)
+    NotificationService.notify_service_request_status_change(fresh, old_status, new_status)
 
 
 # ── Claim Signals ───────────────────────────────────────────────────────────
@@ -68,4 +71,7 @@ def claim_notify_on_status_change(sender, instance, created, **kwargs):
     if old_status is None or old_status == new_status:
         return
 
-    NotificationService.notify_claim_status_change(instance, old_status, new_status)
+    fresh = Claim.objects.select_related(
+        'member__client', 'member__user'
+    ).get(pk=instance.pk)
+    NotificationService.notify_claim_status_change(fresh, old_status, new_status)

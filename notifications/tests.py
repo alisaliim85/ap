@@ -262,21 +262,21 @@ class SignalIntegrationTest(TestCase):
     Uses @patch to avoid full fixture setup for ServiceRequest / Claim.
     """
 
+    @patch('notifications.signals.ServiceRequest')
     @patch('notifications.signals.NotificationService.notify_service_request_status_change')
-    def test_signal_calls_service_on_status_change(self, mock_notify):
-        from service_requests.models import ServiceRequest
-        mock_instance = MagicMock(spec=ServiceRequest)
+    def test_signal_calls_service_on_status_change(self, mock_notify, MockSR):
+        mock_instance = MagicMock()
         mock_instance.pk = uuid.uuid4()
         mock_instance.status = 'SUBMITTED'
         mock_instance._original_status = 'DRAFT'
 
-        from notifications.signals import sr_notify_on_status_change
-        sr_notify_on_status_change(sender=ServiceRequest, instance=mock_instance, created=False)
+        reloaded = MagicMock()
+        MockSR.objects.select_related.return_value.get.return_value = reloaded
 
-        mock_notify.assert_called_once()
-        args = mock_notify.call_args[0]
-        self.assertEqual(args[1], 'DRAFT')    # old_status
-        self.assertEqual(args[2], 'SUBMITTED')  # new_status
+        from notifications.signals import sr_notify_on_status_change
+        sr_notify_on_status_change(sender=MockSR, instance=mock_instance, created=False)
+
+        mock_notify.assert_called_once_with(reloaded, 'DRAFT', 'SUBMITTED')
 
     @patch('notifications.signals.NotificationService.notify_service_request_status_change')
     def test_signal_does_not_fire_on_create(self, mock_notify):
@@ -297,13 +297,18 @@ class SignalIntegrationTest(TestCase):
         sr_notify_on_status_change(sender=ServiceRequest, instance=mock_instance, created=False)
         mock_notify.assert_not_called()
 
+    @patch('notifications.signals.Claim')
     @patch('notifications.signals.NotificationService.notify_claim_status_change')
-    def test_claim_signal_calls_service_on_status_change(self, mock_notify):
-        from claims.models import Claim
-        from notifications.signals import claim_notify_on_status_change
-        mock_instance = MagicMock(spec=Claim)
+    def test_claim_signal_calls_service_on_status_change(self, mock_notify, MockClaim):
+        mock_instance = MagicMock()
         mock_instance.pk = uuid.uuid4()
         mock_instance.status = 'SUBMITTED_TO_HR'
         mock_instance._original_status = 'DRAFT'
-        claim_notify_on_status_change(sender=Claim, instance=mock_instance, created=False)
-        mock_notify.assert_called_once()
+
+        reloaded = MagicMock()
+        MockClaim.objects.select_related.return_value.get.return_value = reloaded
+
+        from notifications.signals import claim_notify_on_status_change
+        claim_notify_on_status_change(sender=MockClaim, instance=mock_instance, created=False)
+
+        mock_notify.assert_called_once_with(reloaded, 'DRAFT', 'SUBMITTED_TO_HR')
