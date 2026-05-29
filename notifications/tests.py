@@ -406,3 +406,122 @@ class SignalIntegrationTest(TestCase):
         sr_capture_old_status(sender=ServiceRequest, instance=mock_instance, using='default')
 
         self.assertIsNone(mock_instance._original_status)
+
+
+class NotificationListViewTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='listuser', password='pass123', role=User.Roles.MEMBER
+        )
+        self.client.force_login(self.user)
+
+    def test_list_requires_login(self):
+        self.client.logout()
+        response = self.client.get(url_reverse('notifications:list'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_list_shows_only_own_notifications(self):
+        other = User.objects.create_user(username='listother', password='p', role=User.Roles.MEMBER)
+        Notification.objects.create(
+            recipient=self.user, notification_type=Notification.Type.STATUS_CHANGE, title='لي'
+        )
+        Notification.objects.create(
+            recipient=other, notification_type=Notification.Type.STATUS_CHANGE, title='لغيري'
+        )
+        response = self.client.get(url_reverse('notifications:list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'لي')
+        self.assertNotContains(response, 'لغيري')
+
+
+class MessageViewTest(TestCase):
+    def setUp(self):
+        self.broker = User.objects.create_user(
+            username='brk_view', password='pass123', role=User.Roles.BROKER_ADMIN
+        )
+        self.member = User.objects.create_user(
+            username='mbr_view', password='pass123', role=User.Roles.MEMBER
+        )
+
+    def test_compose_requires_broker_role(self):
+        self.client.force_login(self.member)
+        response = self.client.get(url_reverse('notifications:compose'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_compose_accessible_to_broker(self):
+        self.client.force_login(self.broker)
+        response = self.client.get(url_reverse('notifications:compose'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_inbox_requires_login(self):
+        response = self.client.get(url_reverse('notifications:inbox'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_thread_view_accessible_to_sender(self):
+        self.client.force_login(self.broker)
+        root = Message.objects.create(
+            sender=self.broker, recipient=self.member, subject='موضوع', body='نص'
+        )
+        response = self.client.get(url_reverse('notifications:thread', kwargs={'pk': root.pk}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_thread_view_accessible_to_recipient(self):
+        self.client.force_login(self.member)
+        root = Message.objects.create(
+            sender=self.broker, recipient=self.member, subject='موضوع', body='نص'
+        )
+        response = self.client.get(url_reverse('notifications:thread', kwargs={'pk': root.pk}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_thread_view_blocked_for_non_participant(self):
+        stranger = User.objects.create_user(
+            username='stranger', password='p', role=User.Roles.MEMBER
+        )
+        self.client.force_login(stranger)
+        root = Message.objects.create(
+            sender=self.broker, recipient=self.member, subject='موضوع', body='نص'
+        )
+        response = self.client.get(url_reverse('notifications:thread', kwargs={'pk': root.pk}))
+        self.assertEqual(response.status_code, 403)
+
+    def test_thread_view_returns_404_for_reply_pk(self):
+        """thread/ pk must point to a root message only."""
+        self.client.force_login(self.broker)
+        root = Message.objects.create(
+            sender=self.broker, recipient=self.member, subject='موضوع', body='نص'
+        )
+        reply = Message.objects.create(
+            sender=self.member, recipient=self.broker,
+            subject='رد', body='رد', parent=root
+        )
+        response = self.client.get(url_reverse('notifications:thread', kwargs={'pk': reply.pk}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_reply_rejected_for_non_participant(self):
+        stranger = User.objects.create_user(
+            username='stranger2', password='p', role=User.Roles.MEMBER
+        )
+        self.client.force_login(stranger)
+        root = Message.objects.create(
+            sender=self.broker, recipient=self.member, subject='موضوع', body='نص'
+        )
+        response = self.client.post(
+            url_reverse('notifications:reply', kwargs={'pk': root.pk}),
+            {'body': 'محاولة رد غير مصرح بها'},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_reply_rejected_when_pk_is_reply(self):
+        """reply/ endpoint must return 400 if pk is not a root message."""
+        self.client.force_login(self.member)
+        root = Message.objects.create(
+            sender=self.broker, recipient=self.member, subject='موضوع', body='نص'
+        )
+        reply = Message.objects.create(
+            sender=self.member, recipient=self.broker, subject='رد', body='رد', parent=root
+        )
+        response = self.client.post(
+            url_reverse('notifications:reply', kwargs={'pk': reply.pk}),
+            {'body': 'محاولة'},
+        )
+        self.assertEqual(response.status_code, 400)
