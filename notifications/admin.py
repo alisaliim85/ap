@@ -21,7 +21,8 @@ class MessageAdmin(admin.ModelAdmin):
     raw_id_fields = ('sender', 'recipient', 'parent', 'content_type')
     readonly_fields = ('content_object',)
     list_per_page = 25
-    list_select_related = True
+    list_select_related = ('sender', 'recipient')
     list_display = ('sender', 'recipient', 'subject', 'is_read', 'created_at')
+    list_filter = ('is_read',)
     search_fields = ('sender__username', 'recipient__username', 'subject')
     date_hierarchy = 'created_at'
