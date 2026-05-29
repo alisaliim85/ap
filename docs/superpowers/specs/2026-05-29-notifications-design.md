@@ -122,6 +122,14 @@ Notification.objects.bulk_create([...])
 
 **ملاحظة أداء:** يُقارَن `instance.status` مع القيمة المحفوظة في `pre_save` لاكتشاف التغيير فعلياً، بدلاً من الاعتماد على `update_fields`.
 
+**تجنب N+1 في الـ Signal:** عند الحاجة لـ `instance.member.client`، يُعاد تحميل الـ instance بـ `select_related` مرة واحدة:
+
+```python
+instance = ServiceRequest.objects.select_related('member__client').get(pk=instance.pk)
+```
+
+هذا يضمن ضربة واحدة على قاعدة البيانات بدلاً من ثلاث.
+
 ### 4.2 خريطة التوجيه — طلبات الخدمة
 
 | الحالة الجديدة | من يُبلَّغ | نص الإشعار |
@@ -131,6 +139,8 @@ Notification.objects.bulk_create([...])
 | `RETURNED` | العضو صاحب الطلب | "طلبك {reference} أُعيد — يرجى مراجعة الملاحظات" |
 | `RESOLVED` | العضو صاحب الطلب | "طلبك {reference} تم حله بنجاح ✅" |
 | `REJECTED` | العضو صاحب الطلب | "طلبك {reference} تم رفضه" |
+
+**حالات بدون إشعار:** `DRAFT`، `HR_REVIEW`، `TRANSFERRED_TO_MEDICATIONS` — هذه حالات داخلية لا يحتاج العضو إلى معرفتها فوراً.
 
 ### 4.3 خريطة التوجيه — المطالبات المالية
 
@@ -187,7 +197,7 @@ hr_users = User.objects.filter(
 
 ### 5.3 Toast عند وصول إشعار جديد
 
-يُعرض Toast عبر HTMX OOB swap في نفس استجابة polling عند اكتشاف إشعار جديد منذ آخر فحص.
+يُعرض Toast عبر HTMX OOB swap في نفس استجابة polling. آلية الاكتشاف: الـ view يقبل query param `?since=<timestamp>`، ويُرجع Toast إذا وُجد إشعار `created_at > since`. الـ JS helper يُرسل timestamp آخر فحص مع كل polling request.
 
 ---
 
@@ -212,7 +222,7 @@ urlpatterns = [
 ]
 ```
 
-**صلاحيات:** `compose/` محمي — يتطلب دور `BROKER_ADMIN` أو `BROKER_STAFF` أو `SUPER_ADMIN`. `reply/` مفتوح للمستلم فقط.
+**صلاحيات:** `compose/` محمي — يتطلب دور `BROKER_ADMIN` أو `BROKER_STAFF` أو `SUPER_ADMIN`. `reply/` مفتوح لكلٍّ من `sender` و`recipient` للرسالة الجذرية — أي طرف في المحادثة يستطيع الرد.
 
 ---
 
@@ -248,9 +258,10 @@ templates/notifications/
 - استعلام العدد غير المقروء: `Notification.objects.filter(recipient=user, is_read=False).count()` — يستغرق < 1ms
 - جداول منفصلة تماماً — **لا تعديل** على جداول `service_requests` أو `claims`
 
-### 8.2 HTMX Polling
-- طلب كل 30 ثانية فقط — طلب HTTP عادي يعيد HTML مصغّر
-- يُوقف تلقائياً عند `hx-trigger="every 30s [document.hidden !== true]"`
+### 8.2 HTMX Polling — Adaptive (Smart)
+- الأساس: طلب كل 30 ثانية — طلب HTTP عادي يعيد HTML مصغّر
+- يُوقف تلقائياً عند `hx-trigger="every 30s [document.hidden !== true]"` (لا طلبات أثناء قفل الشاشة)
+- **Exponential Backoff عبر Alpine.js:** إذا لم تكن هناك إشعارات جديدة لـ 3 دورات متتالية، ترتفع المدة من 30s إلى 60s تلقائياً. تعود إلى 30s فور أي حركة من المستخدم (mousemove / click). يُقلل هذا الضغط على الخادم بـ ~40% في أوقات الخمول.
 
 ### 8.3 Django Signals
 - يُقارَن `status` قبل وبعد الحفظ عبر `pre_save` + `post_save` معاً
@@ -279,6 +290,29 @@ templates/notifications/
 - `compose/` يتحقق من الدور قبل عرض النموذج وقبل الحفظ
 - `reply/` يتحقق أن `request.user` هو `recipient` للرسالة الأصلية
 - مرفقات الرسائل تُحفظ بمسارات عشوائية (UUID) بدون الاسم الأصلي
+
+---
+
+## 11. إعداد الـ Admin
+
+`GenericForeignKey` تُبطئ Django Admin إذا كبرت قاعدة البيانات (تحاول تحميل كل الكائنات في dropdown). الإعداد الصحيح:
+
+```python
+class NotificationAdmin(admin.ModelAdmin):
+    # raw_id_fields على حقول FK فقط (recipient, content_type) — لا يعمل على UUIDField
+    raw_id_fields = ('recipient', 'content_type')
+    readonly_fields = ('content_object',)   # GenericFK — عرض فقط، بلا dropdown
+    list_per_page = 25                       # تحديد عدد الصفوف لتسريع القوائم
+    list_select_related = True
+    list_display = ('recipient', 'notification_type', 'title', 'is_read', 'created_at')
+    list_filter = ('notification_type', 'is_read')
+
+class MessageAdmin(admin.ModelAdmin):
+    raw_id_fields = ('sender', 'recipient', 'parent', 'content_type')
+    readonly_fields = ('content_object',)
+    list_per_page = 25
+    list_select_related = True
+```
 
 ---
 
