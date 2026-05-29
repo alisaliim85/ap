@@ -3,6 +3,7 @@ from datetime import datetime, timezone as dt_timezone
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from .models import Notification
 
@@ -42,6 +43,7 @@ def unread_count(request):
 
 
 @login_required
+@require_POST
 def mark_read(request, pk):
     """Mark a single notification as read. Only the recipient can mark their own."""
     notif = get_object_or_404(Notification, pk=pk, recipient=request.user)
