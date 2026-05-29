@@ -1,3 +1,59 @@
-{{ active_filter }}
-{% for n in notifications %}{{ n.title }}
-{% endfor %}
+{% extends 'base.html' %}
+
+{% block header_title %}الإشعارات{% endblock %}
+
+{% block content %}
+<div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+        <h2 class="text-2xl font-extrabold text-slate-800 flex items-center gap-2">
+            <i class="ph-duotone ph-bell text-brand-600"></i>
+            الإشعارات
+        </h2>
+        <p class="text-slate-500 text-sm mt-1">متابعة كل إشعاراتك وتنبيهاتك</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <a href="{% url 'notifications:inbox' %}"
+            class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-600 rounded-md hover:bg-slate-50 text-sm font-medium transition-all">
+            <i class="ph-duotone ph-envelope"></i>
+            صندوق الرسائل
+        </a>
+        <form method="post" action="{% url 'notifications:mark-all-read' %}">
+            {% csrf_token %}
+            <button type="submit"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 text-sm font-medium transition-all shadow-sm">
+                <i class="ph-duotone ph-checks"></i>
+                تعليم الكل مقروءة
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="mb-4 flex gap-1 border-b border-slate-200">
+    <a href="?filter=all"
+        class="px-5 py-2.5 text-sm font-medium transition-all rounded-t-md
+               {% if active_filter == 'all' %}text-brand-600 border-b-2 border-brand-600 bg-brand-50{% else %}text-slate-500 hover:text-slate-700 hover:bg-slate-50{% endif %}">
+        الكل
+    </a>
+    <a href="?filter=unread"
+        class="px-5 py-2.5 text-sm font-medium transition-all rounded-t-md
+               {% if active_filter == 'unread' %}text-brand-600 border-b-2 border-brand-600 bg-brand-50{% else %}text-slate-500 hover:text-slate-700 hover:bg-slate-50{% endif %}">
+        غير المقروءة
+    </a>
+</div>
+
+<!-- Notification List -->
+<div class="space-y-2">
+    {% for n in notifications %}
+        {% include 'notifications/_notification_item.html' with notification=n %}
+    {% empty %}
+    <div class="flex flex-col items-center justify-center py-20 text-center">
+        <div class="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+            <i class="ph-duotone ph-bell-slash text-3xl text-slate-400"></i>
+        </div>
+        <p class="text-slate-600 font-medium">لا توجد إشعارات</p>
+        <p class="text-slate-400 text-sm mt-1">ستظهر هنا إشعاراتك عند وصولها</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
