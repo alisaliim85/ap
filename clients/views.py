@@ -2,8 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.db.models import Count, Sum, Q
-from .models import Client
-from .forms import ClientForm
+from .models import Client, SponsorNumber, get_group_root
+from .forms import ClientForm, SponsorNumberForm
 from policies.models import Policy
 from members.models import Member
 from accounts.models import User
@@ -125,6 +125,13 @@ def client_detail(request, pk):
     # --- باقي الكود ممتاز ولا يحتاج تعديل لأن العميل (client) أصبح مضموناً أنه يخص الوسيط ---
     # وبالتالي أي بوالص أو أعضاء مرتبطين بهذا العميل هم بالتبعية يخصون هذا الوسيط.
 
+    group_root = get_group_root(client)
+    sponsor_numbers = SponsorNumber.objects.filter(
+        group=group_root
+    ).annotate(
+        members_count=Count('members')
+    ).select_related('owner_client').order_by('sponsor_number')
+
     if client.is_holding:
         subsidiaries = client.subsidiaries.all().annotate(
             total_employees=Count('members', filter=Q(members__relation='PRINCIPAL')),
@@ -165,7 +172,9 @@ def client_detail(request, pk):
             'master_policy': master_policy,
             'census': census,
             'class_stats': class_stats,
-            'network': network
+            'network': network,
+            'sponsor_numbers': sponsor_numbers,
+            'group_root': group_root,
         }
         return render(request, 'clients/client_detail_holding.html', context)
 
@@ -194,5 +203,84 @@ def client_detail(request, pk):
             'policy': policy,
             'network': network,
             'census': census,
+            'sponsor_numbers': sponsor_numbers,
+            'group_root': group_root,
         }
         return render(request, 'clients/client_detail.html', context)
+
+
+# ==========================================
+# إدارة أرقام الكفيلة (Sponsor Numbers)
+# ==========================================
+
+@login_required
+@permission_required('clients.manage_clients', raise_exception=True)
+def sponsor_number_create(request, pk):
+    """
+    إضافة رقم كفيل — المجموعة تُحدد تلقائياً من جذر الشركة المالكة.
+    """
+    client = get_object_or_404(get_allowed_clients(request.user), pk=pk)
+    group_root = get_group_root(client)
+
+    if request.method == 'POST':
+        form = SponsorNumberForm(request.POST, user=request.user, group=group_root)
+        if form.is_valid():
+            sponsor = form.save(commit=False)
+            sponsor.group = group_root
+            sponsor.save()
+            messages.success(request, f"تمت إضافة رقم الكفيل {sponsor.sponsor_number} بنجاح")
+            return redirect('client_detail', pk=client.pk)
+    else:
+        form = SponsorNumberForm(user=request.user, group=group_root, initial={'owner_client': client})
+
+    return render(request, 'clients/sponsor_number_form.html', {
+        'form': form,
+        'client': client,
+        'title': 'إضافة رقم كفيل جديد',
+    })
+
+
+@login_required
+@permission_required('clients.manage_clients', raise_exception=True)
+def sponsor_number_update(request, pk, sponsor_pk):
+    """
+    تعديل رقم كفيل.
+    """
+    client = get_object_or_404(get_allowed_clients(request.user), pk=pk)
+    group_root = get_group_root(client)
+    sponsor = get_object_or_404(SponsorNumber, pk=sponsor_pk, group=group_root)
+
+    if request.method == 'POST':
+        form = SponsorNumberForm(request.POST, instance=sponsor, user=request.user, group=group_root)
+        if form.is_valid():
+            updated = form.save(commit=False)
+            updated.group = group_root
+            updated.save()
+            messages.success(request, f"تم تحديث رقم الكفيل {updated.sponsor_number} بنجاح")
+            return redirect('client_detail', pk=client.pk)
+    else:
+        form = SponsorNumberForm(instance=sponsor, user=request.user, group=group_root)
+
+    return render(request, 'clients/sponsor_number_form.html', {
+        'form': form,
+        'client': client,
+        'sponsor': sponsor,
+        'title': f'تعديل رقم كفيل: {sponsor.sponsor_number}',
+    })
+
+
+@login_required
+@permission_required('clients.manage_clients', raise_exception=True)
+def sponsor_number_toggle(request, pk, sponsor_pk):
+    """
+    تفعيل/تعطيل رقم كفيل (حذف لين).
+    """
+    client = get_object_or_404(get_allowed_clients(request.user), pk=pk)
+    group_root = get_group_root(client)
+    sponsor = get_object_or_404(SponsorNumber, pk=sponsor_pk, group=group_root)
+
+    if request.method == 'POST':
+        sponsor.is_active = not sponsor.is_active
+        sponsor.save(update_fields=['is_active'])
+        messages.success(request, "تم تحديث حالة رقم الكفيل بنجاح")
+    return redirect('client_detail', pk=client.pk)

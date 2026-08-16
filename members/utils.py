@@ -24,6 +24,7 @@ def generate_empty_template():
         "Gender (M/F) (Required)",
         "Relationship (EMPLOYEE/SPOUSE/CHILD) (Required)",
         "Sponsor National ID (If Dependent)",
+        "Sponsor Number (Establishment ID) (Required)",
         "Policy Class (Optional)",
         "Medical Card ID (Optional)",
         "National Address (Optional)",
@@ -55,7 +56,7 @@ def generate_empty_template():
     return stream
 
 from .models import Member
-from clients.models import Client
+from clients.models import Client, SponsorNumber, get_group_root
 from policies.models import PolicyClass
 from django.db import transaction
 
@@ -97,9 +98,10 @@ def process_bulk_upload(file, client):
             gender = str(row[4]).strip().upper() if row[4] else None
             relation = str(row[5]).strip().upper() if row[5] else None
             sponsor_nid = str(row[6]).strip() if row[6] else None
-            policy_class_name = str(row[7]).strip() if row[7] else None # Optional
-            medical_card = str(row[8]).strip() if row[8] else None # Optional
-            address = str(row[9]).strip() if row[9] else "" # Optional
+            sponsor_number_str = str(row[7]).strip() if row[7] else None
+            policy_class_name = str(row[8]).strip() if row[8] else None # Optional
+            medical_card = str(row[9]).strip() if row[9] else None # Optional
+            address = str(row[10]).strip() if row[10] else "" # Optional
         except Exception as e:
             results['failed'].append({
                 'row': index, 
@@ -134,6 +136,22 @@ def process_bulk_upload(file, client):
         # Logic for Sponsor / Policy Class
         sponsor_obj = None
         target_policy_class = None
+        target_sponsor_number = None
+
+        # Resolve Sponsor Number (ضمن مجموعة القابضة للعميل)
+        group_root = get_group_root(client)
+        if sponsor_number_str:
+            target_sponsor_number = SponsorNumber.objects.filter(
+                sponsor_number=sponsor_number_str,
+                group=group_root,
+                is_active=True,
+            ).first()
+            if not target_sponsor_number:
+                results['failed'].append({
+                    'row': index, 'name': full_name,
+                    'error': f"Invalid Sponsor Number: {sponsor_number_str} (not found in this holding group)"
+                })
+                continue
         
         # Resolve Sponsor if dependent
         if relation != 'PRINCIPAL' and relation != 'EMPLOYEE':
@@ -148,6 +166,10 @@ def process_bulk_upload(file, client):
             if not sponsor_obj or sponsor_obj.client != client:
                  results['failed'].append({'row': index, 'name': full_name, 'error': f"Sponsor not found in this client (ID: {sponsor_nid})"})
                  continue
+            
+            # التابع يرث رقم الكفيل من رب الأسرة إن لم يُحدد
+            if not target_sponsor_number and sponsor_obj.sponsor_number_id:
+                target_sponsor_number = sponsor_obj.sponsor_number
             
             # Policy Class Check - Must match Sponsor
             sponsor_class = sponsor_obj.policy_class
@@ -164,6 +186,10 @@ def process_bulk_upload(file, client):
                      continue
         else:
             # RELATION == PRINCIPAL or EMPLOYEE
+            if not target_sponsor_number:
+                results['failed'].append({'row': index, 'name': full_name, 'error': "Sponsor Number required for Principal/Employee"})
+                continue
+
             if not policy_class_name:
                  results['failed'].append({'row': index, 'name': full_name, 'error': "Policy Class required for Principal/Employee"})
                  continue
@@ -215,6 +241,7 @@ def process_bulk_upload(file, client):
                 gender=clean_gender,
                 relation=clean_relation,
                 sponsor=sponsor_obj,
+                sponsor_number=target_sponsor_number,
                 policy_class=target_policy_class,
                 medical_card_number=medical_card,
                 national_address=address

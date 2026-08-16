@@ -135,6 +135,15 @@ class Policy(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     client = models.ForeignKey('clients.Client', on_delete=models.CASCADE, related_name='policies')
     
+    # ربط الوثيقة برقم الكفيل (للكفلاء — الوثيقة الأم لا تملك كفيلاً)
+    sponsor_number = models.ForeignKey(
+        'clients.SponsorNumber',
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='policies',
+        verbose_name=_("Sponsor Number"),
+    )
+    
     # ربط الوثيقة بالأم (للشركات القابضة) - التعديل الجديد
     master_policy = models.ForeignKey(
         'self', 
@@ -187,6 +196,26 @@ class Policy(models.Model):
         if self.master_policy and self.provider:
             if self.master_policy.provider != self.provider:
                 raise ValidationError(_("Subsidiary policy must have the same provider as the master policy."))
+
+        # التحقق: الكفيل يجب أن يكون ضمن نفس مجموعة القابضة الخاصة بالوثيقة
+        if self.sponsor_number_id:
+            from clients.models import get_group_root
+            if get_group_root(self.client) != self.sponsor_number.group:
+                raise ValidationError(_("The sponsor number must belong to the same holding group as the policy's client."))
+
+        # التحقق: لا يمكن تكرار الكفيل في أكثر من وثيقة لنفس الشركة في نفس الفترة
+        # (التجديد السنوي مسموح لأن الفترات لا تتداخل)
+        if self.sponsor_number_id and self.client_id and self.start_date and self.end_date:
+            duplicate = Policy.objects.filter(
+                client=self.client,
+                sponsor_number=self.sponsor_number,
+                start_date__lte=self.end_date,
+                end_date__gte=self.start_date,
+            ).exclude(pk=self.pk)
+            if duplicate.exists():
+                raise ValidationError(_(
+                    "This sponsor number already has a policy for this company in the same period."
+                ))
 
     def save(self, *args, **kwargs):
         # قبل الحفظ، إذا كانت وثيقة تابعة، يمكننا نسخ المزود من الأم لسهولة البحث (اختياري)

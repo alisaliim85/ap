@@ -17,6 +17,9 @@
                         الشركة / التبعية</th>
                     <th
                         class="px-6 py-4 text-[10px] font-black text-indigo-900/50 uppercase tracking-widest text-center">
+                        رقم الكفيل</th>
+                    <th
+                        class="px-6 py-4 text-[10px] font-black text-indigo-900/50 uppercase tracking-widest text-center">
                         الفئة</th>
                     <th
                         class="px-6 py-4 text-[10px] font-black text-indigo-900/50 uppercase tracking-widest text-center">
@@ -60,6 +63,18 @@
                             </p>
                             {% endif %}
                         </div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        {% if m.sponsor_number %}
+                        <div class="flex flex-col items-center">
+                            <p class="text-xs font-mono font-bold text-slate-800">{{ m.sponsor_number.sponsor_number }}</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5 font-medium">
+                                {{ m.sponsor_number.owner_client.name_ar }}
+                            </p>
+                        </div>
+                        {% else %}
+                        <span class="text-slate-300 text-xs">—</span>
+                        {% endif %}
                     </td>
                     <td class="px-6 py-4 text-center">
                         <span
@@ -115,7 +130,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="py-20 text-center">
+                    <td colspan="7" class="py-20 text-center">
                         <div class="flex flex-col items-center gap-3 text-slate-300">
                             <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-2">
                                 <i class="ph-duotone ph-users-three text-4xl opacity-50"></i>

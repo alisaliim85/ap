@@ -1,20 +1,21 @@
 from django import forms
 from .models import Member
 from policies.models import PolicyClass
-from clients.models import Client
+from clients.models import Client, SponsorNumber
 from accounts.models import User
 
 class MemberForm(forms.ModelForm):
     class Meta:
         model = Member
         fields = [
-            'client', 'policy_class', 'sponsor', 'full_name', 
+            'client', 'policy_class', 'sponsor_number', 'sponsor', 'full_name', 
             'national_id', 'medical_card_number', 'national_address', 'birth_date', 
             'gender', 'relation', 'phone_number', 'is_active'
         ]
         widgets = {
             'client': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-brand-500 focus:border-brand-500'}),
             'policy_class': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-brand-500 focus:border-brand-500'}),
+            'sponsor_number': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-brand-500 focus:border-brand-500'}),
             'sponsor': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-brand-500 focus:border-brand-500'}),
             'full_name': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-brand-500 focus:border-brand-500', 'placeholder': 'الاسم الكامل'}),
             'national_id': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-brand-500 focus:border-brand-500', 'placeholder': 'رقم الهوية / الإقامة'}),
@@ -97,6 +98,7 @@ class MemberForm(forms.ModelForm):
         # 3. فلترة الفئات المتاحة والكفلاء (بناءً على العميل الموثوق به الآن)
         if target_client_id:
             from django.db.models import Q
+            from clients.models import get_group_root
             try:
                 cid = target_client_id
                 query = Q(policy__client_id=cid)
@@ -113,17 +115,34 @@ class MemberForm(forms.ModelForm):
                     client_id=cid,
                     relation='PRINCIPAL'
                 )
+
+                # أرقام الكفيلة: كل أرقام الكفيلة ضمن نفس مجموعة القابضة (تسمح بالشقيقات)
+                try:
+                    client_obj = Client.objects.get(id=cid)
+                    group_root = get_group_root(client_obj)
+                    self.fields['sponsor_number'].queryset = SponsorNumber.objects.filter(
+                        group=group_root,
+                        is_active=True,
+                    ).select_related('owner_client')
+                    self.fields['sponsor_number'].label_from_instance = (
+                        lambda obj: f"{obj.sponsor_number} - {obj.owner_client.name_en}"
+                    )
+                except Client.DoesNotExist:
+                    self.fields['sponsor_number'].queryset = SponsorNumber.objects.none()
             except (ValueError, TypeError):
                 self.fields['policy_class'].queryset = PolicyClass.objects.none()
                 self.fields['sponsor'].queryset = Member.objects.none()
+                self.fields['sponsor_number'].queryset = SponsorNumber.objects.none()
         else:
             # إذا لم يتم اجتياز الفحص الأمني، تظل القوائم فارغة
             self.fields['policy_class'].queryset = PolicyClass.objects.none()
             self.fields['sponsor'].queryset = Member.objects.none()
+            self.fields['sponsor_number'].queryset = SponsorNumber.objects.none()
             
             # تحسين تجربة المستخدم: إضافة رسالة توضيحية في القائمة
             self.fields['policy_class'].empty_label = "يرجى اختيار الشركة أولاً"
             self.fields['sponsor'].empty_label = "يرجى اختيار الشركة أولاً"
+            self.fields['sponsor_number'].empty_label = "يرجى اختيار الشركة أولاً"
 
         # 4. إعدادات الكفيل والتبعية
 
@@ -173,10 +192,21 @@ class MemberForm(forms.ModelForm):
                 else:
                     cleaned_data['policy_class'] = self.fields['policy_class'].initial or self.instance.policy_class
 
+            # التابع يرث رقم الكفيل من رب الأسرة تلقائياً
+            sponsor_number = cleaned_data.get('sponsor_number')
+            if not sponsor_number:
+                if sponsor and sponsor.sponsor_number_id:
+                    cleaned_data['sponsor_number'] = sponsor.sponsor_number
+                else:
+                    cleaned_data['sponsor_number'] = self.instance.sponsor_number
+
         if relation != 'PRINCIPAL' and not cleaned_data.get('sponsor'):
             self.add_error('sponsor', "يجب تحديد الموظف (الكفيل) لهذا التابع.")
         
         if relation == 'PRINCIPAL' and cleaned_data.get('sponsor'):
             self.add_error('sponsor', "الموظف الأساسي لا يمكن أن يكون له كفيل.")
+            
+        if not cleaned_data.get('sponsor_number'):
+            self.add_error('sponsor_number', "يجب تحديد رقم الكفيل (معرّف المنشأة) لهذا العضو.")
             
         return cleaned_data

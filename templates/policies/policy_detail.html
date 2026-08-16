@@ -21,6 +21,12 @@
                         وثيقة رئيسية &mdash; {{ policy.client.name_ar }}
                         {% if policy.provider %}&nbsp;|&nbsp;{{ policy.provider.name_ar }}{% endif %}
                     {% endif %}
+                    {% if policy.sponsor_number %}
+                    <span class="inline-flex items-center gap-1.5 bg-brand-50 text-brand-700 border border-brand-100 px-2.5 py-0.5 rounded-full text-xs font-bold ms-2">
+                        <i class="ph-duotone ph-identification-badge"></i>
+                        كفيل: {{ policy.sponsor_number.sponsor_number }} ({{ policy.sponsor_number.owner_client.name_ar }})
+                    </span>
+                    {% endif %}
                 </p>
             </div>
         </div>

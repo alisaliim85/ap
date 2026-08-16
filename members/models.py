@@ -44,7 +44,17 @@ class Member(models.Model):
         db_index=True
     )
 
-    # 4. الكفيل (رب الأسرة)
+    # 4. رقم الكفيل (معرّف المنشأة) — كيان مشترك ضمن مجموعة القابضة
+    sponsor_number = models.ForeignKey(
+        'clients.SponsorNumber',
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='members',
+        db_index=True,
+        verbose_name=_("Sponsor Number"),
+    )
+
+    # 5. الكفيل (رب الأسرة)
     sponsor = models.ForeignKey(
         'self',
         on_delete=models.CASCADE,
@@ -88,6 +98,16 @@ class Member(models.Model):
 
     def __str__(self):
         return f"{self.full_name} ({self.client.name_en})"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        from clients.models import get_group_root
+        if self.sponsor_number_id and self.client_id:
+            # كفيل العضو يجب أن يكون ضمن نفس مجموعة القابضة التي تتبعها الشركة
+            if get_group_root(self.sponsor_number.owner_client) != get_group_root(self.client):
+                raise ValidationError({
+                    'sponsor_number': _("The sponsor number must belong to the same holding group as the member's company.")
+                })
 
 
 class MemberDocument(models.Model):

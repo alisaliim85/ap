@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 
@@ -89,3 +90,69 @@ class Client(models.Model):
         if not self.services_config or 'claims' not in self.services_config:
             return default
         return self.services_config['claims'].get(setting_name, default)
+
+
+def get_group_root(client):
+    """
+    إرجاع جذر مجموعة القابضة (أعلى أب في سلسلة parent).
+    إذا لم يكن للعميل أب، يعيد العميل نفسه.
+    """
+    current = client
+    while current.parent_id:
+        current = current.parent
+    return current
+
+
+class SponsorNumber(models.Model):
+    """
+    رقم كفيل (معرّف المنشأة في أبشر/مقيم) — كيان مشترك داخل مجموعة القابضة.
+    يمكن أن يغطي موظفين من عدة شركات شقيقة، وله شركة مالكة واحدة،
+    وكل رقم كفيل يخص مجموعة قابضة واحدة فقط.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # جذر مجموعة القابضة (يحدد المجموعة الواحدة التي ينتمي لها الرقم)
+    group = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        related_name='sponsor_numbers',
+        verbose_name=_("Holding Group"),
+    )
+    # الشركة المالكة للكفيل (ضمن نفس المجموعة)
+    owner_client = models.ForeignKey(
+        Client,
+        on_delete=models.PROTECT,
+        related_name='owned_sponsor_numbers',
+        verbose_name=_("Owner Company"),
+    )
+
+    sponsor_number = models.CharField(_("Sponsor Number (Establishment ID)"), max_length=50)
+    name = models.CharField(_("Name"), max_length=150, blank=True)
+    is_active = models.BooleanField(_("Active"), default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Sponsor Number")
+        verbose_name_plural = _("Sponsor Numbers")
+        ordering = ['sponsor_number']
+        # الرقم يخص مجموعة قابضة واحدة فقط
+        unique_together = ('group', 'sponsor_number')
+
+    def clean(self):
+        # الشركة المالكة يجب أن تكون ضمن نفس مجموعة القابضة
+        if self.owner_client_id:
+            if get_group_root(self.owner_client) != self.group:
+                raise ValidationError(
+                    _("The owner company must belong to the same holding group as the sponsor number.")
+                )
+
+    def save(self, *args, **kwargs):
+        # ملء المجموعة تلقائياً من جذر الشركة المالكة (إن لم تُحدد)
+        if not self.group_id and self.owner_client_id:
+            self.group = get_group_root(self.owner_client)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        owner = self.owner_client.name_en if self.owner_client_id else '-'
+        return f"{self.sponsor_number} ({owner})"

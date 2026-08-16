@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
@@ -24,9 +25,23 @@ def get_allowed_policies(user):
         
     # 3. مدير الموارد البشرية (HR) يرى بوالص شركته فقط
     elif user.is_hr_role and user.related_client:
-        return Policy.objects.filter(client=user.related_client)
+        return Policy.objects.filter(
+            Q(client=user.related_client) |
+            # يرى وثائق كفلاء موظفيه (حتى لو الكفيل يتبع شركة شقيقة)
+            Q(sponsor_number__members__client=user.related_client)
+        ).distinct()
         
     return Policy.objects.none()
+
+
+def get_active_policy_for_sponsor(sponsor_number):
+    """
+    إرجاع الوثيقة النشطة الحالية لرقم كفيل معين (الأحدث تاريخ بدء).
+    """
+    return Policy.objects.filter(
+        sponsor_number=sponsor_number,
+        is_active=True,
+    ).order_by('-start_date').first()
 
 
 def get_allowed_plans(user):
@@ -52,7 +67,7 @@ def policy_list(request):
     قائمة البوالص - [تم تطبيق عزل الـ SaaS]
     """
     # استخدام الدالة المساعدة لجلب البوالص المصرح بها فقط
-    policies_list = get_allowed_policies(request.user).select_related('client', 'provider', 'master_policy').order_by('-created_at')
+    policies_list = get_allowed_policies(request.user).select_related('client', 'provider', 'master_policy', 'sponsor_number__owner_client').order_by('-created_at')
 
     # منطق البحث
     search_query = request.GET.get('search', '')
@@ -81,7 +96,7 @@ def policy_detail(request, pk):
     """
     policy = get_object_or_404(
         get_allowed_policies(request.user).select_related(
-            'client', 'provider', 'master_policy', 'plan__provider'
+            'client', 'provider', 'master_policy', 'plan__provider', 'sponsor_number__owner_client'
         ),
         pk=pk,
     )
@@ -209,16 +224,24 @@ def policy_renew(request, pk):
             return render(request, 'policies/policy_renew_confirm.html', {'old_policy': old_policy})
 
         # إنشاء الوثيقة الجديدة بنسخ بيانات القديمة
-        new_policy = Policy.objects.create(
+        new_policy = Policy(
             client=old_policy.client,
             provider=old_policy.provider,
             plan=old_policy.plan,
             master_policy=old_policy.master_policy,
+            sponsor_number=old_policy.sponsor_number,
             policy_number=new_number,
             start_date=new_start,
             end_date=new_end,
             is_active=True,
         )
+        try:
+            new_policy.full_clean()
+        except ValidationError as e:
+            for err in e.messages:
+                messages.error(request, err)
+            return render(request, 'policies/policy_renew_confirm.html', {'old_policy': old_policy})
+        new_policy.save()
 
         # نسخ PolicyClass + overrides من الوثيقة القديمة
         old_classes = old_policy.classes.select_related('plan_class', 'network').prefetch_related('benefits__benefit_type')
@@ -779,3 +802,55 @@ def plan_get_classes(request, plan_pk):
     plan = get_object_or_404(get_allowed_plans(request.user), pk=plan_pk)
     classes = plan.classes.order_by('order', 'name')
     return render(request, 'policies/partials/plan_classes_options.html', {'classes': classes})
+
+
+@login_required
+@permission_required('policies.add_policy', raise_exception=True)
+def load_sponsor_numbers(request):
+    """HTMX endpoint: يُرجع خيارات أرقام الكفيلة لعميل معين (ضمن نفس مجموعة القابضة)."""
+    from clients.models import SponsorNumber, get_group_root
+    client_id = request.GET.get('client_id')
+    if not client_id:
+        return render(request, 'policies/partials/sponsor_number_options.html', {'sponsor_numbers': []})
+
+    # حماية العزل: لا يمكن جلب كفلاء عميل غير مسموح به
+    allowed_clients = get_allowed_clients_qs(request.user)
+    client = get_object_or_404(allowed_clients, id=client_id)
+    group_root = get_group_root(client)
+
+    sponsor_numbers = SponsorNumber.objects.filter(
+        group=group_root,
+        is_active=True,
+    ).select_related('owner_client')
+
+    return render(request, 'policies/partials/sponsor_number_options.html', {'sponsor_numbers': sponsor_numbers})
+
+
+@login_required
+@permission_required('policies.add_policy', raise_exception=True)
+def load_master_policy_details(request):
+    """HTMX/JSON endpoint: يُرجع تفاصيل الوثيقة الأم (التواريخ، الخطة، جهة التأمين)
+    لتعبئة نموذج الوثيقة تلقائياً عند اختيار الوثيقة الأم."""
+    from django.http import JsonResponse
+    master_policy_id = request.GET.get('master_policy_id')
+    if not master_policy_id:
+        return JsonResponse({'error': 'missing master_policy_id'}, status=400)
+
+    master = get_object_or_404(get_allowed_policies(request.user), pk=master_policy_id)
+    return JsonResponse({
+        'start_date': master.start_date.isoformat() if master.start_date else None,
+        'end_date': master.end_date.isoformat() if master.end_date else None,
+        'plan_id': str(master.plan_id) if master.plan_id else '',
+        'provider_id': str(master.provider_id) if master.provider_id else '',
+    })
+
+
+def get_allowed_clients_qs(user):
+    from clients.models import Client
+    if user.role == User.Roles.SUPER_ADMIN:
+        return Client.objects.all()
+    elif user.is_broker_role and user.related_broker:
+        return Client.objects.filter(broker=user.related_broker)
+    elif user.is_hr_role and user.related_client:
+        return Client.objects.filter(id=user.related_client.id)
+    return Client.objects.none()

@@ -6,7 +6,7 @@ from django.core.paginator import Paginator
 from .models import Member
 from .forms import MemberForm
 from .utils import get_allowed_members
-from clients.models import Client
+from clients.models import Client, SponsorNumber
 from accounts.models import User
 from networks.models import ServiceProvider
 from service_requests.models import ServiceRequest
@@ -21,7 +21,7 @@ def member_list(request):
     عرض قائمة أعضاء التأمين - [تم تطبيق العزل]
     """
     # استخدام الدالة المساعدة لضمان الأمان بدلاً من Member.objects.all()
-    members_list = get_allowed_members(request.user).select_related('client', 'policy_class__policy', 'policy_class__network', 'sponsor').order_by('-created_at')
+    members_list = get_allowed_members(request.user).select_related('client', 'policy_class__policy', 'policy_class__network', 'sponsor', 'sponsor_number__owner_client').order_by('-created_at')
 
     # البحث والفلاتر
     search_query = request.GET.get('search', '')
@@ -74,7 +74,7 @@ def member_detail(request, pk):
     """
     member = get_object_or_404(
         get_allowed_members(request.user).select_related(
-            'client', 'policy_class__policy', 'policy_class__network', 'sponsor'
+            'client', 'policy_class__policy', 'policy_class__network', 'sponsor', 'sponsor_number__owner_client'
         ),
         pk=pk
     )
@@ -221,9 +221,17 @@ def load_policy_classes(request):
     # 2. جلب الموظفين الأساسيين (كفلاء محتملين)
     sponsors = Member.objects.filter(client_id=client_id, relation='PRINCIPAL').only('id', 'full_name')
 
+    # 3. جلب أرقام الكفيلة ضمن مجموعة القابضة (تسمح بالشقيقات)
+    from clients.models import get_group_root
+    sponsor_numbers = SponsorNumber.objects.filter(
+        group=get_group_root(client_obj),
+        is_active=True,
+    ).select_related('owner_client')
+
     return render(request, 'members/partials/policy_class_options.html', {
         'policy_classes': policy_classes,
-        'sponsors': sponsors
+        'sponsors': sponsors,
+        'sponsor_numbers': sponsor_numbers,
     })
 
 

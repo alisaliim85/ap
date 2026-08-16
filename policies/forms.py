@@ -1,14 +1,15 @@
 from django import forms
 from .models import Policy, PolicyClass, ClassBenefit, BenefitType, InsurancePlan, PlanClass, PlanClassBenefit
-from clients.models import Client
+from clients.models import Client, SponsorNumber
 from accounts.models import User
 
 class PolicyForm(forms.ModelForm):
     class Meta:
         model = Policy
-        fields = ['client', 'master_policy', 'provider', 'plan', 'policy_number', 'start_date', 'end_date', 'contract_file', 'is_active']
+        fields = ['client', 'sponsor_number', 'master_policy', 'provider', 'plan', 'policy_number', 'start_date', 'end_date', 'contract_file', 'is_active']
         widgets = {
             'client': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'}),
+            'sponsor_number': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'}),
             'master_policy': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'}),
             'provider': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'}),
             'plan': forms.Select(attrs={
@@ -31,6 +32,8 @@ class PolicyForm(forms.ModelForm):
         self.fields['master_policy'].label = "الوثيقة الأم (للشركات القابضة)"
         self.fields['plan'].required = False
         self.fields['plan'].label = "خطة التأمين (اختياري — يُولِّد الفئات تلقائياً)"
+        self.fields['sponsor_number'].required = False
+        self.fields['sponsor_number'].label = "رقم الكفيل (اختياري — للكفلاء)"
 
         # 2. تطبيق العزل على القوائم المنسدلة بناءً على الصلاحيات
         if self.user:
@@ -62,6 +65,47 @@ class PolicyForm(forms.ModelForm):
                 self.fields['client'].queryset = Client.objects.none()
                 self.fields['master_policy'].queryset = Policy.objects.none()
                 self.fields['plan'].queryset = InsurancePlan.objects.none()
+
+        # فلترة أرقام الكفيلة حسب العميل المحدد (كل أرقام مجموعة القابضة)
+        selected_client = None
+        if self.is_bound and self.data.get('client'):
+            selected_client = Client.objects.filter(id=self.data.get('client')).first()
+        elif self.instance.pk and self.instance.client_id:
+            selected_client = self.instance.client
+
+        from clients.models import get_group_root
+        if selected_client:
+            group_root = get_group_root(selected_client)
+            self.fields['sponsor_number'].queryset = SponsorNumber.objects.filter(
+                group=group_root,
+                is_active=True,
+            ).select_related('owner_client')
+            self.fields['sponsor_number'].label_from_instance = (
+                lambda obj: f"{obj.sponsor_number} - {obj.owner_client.name_en}"
+            )
+        else:
+            # قبل اختيار العميل: نعرض كفلاء كل العملاء المسموحين
+            allowed_clients = self.fields['client'].queryset
+            if allowed_clients:
+                group_ids = set()
+                for c in allowed_clients:
+                    group_ids.add(get_group_root(c).pk)
+                self.fields['sponsor_number'].queryset = SponsorNumber.objects.filter(
+                    group_id__in=group_ids,
+                    is_active=True,
+                ).select_related('owner_client')
+                self.fields['sponsor_number'].label_from_instance = (
+                    lambda obj: f"{obj.sponsor_number} - {obj.owner_client.name_en}"
+                )
+
+        # HTMX: جلب أرقام الكفيلة تلقائياً عند تغيير العميل
+        from django.urls import reverse_lazy
+        self.fields['client'].widget.attrs.update({
+            'hx-get': reverse_lazy('policies:ajax_load_sponsor_numbers'),
+            'hx-target': '#id_sponsor_number',
+            'hx-trigger': 'change',
+            'hx-vals': 'js:{client_id: this.value}',
+        })
     
     def clean(self):
         cleaned_data = super().clean()

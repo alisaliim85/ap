@@ -181,6 +181,16 @@
                             <span class="text-indigo-400">مزود الخدمة</span>
                             <span class="font-black">{{ member.policy_class.policy.provider.name_ar|default:"-" }}</span>
                         </div>
+                        {% if member.sponsor_number %}
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-indigo-400">رقم الكفيل</span>
+                            <span class="font-black font-mono">{{ member.sponsor_number.sponsor_number }}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-indigo-400">الشركة المالكة للكفيل</span>
+                            <span class="font-black">{{ member.sponsor_number.owner_client.name_ar }}</span>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <i class="ph-duotone ph-shield-check absolute -bottom-10 -left-10 text-9xl text-white/5"></i>

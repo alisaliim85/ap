@@ -30,4 +30,9 @@ urlpatterns = [
     path('plans/<uuid:plan_pk>/classes/<uuid:class_pk>/benefits/', views.plan_class_benefit_manage, name='plan_class_benefit_manage'),
     # HTMX endpoint: خيارات الفئات لخطة معينة
     path('plans/<uuid:plan_pk>/get-classes/', views.plan_get_classes, name='plan_get_classes'),
+
+    # HTMX endpoint: خيارات أرقام الكفيلة لعميل معين
+    path('ajax/load-sponsor-numbers/', views.load_sponsor_numbers, name='ajax_load_sponsor_numbers'),
+    # HTMX endpoint: تفاصيل الوثيقة الأم (تواريخ، خطة، مزود)
+    path('ajax/load-master-policy/', views.load_master_policy_details, name='ajax_load_master_policy'),
 ]

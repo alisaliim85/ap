@@ -1,5 +1,5 @@
 from django import forms
-from .models import Client
+from .models import Client, SponsorNumber
 from accounts.models import User
 
 class ClientForm(forms.ModelForm):
@@ -60,3 +60,56 @@ class ClientForm(forms.ModelForm):
             if self.user.role != User.Roles.SUPER_ADMIN:
                 if 'broker' in self.fields:
                     del self.fields['broker']
+
+
+class SponsorNumberForm(forms.ModelForm):
+    class Meta:
+        model = SponsorNumber
+        fields = ['owner_client', 'sponsor_number', 'name', 'is_active', 'group']
+        widgets = {
+            'owner_client': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500'
+            }),
+            'sponsor_number': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500',
+                'placeholder': 'معرّف المنشأة في أبشر/مقيم'
+            }),
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500',
+                'placeholder': 'اسم وصفي (اختياري)'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500'
+            }),
+            'group': forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        self.group = kwargs.pop('group', None)
+        super().__init__(*args, **kwargs)
+
+        # حقل المجموعة مخفي ويُملأ تلقائياً (غير إلزامي)
+        self.fields['group'].required = False
+        if self.instance and self.instance.group_id:
+            self.fields['group'].initial = self.instance.group_id
+
+        # فلترة الشركات المالكة بناءً على صلاحيات المستخدم
+        from .views import get_allowed_clients
+        if self.user:
+            allowed = get_allowed_clients(self.user)
+            if self.group:
+                allowed = allowed.filter(id=self.group.id) | allowed.filter(parent__id=self.group.id)
+                self.fields['owner_client'].queryset = allowed
+            else:
+                self.fields['owner_client'].queryset = allowed
+
+    def clean(self):
+        cleaned_data = super().clean()
+        owner_client = cleaned_data.get('owner_client')
+        group = cleaned_data.get('group')
+
+        if owner_client:
+            from .models import get_group_root
+            cleaned_data['group'] = group or get_group_root(owner_client)
+        return cleaned_data

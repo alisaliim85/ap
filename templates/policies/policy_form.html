@@ -26,6 +26,12 @@
             <form method="post" enctype="multipart/form-data" class="space-y-6">
                 {% csrf_token %}
 
+                {% if form.non_field_errors %}
+                <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm font-bold">
+                    {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+                </div>
+                {% endif %}
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="md:col-span-2">
                         <label class="block text-sm font-bold text-slate-700 mb-2">رقم الوثيقة (أو مرجع العقد)</label>
@@ -41,6 +47,12 @@
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">العميل (الشركة المستفيدة)</label>
                         {{ form.client }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">رقم الكفيل (اختياري)</label>
+                        {{ form.sponsor_number }}
+                        <p class="text-xs text-slate-500 mt-1">يُحدد تلقائياً حسب مجموعة القابضة للعميل.</p>
                     </div>
 
                     <div id="provider-container">
@@ -105,7 +117,7 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // إخفاء/إظهار حقل Provider بناءً على الوثيقة الأم
@@ -115,7 +127,39 @@
         function toggleProvider() {
             providerContainer.style.display = masterPolicySelect.value ? 'none' : 'block';
         }
+
+        // تعبئة التواريخ والخطة وجهة التأمين تلقائياً من الوثيقة الأم
+        function fillFromMasterPolicy() {
+            const masterId = masterPolicySelect.value;
+            const startDate = document.getElementById('{{ form.start_date.id_for_label }}');
+            const endDate = document.getElementById('{{ form.end_date.id_for_label }}');
+            const planSelect = document.getElementById('{{ form.plan.id_for_label }}');
+            const providerSelect = document.getElementById('{{ form.provider.id_for_label }}');
+
+            if (!masterId) {
+                startDate.value = '';
+                endDate.value = '';
+                planSelect.value = '';
+                planSelect.dispatchEvent(new Event('change'));
+                providerSelect.value = '';
+                return;
+            }
+            fetch(`/policies/ajax/load-master-policy/?master_policy_id=${masterId}`, {
+                headers: { 'HX-Request': 'true' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) return;
+                if (data.start_date) startDate.value = data.start_date;
+                if (data.end_date) endDate.value = data.end_date;
+                if (data.plan_id) planSelect.value = data.plan_id;
+                planSelect.dispatchEvent(new Event('change'));
+                if (data.provider_id) providerSelect.value = data.provider_id;
+            })
+            .catch(() => {});
+        }
         masterPolicySelect.addEventListener('change', toggleProvider);
+        masterPolicySelect.addEventListener('change', fillFromMasterPolicy);
         toggleProvider();
 
         // معاينة فئات الخطة عند الاختيار

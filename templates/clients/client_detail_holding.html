@@ -95,6 +95,11 @@
                 class="px-6 py-3 border-b-2 font-bold whitespace-nowrap rounded-t-lg transition-all flex items-center gap-2">
                 <i class="ph-duotone ph-tree-structure text-lg"></i> الشركات التابعة
             </button>
+            <button @click="tab = 'sponsors'"
+                :class="tab === 'sponsors' ? 'border-brand-600 text-brand-600 bg-brand-50' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'"
+                class="px-6 py-3 border-b-2 font-bold whitespace-nowrap rounded-t-lg transition-all flex items-center gap-2">
+                <i class="ph-duotone ph-identification-badge text-lg"></i> أرقام الكفيلة
+            </button>
             <button @click="tab = 'benefits'"
                 :class="tab === 'benefits' ? 'border-brand-600 text-brand-600 bg-brand-50' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'"
                 class="px-6 py-3 border-b-2 font-bold whitespace-nowrap rounded-t-lg transition-all flex items-center gap-2">
@@ -182,7 +187,82 @@
             </div>
         </div>
 
-        <!-- Tab 2: Master Benefits -->
+        <!-- Tab 2: Sponsor Numbers -->
+        <div x-show="tab === 'sponsors'" class="space-y-6" x-transition>
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <div class="p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800">أرقام الكفيلة (معرّفات المنشأة)</h3>
+                        <p class="text-xs text-slate-500 mt-0.5">رقم الكفيل يمكن أن يخدم موظفين من عدة شركات شقيقة ضمن نفس المجموعة.</p>
+                    </div>
+                    <a href="{% url 'sponsor_number_create' client.pk %}"
+                        class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-bold text-xs flex items-center gap-1.5 transition shadow-sm">
+                        <i class="ph-bold ph-plus"></i> إضافة كفيل
+                    </a>
+                </div>
+                <table class="w-full text-right">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">رقم الكفيل</th>
+                            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">الشركة المالكة</th>
+                            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">الوصف</th>
+                            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">عدد الموظفين</th>
+                            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">الحالة</th>
+                            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for sn in sponsor_numbers %}
+                        <tr class="hover:bg-slate-50 transition group">
+                            <td class="px-6 py-4 font-mono font-bold text-slate-800">{{ sn.sponsor_number }}</td>
+                            <td class="px-6 py-4 text-sm text-slate-600">{{ sn.owner_client.name_ar }}</td>
+                            <td class="px-6 py-4 text-center text-xs text-slate-500">{{ sn.name|default:"—" }}</td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-bold">{{ sn.members_count }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                {% if sn.is_active %}
+                                <span class="inline-flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded-full border border-green-100">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> نشط
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center gap-1 text-slate-500 text-xs font-bold bg-slate-100 px-2 py-1 rounded-full border border-slate-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> معطل
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <a href="{% url 'sponsor_number_update' client.pk sn.pk %}"
+                                        class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 transition"
+                                        title="تعديل">
+                                        <i class="ph-duotone ph-pencil-simple text-sm"></i>
+                                    </a>
+                                    <form method="post" action="{% url 'sponsor_number_toggle' client.pk sn.pk %}" class="inline">
+                                        {% csrf_token %}
+                                        <button type="submit"
+                                            class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:border-amber-200 transition"
+                                            title="تفعيل/تعطيل">
+                                            <i class="ph-duotone ph-toggle-right text-sm"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="py-12 text-center text-slate-400">
+                                <i class="ph-duotone ph-identification-badge text-3xl mb-2 block"></i>
+                                لا توجد أرقام كفيلة مسجلة لهذه المجموعة
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 3: Master Benefits -->
         <div x-show="tab === 'benefits'" class="space-y-6" x-transition>
             {% if master_policy %}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
