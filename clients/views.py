@@ -23,7 +23,7 @@ def get_allowed_clients(user):
 # -------------------------------------------------------------
 
 @login_required
-@permission_required('clients.view_client_dashboard', raise_exception=True)
+@permission_required('clients.view_client', raise_exception=True)
 def client_list(request):
     """
     عرض قائمة العملاء مع دعم البحث والترقيم (Pagination) - [تم تطبيق العزل]
@@ -75,7 +75,7 @@ def client_create(request):
 
 
 @login_required
-@permission_required('clients.manage_clients', raise_exception=True)
+@permission_required('clients.change_client', raise_exception=True)
 def client_update(request, pk):
     """
     تعديل شركة - [تم تطبيق الحماية لمنع تعديل شركات وسطاء آخرين]
@@ -96,7 +96,7 @@ def client_update(request, pk):
 
 
 @login_required
-@permission_required('clients.manage_clients', raise_exception=True)
+@permission_required('clients.delete_client', raise_exception=True)
 def client_delete(request, pk):
     """
     حذف شركة - [تم تطبيق الحماية]
